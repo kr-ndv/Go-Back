@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,21 +12,34 @@ export default function NoteEditorScreen() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [ready, setReady] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('Loading note…');
   useEffect(() => {
     let active = true;
     void getDatabase().then(async db => {
       const note = await db.getFirstAsync<{ title: string; body: string }>('SELECT title, body FROM notes WHERE id = ?', id);
-      if (active && note) { setTitle(note.title); setBody(note.body); setReady(true); }
+      if (active && note) { setTitle(note.title); setBody(note.body); setReady(true); setSaveStatus('Saved locally'); }
     });
     return () => { active = false; };
   }, [id]);
-  const save = async () => {
-    const db = await getDatabase();
-    await db.runAsync('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?', title.trim() || 'Untitled note', body, new Date().toISOString(), id);
-  };
+  const save = useCallback(async () => {
+    if (!ready) return;
+    setSaveStatus('Saving…');
+    try {
+      const db = await getDatabase();
+      await db.runAsync('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?', title.trim() || 'Untitled note', body, new Date().toISOString(), id);
+      setSaveStatus('Saved locally');
+    } catch {
+      setSaveStatus('Save failed');
+    }
+  }, [body, id, ready, title]);
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => { void save(); }, 500);
+    return () => clearTimeout(timer);
+  }, [ready, save]);
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-    <View style={styles.toolbar}><Pressable onPress={() => { void save().then(() => router.back()); }} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.saved, { color: theme.muted }]}>{ready ? 'Saved locally' : 'Loading note…'}</Text><Pressable onPress={() => void save()}><Text style={[styles.save, { color: theme.primary }]}>Save</Text></Pressable></View>
-    <View style={styles.content}><TextInput value={title} onChangeText={setTitle} placeholder="Note title" placeholderTextColor={theme.muted} style={[styles.title, { color: theme.text }]} /><TextInput value={body} onChangeText={setBody} placeholder="Start writing…" placeholderTextColor={theme.muted} multiline textAlignVertical="top" style={[styles.body, { color: theme.text }]} /></View>
+    <View style={styles.toolbar}><Pressable onPress={() => { void save().then(() => router.back()); }} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.saved, { color: theme.muted }]}>{saveStatus}</Text><Pressable onPress={() => void save()}><Text style={[styles.save, { color: theme.primary }]}>Save</Text></Pressable></View>
+    <View style={styles.content}><TextInput value={title} onChangeText={setTitle} placeholder="Note title" placeholderTextColor={theme.muted} editable={ready} style={[styles.title, { color: theme.text }]} /><TextInput value={body} onChangeText={setBody} placeholder="Start writing…" placeholderTextColor={theme.muted} multiline textAlignVertical="top" editable={ready} style={[styles.body, { color: theme.text }]} /></View>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
