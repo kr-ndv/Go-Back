@@ -21,7 +21,8 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-notifications"
+      "expo-notifications",
+      "./plugins/withGoBackWidget"
     ],
     "experiments": {
       "typedRoutes": true
