@@ -17,7 +17,9 @@ export const useThemeStore = create<ThemeState>((set) => ({
   accent: 'forest',
   ready: false,
   hydrate: async () => {
-    const [mode, accent] = await Promise.all([getSetting<ThemeMode>('theme.mode', 'system'), getSetting<AccentColor>('theme.accent', 'forest')]);
+    const [storedMode, storedAccent] = await Promise.all([getSetting<unknown>('theme.mode', 'system'), getSetting<unknown>('theme.accent', 'forest')]);
+    const mode: ThemeMode = storedMode === 'light' || storedMode === 'dark' || storedMode === 'system' ? storedMode : 'system';
+    const accent: AccentColor = storedAccent === 'blue' || storedAccent === 'violet' || storedAccent === 'amber' || storedAccent === 'forest' ? storedAccent : 'forest';
     set({ mode, accent, ready: true });
   },
   setMode: async (mode) => {
