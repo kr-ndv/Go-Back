@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,13 +49,13 @@ export default function HabitsScreen() {
   const completed = habits.filter(h => h.done_today).length;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Daily habits</Text><View style={{ width: 40 }} /></View>
-    <View style={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>CONSISTENCY OVER INTENSITY</Text>
       <View style={[styles.summary, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.summaryIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="leaf" size={24} color={theme.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.summaryTitle, { color: theme.text }]}>Show up for yourself.</Text><Text style={[styles.hint, { color: theme.muted }]}>{completed} of {habits.length} habits completed today</Text></View><Text style={[styles.percent, { color: theme.primary }]}>{habits.length ? Math.round(completed / habits.length * 100) : 0}%</Text></View>
       <View style={[styles.addRow, { backgroundColor: theme.surface, borderColor: theme.border }]}><TextInput value={title} onChangeText={setTitle} placeholder="A habit to build..." placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} /><Pressable onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={22} color={theme.background} /></Pressable></View>
       {habits.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="sunny-outline" size={30} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Start small. Keep showing up.</Text><Text style={[styles.hint, { color: theme.muted, textAlign: 'center' }]}>Add a daily habit like reading, walking, or revising a chapter.</Text></View> : habits.map(habit => <View key={habit.id} style={[styles.habit, { backgroundColor: theme.surface, borderColor: theme.border }]}><Pressable onPress={() => void toggle(habit)} style={[styles.check, { borderColor: habit.done_today ? theme.primary : theme.muted, backgroundColor: habit.done_today ? theme.primary : 'transparent' }]}>{habit.done_today ? <Ionicons name="checkmark" size={17} color={theme.background} /> : null}</Pressable><Pressable onPress={() => void toggle(habit)} style={{ flex: 1, gap: 4 }}><Text style={[styles.habitTitle, { color: habit.done_today ? theme.muted : theme.text, textDecorationLine: habit.done_today ? 'line-through' : 'none' }]}>{habit.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{habit.streak} day streak {habit.streak === 1 ? '🔥' : '✨'}</Text></Pressable><Pressable onPress={() => remove(habit)} hitSlop={10}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View>)}
       <Text style={[styles.hint, { color: theme.muted }]}>Streaks count consecutive calendar days with a completed check-in. All data stays on your device.</Text>
-    </View>
+    </ScrollView>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
