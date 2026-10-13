@@ -14,12 +14,17 @@ export default function FocusScreen() {
   const [remaining, setRemaining] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const startedAt = useRef<string | null>(null);
+  const remainingRef = useRef(25 * 60);
+  const minutesRef = useRef(25);
   const initialSeconds = minutes * 60;
+  useEffect(() => { remainingRef.current = remaining; }, [remaining]);
+  useEffect(() => { minutesRef.current = minutes; }, [minutes]);
 
   useEffect(() => {
     if (!running) return;
     const interval = setInterval(() => setRemaining(current => {
-      if (current <= 1) { clearInterval(interval); setRunning(false); void finish(true); return 0; }
+      if (current <= 1) { clearInterval(interval); remainingRef.current = 0; setRunning(false); void finish(true); return 0; }
+      remainingRef.current = current - 1;
       return current - 1;
     }), 1000);
     return () => clearInterval(interval);
@@ -30,9 +35,9 @@ export default function FocusScreen() {
     await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed) VALUES (?, ?, ?, ?)', createLocalId('focus'), startedAt.current ?? new Date().toISOString(), initialSeconds - remaining, completed ? 1 : 0);
     if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
   };
-  const choose = (value: number) => { setMinutes(value); setRemaining(value * 60); setRunning(false); };
+  const choose = (value: number) => { setMinutes(value); setRemaining(value * 60); remainingRef.current = value * 60; setRunning(false); };
   const close = () => { if (running) { Alert.alert('End focus session?', 'Your current session will stop.', [{ text: 'Keep focusing', style: 'cancel' }, { text: 'End session', style: 'destructive', onPress: () => { setRunning(false); void finish(false).then(() => router.back()); } }]); } else router.back(); };
-  const start = () => { if (!running) { if (remaining === 0) setRemaining(minutes * 60); startedAt.current = new Date().toISOString(); setRunning(true); } };
+  const start = () => { if (!running) { if (remaining === 0) { setRemaining(minutes * 60); remainingRef.current = minutes * 60; } startedAt.current = new Date().toISOString(); setRunning(true); } };
   const format = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -40,7 +45,7 @@ export default function FocusScreen() {
     <View style={styles.main}><View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
       {!running ? <View style={styles.presets}>{PRESETS.map(p => <Pressable key={p} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.background : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View> : <Text style={[styles.runningNote, { color: theme.muted }]}>Keep this screen open to keep the timer active. Background-safe timing and persistent notifications are planned for the next stage.</Text>}
       <Pressable onPress={() => running ? setRunning(false) : start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
-      {running && <Pressable onPress={() => { setRunning(false); void finish(false); setRemaining(minutes * 60); }}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
+      {running && <Pressable onPress={() => { setRunning(false); void finish(false); setRemaining(minutes * 60); remainingRef.current = minutes * 60; } }><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
     </View>
   </SafeAreaView>;
 }
