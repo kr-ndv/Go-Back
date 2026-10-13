@@ -78,6 +78,7 @@ export default function TodayScreen() {
         <Action icon="calendar-outline" label="Exam countdown & timetable" onPress={() => router.push('/exams')} theme={theme} />
         <Action icon="book-outline" label="Syllabus tracker" onPress={() => router.push('/syllabus')} theme={theme} />
         <Action icon="leaf-outline" label="Daily habits & streaks" onPress={() => router.push('/habits')} theme={theme} />
+        <Action icon="flag-outline" label="Goals & progress" onPress={() => router.push('/goals')} theme={theme} />
       </View>
       <Text style={[styles.footer, { color: theme.muted }]}>YOUR TIME. YOUR TERMS.</Text>
     </Screen>
