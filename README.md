@@ -45,7 +45,13 @@ Type-check:
 npm run typecheck
 ```
 
-Build an internal APK using EAS:
+Build an installable **debug APK** from GitHub Actions:
+1. Open the repository's **Actions** tab.
+2. Select **Android APK Build**.
+3. Click **Run workflow** and wait for the job to finish.
+4. Download the `Go-Back-debug-apk` artifact from that run.
+
+This debug APK is for device testing; it is **not** the signed production release. To build a preview/release APK with EAS, configure an Expo account and project, then run:
 
 ```bash
 npm install --global eas-cli
