@@ -52,7 +52,7 @@ export default function SettingsScreen() {
       const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets[0]) return;
       const json = await FileSystem.readAsStringAsync(picked.assets[0].uri);
-      Alert.alert('Replace local data?', 'Restoring this backup replaces the tasks, notes, exams, syllabus, habits and settings currently stored on this device.', [
+      Alert.alert('Replace local data?', 'Restoring this backup replaces the tasks, notes, exams, syllabus, goals, habits, focus history and settings currently stored on this device.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Restore backup', style: 'destructive', onPress: () => { void (async () => {
           try {
