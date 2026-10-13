@@ -46,14 +46,15 @@ function validateBackup(value: unknown): Backup {
   return backup as Backup;
 }
 
-function cleanRow(table: TableName, value: unknown): Record<string, string | number> {
+function cleanRow(table: TableName, value: unknown): Record<string, string | number | null> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`Invalid record in ${table}.`);
   const source = value as Record<string, unknown>;
-  const clean: Record<string, string | number> = {};
+  const clean: Record<string, string | number | null> = {};
   for (const column of COLUMNS[table]) {
     if (!(column in source)) continue;
     const cell = source[column];
-    if (typeof cell === 'string' || (typeof cell === 'number' && Number.isFinite(cell))) clean[column] = cell;
+    if (cell === null && (column === 'due_date' || column === 'target_date')) clean[column] = null;
+    else if (typeof cell === 'string' || (typeof cell === 'number' && Number.isFinite(cell))) clean[column] = cell;
     else throw new Error(`Invalid ${column} value in ${table}.`);
   }
   const required = table === 'settings' ? ['key', 'value'] : table === 'tasks' ? ['id', 'title', 'created_at'] :
@@ -68,7 +69,7 @@ export async function restoreBackupJson(json: string): Promise<void> {
   let parsed: unknown;
   try { parsed = JSON.parse(json); } catch { throw new Error('The selected file is not valid JSON.'); }
   const backup = validateBackup(parsed);
-  const sanitized = {} as Record<TableName, Record<string, string | number>[]>;
+  const sanitized = {} as Record<TableName, Record<string, string | number | null>[]>;
   for (const table of TABLES) sanitized[table] = backup.tables[table].map(row => cleanRow(table, row));
 
   const db: SQLite.SQLiteDatabase = await getDatabase();
