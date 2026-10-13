@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
@@ -93,12 +93,20 @@ export default function FocusScreen() {
     endAtRef.current = Date.now() + seconds * 1000;
     setRunning(true);
     try {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('focus-sessions', {
+          name: 'Focus sessions',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#B8F36B',
+        });
+      }
       let permission = await Notifications.getPermissionsAsync();
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
       if (permission.granted && endAtRef.current) {
         await cancelNotification();
         notificationIdRef.current = await Notifications.scheduleNotificationAsync({
-          content: { title: 'Focus session complete', body: 'Nice work. Take a short break before your next session.' },
+          content: { title: 'Focus session complete', body: 'Nice work. Take a short break before your next session.', ...(Platform.OS === 'android' ? { channelId: 'focus-sessions' } : {}) },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds },
         });
       }
