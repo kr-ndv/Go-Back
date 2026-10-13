@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,7 +45,7 @@ export default function SyllabusScreen() {
   const percent = total ? Math.round(done / total * 100) : 0;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Syllabus tracker</Text><View style={{ width: 40 }} /></View>
-    <View style={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>EVERY CHAPTER COUNTS</Text>
       <View style={[styles.progressCard, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={styles.progressTop}><View><Text style={[styles.progressTitle, { color: theme.text }]}>Overall progress</Text><Text style={[styles.hint, { color: theme.muted }]}>{done} of {total} chapters completed</Text></View><Text style={[styles.percent, { color: theme.primary }]}>{percent}%</Text></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.fill, { width: percent + '%', backgroundColor: theme.primary }]} /></View></View>
       <View style={[styles.addRow, { backgroundColor: theme.surface, borderColor: theme.border }]}><TextInput value={name} onChangeText={setName} placeholder="Add a subject..." placeholderTextColor={theme.muted} onSubmitEditing={() => void addSubject()} style={[styles.input, { color: theme.text }]} /><Pressable onPress={() => void addSubject()} style={[styles.addButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={22} color={theme.background} /></Pressable></View>
@@ -56,7 +56,7 @@ export default function SyllabusScreen() {
         return <View key={subject.id} style={[styles.subject, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={styles.subjectHead}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.subjectName, { color: theme.text }]}>{subject.name}</Text><Text style={[styles.hint, { color: theme.muted }]}>{completed}/{chapters.length} chapters · {progress}%</Text></View><Pressable onLongPress={() => removeSubject(subject)} hitSlop={8}><Ionicons name="ellipsis-horizontal" size={20} color={theme.muted} /></Pressable></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.fill, { width: progress + '%', backgroundColor: theme.primary }]} /></View>{chapters.map(chapter => <Pressable key={chapter.id} onPress={() => void toggleChapter(subject, chapter.id)} style={styles.chapter}><View style={[styles.check, { backgroundColor: chapter.done ? theme.primary : 'transparent', borderColor: chapter.done ? theme.primary : theme.muted }]}>{chapter.done && <Ionicons name="checkmark" size={13} color={theme.background} />}</View><Text style={[styles.chapterText, { color: chapter.done ? theme.muted : theme.text, textDecorationLine: chapter.done ? 'line-through' : 'none' }]}>{chapter.title}</Text></Pressable>)}<View style={styles.chapterAdd}><TextInput value={chapterDrafts[subject.id] ?? ''} onChangeText={value => setChapterDrafts(current => ({ ...current, [subject.id]: value }))} placeholder="Add chapter..." placeholderTextColor={theme.muted} onSubmitEditing={() => void addChapter(subject)} style={[styles.chapterInput, { color: theme.text }]} /><Pressable onPress={() => void addChapter(subject)}><Ionicons name="add-circle" size={23} color={theme.primary} /></Pressable></View></View>;
       })}
       <Text style={[styles.hint, { color: theme.muted }]}>Tip: long-press a subject to delete it. Everything is stored locally on this device.</Text>
-    </View>
+    </ScrollView>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
