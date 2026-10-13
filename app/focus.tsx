@@ -28,10 +28,19 @@ export default function FocusScreen() {
   useEffect(() => { minutesRef.current = minutes; }, [minutes]);
 
   const cancelNotification = async () => {
-    if (!notificationIdRef.current) return;
     const id = notificationIdRef.current;
     notificationIdRef.current = null;
-    try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* notification may already have fired */ }
+    try {
+      if (id) {
+        await Notifications.cancelScheduledNotificationAsync(id);
+        return;
+      }
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete');
+      await Promise.all(focusNotifications.map(item => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+    } catch {
+      // Notification state may be unavailable on this device.
+    }
   };
 
   const finish = async (completed: boolean) => {
