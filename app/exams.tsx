@@ -21,7 +21,9 @@ export default function ExamsScreen() {
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
     const cleanTitle = title.trim();
-    if (!cleanTitle || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) { Alert.alert('Check your exam details', 'Add a subject or exam name and a date in YYYY-MM-DD format.'); return; }
+    const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T12:00:00') : null;
+    const validDate = !!parsedDate && !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === date;
+    if (!cleanTitle || !validDate) { Alert.alert('Check your exam details', 'Add a subject or exam name and a date in YYYY-MM-DD format.'); return; }
     const db = await getDatabase();
     await db.runAsync('INSERT INTO exams (id, title, exam_date, details) VALUES (?, ?, ?, ?)', createLocalId('exam'), cleanTitle, date, details.trim());
     setTitle(''); setDate(''); setDetails(''); await load();
