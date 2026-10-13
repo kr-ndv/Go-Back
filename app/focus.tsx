@@ -16,7 +16,6 @@ export default function FocusScreen() {
   const startedAt = useRef<string | null>(null);
   const remainingRef = useRef(25 * 60);
   const minutesRef = useRef(25);
-  const initialSeconds = minutes * 60;
   useEffect(() => { remainingRef.current = remaining; }, [remaining]);
   useEffect(() => { minutesRef.current = minutes; }, [minutes]);
 
