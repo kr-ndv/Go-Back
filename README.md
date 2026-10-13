@@ -13,11 +13,12 @@ The initial application foundation is in progress. It includes:
 - Exam countdown and timetable
 - Subject/chapter syllabus tracker with automatic progress
 - Daily habits with streak tracking and goals with progress controls
+- Android home-screen quick-actions widget (Focus, Tasks, Exams, Habits) generated through an Expo config plugin
 - Light/dark/system themes, accent colours, local profile, and JSON backup/restore
 - Android package ID: `com.goback.focus`
 - EAS build profiles for development, preview APK and production APK
 
-**Not yet production-ready:** timer notifications and background behavior need real-device validation; actual Android home-screen widgets, app blocking, screen-time access, encrypted backups, automated tests, and device verification remain outstanding. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
+**Not yet production-ready:** timer notifications and background behavior need real-device validation; app blocking, screen-time access, encrypted backups, automated tests, and device verification remain outstanding. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
 
 ## Requirements
 
