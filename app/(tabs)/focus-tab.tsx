@@ -15,7 +15,7 @@ export default function FocusTab() {
       <Pressable onPress={() => router.push('/focus')} style={[styles.button, { backgroundColor: theme.primary }]}><Ionicons name="play" size={18} color={theme.background} /><Text style={[styles.buttonText, { color: theme.background }]}>Start focus session</Text></Pressable>
     </View>
     <Text style={[styles.smallTitle, { color: theme.text }]}>A little structure goes a long way</Text>
-    <Text style={[styles.sub, { color: theme.muted }]}>Choose a session, put distractions aside, and take breaks when you need them. The full timer is being built next.</Text>
+    <Text style={[styles.sub, { color: theme.muted }]}>Choose a session, put distractions aside, and take breaks when you need them. The timer supports focused sessions and duration presets.</Text>
   </Screen>;
 }
 const styles = StyleSheet.create({
