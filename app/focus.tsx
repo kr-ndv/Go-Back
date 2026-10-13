@@ -4,17 +4,19 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getDatabase } from '@/lib/database';
+import { getDatabase, getSetting, setSetting } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { useAppTheme } from '@/state/theme';
 
 const PRESETS = [15, 25, 45, 60];
+type ActiveFocusSession = { minutes: number; remaining: number; endAt: number | null; startedAt: string };
 
 export default function FocusScreen() {
   const theme = useAppTheme();
   const [minutes, setMinutes] = useState(25);
   const [remaining, setRemaining] = useState(25 * 60);
   const [running, setRunning] = useState(false);
+  const [restoring, setRestoring] = useState(true);
   const startedAt = useRef<string | null>(null);
   const remainingRef = useRef(25 * 60);
   const minutesRef = useRef(25);
@@ -46,6 +48,7 @@ export default function FocusScreen() {
       if (elapsed > 0) {
         await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed) VALUES (?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0);
       }
+      await setSetting('focus.active', null);
       if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
     } catch {
       Alert.alert('Could not save session', 'Your focus session ended, but its history could not be saved.');
@@ -53,6 +56,36 @@ export default function FocusScreen() {
       finishingRef.current = false;
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const session = await getSetting<ActiveFocusSession | null>('focus.active', null);
+        if (!active) return;
+        if (session && [15, 25, 45, 60].includes(session.minutes) && Number.isFinite(session.remaining) && typeof session.startedAt === 'string') {
+          minutesRef.current = session.minutes;
+          setMinutes(session.minutes);
+          startedAt.current = session.startedAt;
+          if (typeof session.endAt === 'number' && Number.isFinite(session.endAt)) {
+            endAtRef.current = session.endAt;
+            const secondsLeft = Math.max(0, Math.ceil((session.endAt - Date.now()) / 1000));
+            remainingRef.current = secondsLeft;
+            setRemaining(secondsLeft);
+            setRunning(true);
+          } else {
+            remainingRef.current = Math.max(0, session.remaining);
+            setRemaining(remainingRef.current);
+          }
+        }
+      } catch {
+        Alert.alert('Could not restore timer', 'A previous focus session could not be restored.');
+      } finally {
+        if (active) setRestoring(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const tick = () => {
     if (!endAtRef.current) return;
@@ -80,10 +113,11 @@ export default function FocusScreen() {
     endAtRef.current = null;
     startedAt.current = null;
     void cancelNotification();
+    void setSetting('focus.active', null);
   };
 
   const start = async () => {
-    if (running || finishingRef.current) return;
+    if (running || restoring || finishingRef.current) return;
     const seconds = remainingRef.current > 0 ? remainingRef.current : minutesRef.current * 60;
     if (remainingRef.current <= 0) {
       remainingRef.current = seconds;
@@ -91,6 +125,7 @@ export default function FocusScreen() {
     }
     if (!startedAt.current) startedAt.current = new Date().toISOString();
     endAtRef.current = Date.now() + seconds * 1000;
+    void setSetting('focus.active', { minutes: minutesRef.current, remaining: seconds, endAt: endAtRef.current, startedAt: startedAt.current });
     setRunning(true);
     try {
       if (Platform.OS === 'android') {
@@ -125,6 +160,7 @@ export default function FocusScreen() {
     setRunning(false);
     void cancelNotification();
     if (remainingRef.current === 0) void finish(true);
+    else if (startedAt.current) void setSetting('focus.active', { minutes: minutesRef.current, remaining: remainingRef.current, endAt: null, startedAt: startedAt.current });
   };
 
   const endSession = async (goBack = false) => {
@@ -159,7 +195,7 @@ export default function FocusScreen() {
     <View style={styles.main}>
       <View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
       {!running ? <View style={styles.presets}>{PRESETS.map(p => <Pressable key={p} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.background : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View> : <Text style={[styles.runningNote, { color: theme.muted }]}>The countdown uses elapsed time, so it catches up when you return to the app. A completion notification is scheduled when permission is granted.</Text>}
-      <Pressable onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
+      <Pressable disabled={restoring} onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{restoring ? 'Restoring session…' : running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
       {startedAt.current && <Pressable onPress={() => void endSession(false)}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
     </View>
   </SafeAreaView>;
