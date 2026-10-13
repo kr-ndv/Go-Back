@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
-import { getDatabase } from '@/lib/database';
+import { getDatabase, getSetting } from '@/lib/database';
 
 function Card({ children, style }: { children: React.ReactNode; style?: object }) {
   const theme = useAppTheme();
@@ -15,13 +15,17 @@ export default function TodayScreen() {
   const theme = useAppTheme();
   const [taskCount, setTaskCount] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
+  const [profileName, setProfileName] = useState('');
 
   useFocusEffect(useCallback(() => {
     let active = true;
     const load = async () => {
       const db = await getDatabase();
-      const counts = await db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done FROM tasks');
-      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); }
+      const [counts, name] = await Promise.all([
+        db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done FROM tasks'),
+        getSetting<string>('profile.name', ''),
+      ]);
+      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); setProfileName(name); }
     };
     void load();
     return () => { active = false; };
@@ -36,7 +40,7 @@ export default function TodayScreen() {
         </View>
         <View style={[styles.avatar, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="person-outline" size={22} color={theme.primary} /></View>
       </View>
-      <Text style={[styles.greeting, { color: theme.text }]}>Make today count.</Text>
+      <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Make today count, ${profileName.trim()}.` : 'Make today count.'}</Text>
       <Text style={[styles.sub, { color: theme.muted }]}>Small steps. Real progress. Less distraction.</Text>
 
       <Pressable onPress={() => router.push('/focus')} style={styles.hero}>
