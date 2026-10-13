@@ -38,6 +38,19 @@ export async function getDatabase() {
       exam_date TEXT NOT NULL,
       details TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS habits (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS habit_logs (
+      id TEXT PRIMARY KEY NOT NULL,
+      habit_id TEXT NOT NULL REFERENCES habits(id) ON DELETE CASCADE,
+      log_date TEXT NOT NULL,
+      completed INTEGER NOT NULL DEFAULT 1,
+      UNIQUE(habit_id, log_date)
+    );
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT NOT NULL
