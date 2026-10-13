@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +30,7 @@ export default function ExamsScreen() {
   const upcoming = exams.filter(e => daysUntil(e.exam_date) >= 0);
   const next = upcoming[0];
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-    <View style={styles.header}><Pressable onPress={() => history.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Exam planner</Text><View style={{ width: 40 }} /></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Exam planner</Text><View style={{ width: 40 }} /></View>
     <View style={styles.content}>
       <Text style={[styles.eyebrow, { color: theme.muted }]}>KEEP THE DATE IN SIGHT</Text>
       {next ? <View style={styles.hero}><Text style={styles.heroLabel}>UP NEXT</Text><Text style={styles.heroTitle}>{next.title}</Text><View style={styles.countRow}><Text style={styles.count}>{daysUntil(next.exam_date)}</Text><Text style={styles.days}>DAYS TO GO</Text></View><Text style={styles.heroDate}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
