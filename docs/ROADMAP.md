@@ -8,8 +8,8 @@
 - Theme selection and EAS APK build profiles
 
 ## Stage 2: Core productivity
-- Timer persistence based on absolute end timestamps; background notifications and session recovery
-- Full task editing, due dates, priorities, habits, goals and streaks
+- Focus timer uses absolute end timestamps, app-resume recalculation, and completion notifications; validate behavior on real Android devices
+- Task priorities and due dates; local goals, daily habits, and streaks are implemented in the current prototype
 - Exam countdown, exam timetable, and student syllabus/chapter tracker with computed progress
 - Personal notes editor autosave, search, pinning and export
 - Reminder scheduling, haptics, font scaling, accent color and dashboard customization
@@ -23,7 +23,7 @@
 
 ## Stage 4: Quality and release
 - Unit and component tests, accessibility review, error handling and migration strategy
-- Backup/restore with integrity validation; encrypt backups if implemented
+- JSON backup/restore with schema and record validation is implemented; encryption remains outstanding
 - EAS or local Gradle release build, APK install test, SHA-256 checksum and release notes
 - CI checks and privacy/security review
 
