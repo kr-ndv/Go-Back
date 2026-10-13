@@ -14,6 +14,12 @@ export const palette = {
 };
 
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type AccentColor = 'forest' | 'blue' | 'violet' | 'amber';
+export const accentColors: Record<Exclude<AccentColor, 'forest'>, string> = {
+  blue: '#64A9FF',
+  violet: '#B49AFF',
+  amber: '#F2B75E',
+};
 
 export const lightTheme = {
   background: palette.paper,
