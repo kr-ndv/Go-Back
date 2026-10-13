@@ -15,7 +15,7 @@
 - Reminder scheduling, haptics, font scaling, accent color and dashboard customization
 
 ## Stage 3: Android system features
-- Native home-screen widgets (focus status, quick actions, exam countdown)
+- An Android home-screen quick-actions widget is implemented through an Expo config plugin; add a live focus-status and exam-countdown widget in a later pass
 - Usage access onboarding and usage-statistics integration where Android permits
 - App blocking via an explicit, transparent Android implementation; assess AccessibilityService / UsageStatsManager limitations and Play policy before shipping
 - Scheduled blocking and strict mode with a clear emergency exit
