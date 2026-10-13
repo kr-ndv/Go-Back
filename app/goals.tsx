@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,7 +35,7 @@ export default function GoalsScreen() {
   const completed = goals.filter(goal => goal.progress === 100).length;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Goals</Text><View style={{ width: 40 }} /></View>
-    <View style={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>AIM FOR WHAT MATTERS</Text>
       <View style={[styles.summary, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="flag-outline" size={22} color={theme.primary} /></View><View style={{ flex: 1, gap: 3 }}><Text style={[styles.summaryTitle, { color: theme.text }]}>Make progress visible.</Text><Text style={[styles.hint, { color: theme.muted }]}>{completed} of {goals.length} goals completed</Text></View><Text style={[styles.percent, { color: theme.primary }]}>{goals.length ? Math.round(goals.reduce((sum, goal) => sum + goal.progress, 0) / goals.length) : 0}%</Text></View>
       <Text style={[styles.section, { color: theme.text }]}>Create a goal</Text>
@@ -43,7 +43,7 @@ export default function GoalsScreen() {
       <Text style={[styles.section, { color: theme.text }]}>Your goals</Text>
       {goals.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="trending-up-outline" size={29} color={theme.primary} /><Text style={[styles.summaryTitle, { color: theme.text }]}>Progress, not perfection.</Text><Text style={[styles.hint, { color: theme.muted, textAlign: 'center' }]}>Set a meaningful goal, then update progress as you move forward.</Text></View> : goals.map(goal => <View key={goal.id} style={[styles.goal, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={styles.goalHead}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.goalTitle, { color: theme.text }]}>{goal.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{goal.progress === 100 ? 'Completed' : goal.target_date ? 'Target · ' + goal.target_date : 'No target date'}</Text></View><Pressable onLongPress={() => remove(goal)} hitSlop={8}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.fill, { width: goal.progress + '%', backgroundColor: theme.primary }]} /></View><View style={styles.progressControls}><Text style={[styles.percentSmall, { color: theme.primary }]}>{goal.progress}%</Text><View style={styles.controlRow}><Pressable disabled={goal.progress === 0} onPress={() => void updateProgress(goal, -10)} style={[styles.control, { borderColor: theme.border, opacity: goal.progress === 0 ? 0.35 : 1 }]}><Ionicons name="remove" size={16} color={theme.text} /></Pressable><Pressable disabled={goal.progress === 100} onPress={() => void updateProgress(goal, 10)} style={[styles.control, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: goal.progress === 100 ? 0.35 : 1 }]}><Ionicons name="add" size={16} color={theme.background} /></Pressable></View></View></View>)}
       <Text style={[styles.hint, { color: theme.muted }]}>Use the + and − controls to update progress in 10% steps. Long-press a goal to remove it.</Text>
-    </View>
+    </ScrollView>
   </SafeAreaView>;
 }
 
