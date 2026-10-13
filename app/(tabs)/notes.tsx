@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
@@ -14,7 +14,7 @@ export default function NotesScreen() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [title, setTitle] = useState('');
   const load = useCallback(async () => { const db = await getDatabase(); setNotes(await db.getAllAsync<Note>('SELECT * FROM notes ORDER BY updated_at DESC')); }, []);
-  useEffect(() => { void load(); }, [load]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
   const create = async () => {
     const clean = title.trim();
     if (!clean) { Alert.alert('Give your note a title', 'Enter a title to create a note.'); return; }
