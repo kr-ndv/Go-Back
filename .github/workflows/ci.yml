@@ -7,6 +7,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: go-back-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   typecheck:
     name: TypeScript, tests and Expo config validation
