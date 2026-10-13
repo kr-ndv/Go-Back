@@ -7,13 +7,17 @@
 The initial application foundation is in progress. It includes:
 - Expo Router navigation and a Today dashboard
 - Local SQLite tables for tasks, notes, subjects, focus sessions, exams and settings
-- A basic task list and personal notes editor
-- A basic foreground focus timer
-- Light/dark theme selection
+- Task list with priorities and optional due dates
+- Personal notes editor
+- Focus timer with preset durations, elapsed-time recovery, completion notifications, and session history
+- Exam countdown and timetable
+- Subject/chapter syllabus tracker with automatic progress
+- Daily habits with streak tracking and goals with progress controls
+- Light/dark/system themes, accent colours, local profile, and JSON backup/restore
 - Android package ID: `com.goback.focus`
 - EAS build profiles for development, preview APK and production APK
 
-**Not yet production-ready:** background-safe focus timing, actual Android home-screen widgets, app blocking, screen-time access, full exam/syllabus workflows, backup/restore, automated tests, and device verification. These will be implemented and validated in subsequent stages. No AI, cloud backend, ads, or analytics are configured.
+**Not yet production-ready:** timer notifications and background behavior need real-device validation; actual Android home-screen widgets, app blocking, screen-time access, encrypted backups, automated tests, and device verification remain outstanding. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
 
 ## Requirements
 
