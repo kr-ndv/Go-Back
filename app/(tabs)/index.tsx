@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
@@ -16,7 +16,7 @@ export default function TodayScreen() {
   const [taskCount, setTaskCount] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let active = true;
     const load = async () => {
       const db = await getDatabase();
@@ -25,7 +25,7 @@ export default function TodayScreen() {
     };
     void load();
     return () => { active = false; };
-  }, []);
+  }, []));
 
   return (
     <Screen>
