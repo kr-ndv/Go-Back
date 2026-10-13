@@ -12,7 +12,9 @@ export async function getDatabase() {
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
       completed INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
+      created_at TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'normal',
+      due_date TEXT
     );
     CREATE TABLE IF NOT EXISTS notes (
       id TEXT PRIMARY KEY NOT NULL,
@@ -38,6 +40,13 @@ export async function getDatabase() {
       exam_date TEXT NOT NULL,
       details TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS goals (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      target_date TEXT,
+      progress INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS habits (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
@@ -56,6 +65,13 @@ export async function getDatabase() {
       value TEXT NOT NULL
     );
   `);
+  const taskColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(tasks)');
+  if (!taskColumns.some(column => column.name === 'priority')) {
+    await database.execAsync("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'");
+  }
+  if (!taskColumns.some(column => column.name === 'due_date')) {
+    await database.execAsync('ALTER TABLE tasks ADD COLUMN due_date TEXT');
+  }
   return database;
 }
 
