@@ -1,32 +1,41 @@
 import { create } from 'zustand';
 import { useColorScheme } from 'react-native';
-import { darkTheme, lightTheme, type ThemeMode } from '@/theme/palette';
+import { accentColors, darkTheme, lightTheme, type AccentColor, type ThemeMode } from '@/theme/palette';
 import { getSetting, setSetting } from '@/lib/database';
 
 type ThemeState = {
   mode: ThemeMode;
+  accent: AccentColor;
   ready: boolean;
   hydrate: () => Promise<void>;
   setMode: (mode: ThemeMode) => Promise<void>;
+  setAccent: (accent: AccentColor) => Promise<void>;
 };
 
 export const useThemeStore = create<ThemeState>((set) => ({
   mode: 'system',
+  accent: 'forest',
   ready: false,
   hydrate: async () => {
-    const mode = await getSetting<ThemeMode>('theme.mode', 'system');
-    set({ mode, ready: true });
+    const [mode, accent] = await Promise.all([getSetting<ThemeMode>('theme.mode', 'system'), getSetting<AccentColor>('theme.accent', 'forest')]);
+    set({ mode, accent, ready: true });
   },
   setMode: async (mode) => {
     set({ mode });
     await setSetting('theme.mode', mode);
   },
+  setAccent: async (accent) => {
+    set({ accent });
+    await setSetting('theme.accent', accent);
+  },
 }));
 
 export function useAppTheme() {
   const mode = useThemeStore((state) => state.mode);
+  const accent = useThemeStore((state) => state.accent);
   const systemScheme = useColorScheme();
-  if (mode === 'light') return lightTheme;
-  if (mode === 'dark') return darkTheme;
-  return systemScheme === 'light' ? lightTheme : darkTheme;
+  const base = mode === 'light' ? lightTheme : mode === 'dark' ? darkTheme : systemScheme === 'light' ? lightTheme : darkTheme;
+  if (accent === 'forest') return base;
+  const color = accentColors[accent];
+  return { ...base, primary: color, accent: color };
 }
