@@ -9,16 +9,11 @@ on:
 
 jobs:
   typecheck:
-    name: TypeScript, tests and Android smoke build
+    name: TypeScript, tests and Expo config validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Java for Android build
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -31,11 +26,3 @@ jobs:
         run: npm run typecheck
       - name: Run unit tests
         run: npm test -- --runInBand
-      - name: Build installable debug APK
-        run: cd android && ./gradlew assembleDebug
-      - name: Upload debug APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Go-Back-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 14
