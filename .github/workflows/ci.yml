@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: go-back-ci-${{ github.ref }}
+  group: go-back-ci-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
