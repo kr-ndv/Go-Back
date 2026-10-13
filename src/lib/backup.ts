@@ -1,15 +1,16 @@
 import * as SQLite from 'expo-sqlite';
 import { getDatabase } from '@/lib/database';
 
-const TABLES = ['tasks', 'notes', 'subjects', 'focus_sessions', 'exams', 'habits', 'habit_logs', 'settings'] as const;
+const TABLES = ['tasks', 'notes', 'subjects', 'focus_sessions', 'exams', 'goals', 'habits', 'habit_logs', 'settings'] as const;
 type TableName = typeof TABLES[number];
 
 const COLUMNS: Record<TableName, string[]> = {
-  tasks: ['id', 'title', 'completed', 'created_at'],
+  tasks: ['id', 'title', 'completed', 'created_at', 'priority', 'due_date'],
   notes: ['id', 'title', 'body', 'updated_at'],
   subjects: ['id', 'name', 'chapters_json', 'updated_at'],
   focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed'],
   exams: ['id', 'title', 'exam_date', 'details'],
+  goals: ['id', 'title', 'target_date', 'progress', 'created_at'],
   habits: ['id', 'title', 'created_at', 'archived'],
   habit_logs: ['id', 'habit_id', 'log_date', 'completed'],
   settings: ['key', 'value'],
@@ -58,7 +59,7 @@ function cleanRow(table: TableName, value: unknown): Record<string, string | num
   const required = table === 'settings' ? ['key', 'value'] : table === 'tasks' ? ['id', 'title', 'created_at'] :
     table === 'notes' ? ['id', 'title', 'body', 'updated_at'] : table === 'subjects' ? ['id', 'name', 'chapters_json', 'updated_at'] :
     table === 'focus_sessions' ? ['id', 'started_at', 'duration_seconds', 'completed'] : table === 'exams' ? ['id', 'title', 'exam_date', 'details'] :
-    table === 'habits' ? ['id', 'title', 'created_at', 'archived'] : ['id', 'habit_id', 'log_date', 'completed'];
+    table === 'goals' ? ['id', 'title', 'progress', 'created_at'] : table === 'habits' ? ['id', 'title', 'created_at', 'archived'] : ['id', 'habit_id', 'log_date', 'completed'];
   if (required.some(key => !(key in clean))) throw new Error(`A record in ${table} is missing required fields.`);
   return clean;
 }
