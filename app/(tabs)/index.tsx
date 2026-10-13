@@ -115,6 +115,6 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, marginTop: 3 },
   actions: { gap: 9 },
   action: { borderWidth: 1, borderRadius: 17, paddingHorizontal: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  actionText: { fontSize: 13, fontWeight: '650' },
+  actionText: { fontSize: 13, fontWeight: '600' },
   footer: { textAlign: 'center', fontSize: 9, letterSpacing: 2, fontWeight: '800', marginTop: 5 },
 });
