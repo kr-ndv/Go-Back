@@ -11,7 +11,7 @@
 - Focus timer uses absolute end timestamps, app-resume recalculation, and completion notifications; validate behavior on real Android devices
 - Task priorities and due dates; local goals, daily habits, and streaks are implemented in the current prototype
 - Exam countdown, exam timetable, and student syllabus/chapter tracker with computed progress
-- Personal notes editor autosave, search, pinning and export
+- Personal notes editor is implemented; autosave, search, pinning and export remain planned
 - Reminder scheduling, haptics, font scaling, accent color and dashboard customization
 
 ## Stage 3: Android system features
@@ -33,4 +33,4 @@
 - iOS Screen Time / Family Controls capabilities require Apple entitlements and platform-specific review
 
 ## Current prototype limitations
-The current timer is foreground-only; Android may suspend JavaScript timers while the app is backgrounded. Native widgets and app blocking are not implemented in this stage. Do not market the prototype as production-ready until these items are implemented and device-tested.
+The timer recalculates elapsed time when the app returns to the foreground and schedules a completion notification when permitted, but background behavior must be tested on real devices. The quick-actions widget is implemented; live focus/exam widgets and app blocking are still outstanding. Do not market the prototype as production-ready until platform features are implemented and device-tested.
