@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
@@ -33,7 +33,7 @@ export default function ExamsScreen() {
   const next = upcoming[0];
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Exam planner</Text><View style={{ width: 40 }} /></View>
-    <View style={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>KEEP THE DATE IN SIGHT</Text>
       {next ? <View style={styles.hero}><Text style={styles.heroLabel}>UP NEXT</Text><Text style={styles.heroTitle}>{next.title}</Text><View style={styles.countRow}><Text style={styles.count}>{daysUntil(next.exam_date)}</Text><Text style={styles.days}>DAYS TO GO</Text></View><Text style={styles.heroDate}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
       <Text style={[styles.section, { color: theme.text }]}>Add an exam</Text>
@@ -45,7 +45,7 @@ export default function ExamsScreen() {
       </View>
       <Text style={[styles.section, { color: theme.text }]}>Your timetable</Text>
       {exams.length === 0 ? <Text style={[styles.hint, { color: theme.muted }]}>No exams added yet.</Text> : exams.map(exam => <Pressable key={exam.id} onLongPress={() => remove(exam)} style={[styles.exam, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.dateBox, { backgroundColor: theme.surfaceAlt }]}><Text style={[styles.dateDay, { color: theme.primary }]}>{new Date(exam.exam_date + 'T12:00:00').getDate()}</Text><Text style={[styles.dateMonth, { color: theme.muted }]}>{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.examTitle, { color: theme.text }]}>{exam.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{dateLabel(exam.exam_date)}{exam.details ? ' · ' + exam.details : ''}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={[styles.daysLeft, { color: theme.primary }]}>{daysUntil(exam.exam_date) < 0 ? 'Done' : daysUntil(exam.exam_date) + 'd'}</Text><Text style={[styles.hint, { color: theme.muted }]}>hold to remove</Text></View></Pressable>)}
-    </View>
+    </ScrollView>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
