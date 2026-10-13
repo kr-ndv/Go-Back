@@ -11,7 +11,7 @@
 - Focus timer uses absolute end timestamps, app-resume recalculation, and completion notifications; validate behavior on real Android devices
 - Task priorities and due dates; local goals, daily habits, and streaks are implemented in the current prototype
 - Exam countdown, exam timetable, and student syllabus/chapter tracker with computed progress
-- Personal notes editor is implemented; autosave, search, pinning and export remain planned
+- Personal notes editor with debounced autosave is implemented; search, pinning and standalone note export remain planned
 - Reminder scheduling, haptics, font scaling, accent color and dashboard customization
 
 ## Stage 3: Android system features
