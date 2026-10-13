@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useColorScheme } from 'react-native';
 import { darkTheme, lightTheme, type ThemeMode } from '@/theme/palette';
 import { getSetting, setSetting } from '@/lib/database';
 
@@ -24,6 +25,8 @@ export const useThemeStore = create<ThemeState>((set) => ({
 
 export function useAppTheme() {
   const mode = useThemeStore((state) => state.mode);
-  // System defaults to the dark-friendly forest theme until native appearance integration is initialized.
-  return mode === 'light' ? lightTheme : darkTheme;
+  const systemScheme = useColorScheme();
+  if (mode === 'light') return lightTheme;
+  if (mode === 'dark') return darkTheme;
+  return systemScheme === 'light' ? lightTheme : darkTheme;
 }
