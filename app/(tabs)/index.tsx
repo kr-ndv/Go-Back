@@ -47,7 +47,7 @@ export default function TodayScreen() {
         <View style={styles.heroTop}>
           <View style={styles.liveDot} />
           <Text style={styles.heroLabel}>TIME FOR YOURSELF</Text>
-          <Ionicons name="arrow-up-right" size={20} color="#D8F9B3" style={{ marginLeft: 'auto' }} />
+          <Ionicons name="arrow-forward-outline" size={20} color="#D8F9B3" style={{ marginLeft: 'auto' }} />
         </View>
         <Text style={styles.heroTitle}>Find your{ '\n' }focus.</Text>
         <View style={styles.heroBottom}>
