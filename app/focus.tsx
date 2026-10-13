@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { useAppTheme } from '@/state/theme';
 
 const PRESETS = [15, 25, 45, 60];
+
 export default function FocusScreen() {
   const theme = useAppTheme();
   const [minutes, setMinutes] = useState(25);
@@ -16,38 +18,145 @@ export default function FocusScreen() {
   const startedAt = useRef<string | null>(null);
   const remainingRef = useRef(25 * 60);
   const minutesRef = useRef(25);
+  const endAtRef = useRef<number | null>(null);
+  const notificationIdRef = useRef<string | null>(null);
+  const finishingRef = useRef(false);
+
   useEffect(() => { remainingRef.current = remaining; }, [remaining]);
   useEffect(() => { minutesRef.current = minutes; }, [minutes]);
 
-  useEffect(() => {
-    if (!running) return;
-    const interval = setInterval(() => setRemaining(current => {
-      if (current <= 1) { clearInterval(interval); remainingRef.current = 0; setRunning(false); void finish(true); return 0; }
-      remainingRef.current = current - 1;
-      return current - 1;
-    }), 1000);
-    return () => clearInterval(interval);
-  }, [running]);
+  const cancelNotification = async () => {
+    if (!notificationIdRef.current) return;
+    const id = notificationIdRef.current;
+    notificationIdRef.current = null;
+    try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* notification may already have fired */ }
+  };
 
   const finish = async (completed: boolean) => {
-    const db = await getDatabase();
-    await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed) VALUES (?, ?, ?, ?)', createLocalId('focus'), startedAt.current ?? new Date().toISOString(), initialSeconds - remaining, completed ? 1 : 0);
-    if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    const sessionStart = startedAt.current ?? new Date().toISOString();
+    const elapsed = completed ? minutesRef.current * 60 : Math.max(0, minutesRef.current * 60 - remainingRef.current);
+    startedAt.current = null;
+    endAtRef.current = null;
+    setRunning(false);
+    await cancelNotification();
+    try {
+      const db = await getDatabase();
+      if (elapsed > 0) {
+        await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed) VALUES (?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0);
+      }
+      if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
+    } catch {
+      Alert.alert('Could not save session', 'Your focus session ended, but its history could not be saved.');
+    } finally {
+      finishingRef.current = false;
+    }
   };
-  const choose = (value: number) => { setMinutes(value); setRemaining(value * 60); remainingRef.current = value * 60; setRunning(false); };
-  const close = () => { if (running) { Alert.alert('End focus session?', 'Your current session will stop.', [{ text: 'Keep focusing', style: 'cancel' }, { text: 'End session', style: 'destructive', onPress: () => { setRunning(false); void finish(false).then(() => router.back()); } }]); } else router.back(); };
-  const start = () => { if (!running) { if (remaining === 0) { setRemaining(minutes * 60); remainingRef.current = minutes * 60; } startedAt.current = new Date().toISOString(); setRunning(true); } };
-  const format = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+  const tick = () => {
+    if (!endAtRef.current) return;
+    const secondsLeft = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+    remainingRef.current = secondsLeft;
+    setRemaining(secondsLeft);
+    if (secondsLeft === 0) void finish(true);
+  };
+
+  useEffect(() => {
+    if (!running) return;
+    const interval = setInterval(tick, 500);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') tick();
+    });
+    return () => { clearInterval(interval); subscription.remove(); };
+  }, [running]);
+
+  const choose = (value: number) => {
+    setMinutes(value);
+    minutesRef.current = value;
+    setRemaining(value * 60);
+    remainingRef.current = value * 60;
+    setRunning(false);
+    endAtRef.current = null;
+    startedAt.current = null;
+    void cancelNotification();
+  };
+
+  const start = async () => {
+    if (running || finishingRef.current) return;
+    const seconds = remainingRef.current > 0 ? remainingRef.current : minutesRef.current * 60;
+    if (remainingRef.current <= 0) {
+      remainingRef.current = seconds;
+      setRemaining(seconds);
+    }
+    if (!startedAt.current) startedAt.current = new Date().toISOString();
+    endAtRef.current = Date.now() + seconds * 1000;
+    setRunning(true);
+    try {
+      let permission = await Notifications.getPermissionsAsync();
+      if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
+      if (permission.granted && endAtRef.current) {
+        await cancelNotification();
+        notificationIdRef.current = await Notifications.scheduleNotificationAsync({
+          content: { title: 'Focus session complete', body: 'Nice work. Take a short break before your next session.' },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds },
+        });
+      }
+    } catch {
+      // The timer remains usable when notifications are unavailable or permission is denied.
+    }
+  };
+
+  const pause = () => {
+    if (endAtRef.current) {
+      const secondsLeft = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+      remainingRef.current = secondsLeft;
+      setRemaining(secondsLeft);
+      endAtRef.current = null;
+    }
+    setRunning(false);
+    void cancelNotification();
+    if (remainingRef.current === 0) void finish(true);
+  };
+
+  const endSession = async (goBack = false) => {
+    if (endAtRef.current) {
+      remainingRef.current = Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000));
+      setRemaining(remainingRef.current);
+      endAtRef.current = null;
+    }
+    setRunning(false);
+    await cancelNotification();
+    await finish(false);
+    if (goBack) router.back();
+    else {
+      const reset = minutesRef.current * 60;
+      remainingRef.current = reset;
+      setRemaining(reset);
+    }
+  };
+
+  const close = () => {
+    if (!running && !startedAt.current) { router.back(); return; }
+    Alert.alert('End focus session?', 'Your current session will stop.', [
+      { text: 'Keep focusing', style: 'cancel' },
+      { text: 'End session', style: 'destructive', onPress: () => { void endSession(true); } },
+    ]);
+  };
+
+  const format = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.top}><Pressable onPress={close} style={[styles.close, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="close" size={22} color={theme.text} /></Pressable><Text style={[styles.topLabel, { color: theme.muted }]}>FOCUS SESSION</Text><View style={{ width: 42 }} /></View>
-    <View style={styles.main}><View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
-      {!running ? <View style={styles.presets}>{PRESETS.map(p => <Pressable key={p} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.background : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View> : <Text style={[styles.runningNote, { color: theme.muted }]}>Keep this screen open to keep the timer active. Background-safe timing and persistent notifications are planned for the next stage.</Text>}
-      <Pressable onPress={() => running ? setRunning(false) : start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
-      {running && <Pressable onPress={() => { setRunning(false); void finish(false); setRemaining(minutes * 60); remainingRef.current = minutes * 60; } }><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
+    <View style={styles.main}>
+      <View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
+      {!running ? <View style={styles.presets}>{PRESETS.map(p => <Pressable key={p} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.background : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View> : <Text style={[styles.runningNote, { color: theme.muted }]}>The countdown uses elapsed time, so it catches up when you return to the app. A completion notification is scheduled when permission is granted.</Text>}
+      <Pressable onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
+      {startedAt.current && <Pressable onPress={() => void endSession(false)}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
     </View>
   </SafeAreaView>;
 }
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   top: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
