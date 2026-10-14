@@ -14,12 +14,13 @@ The initial application foundation is in progress. It includes:
 - Subject/chapter syllabus tracker with automatic progress
 - Daily habits with streak tracking and goals with progress controls
 - Android screen-time insights using UsageStatsManager with explicit Usage Access onboarding (requires a native Android build)
+- Experimental native Android blocking controls for YouTube/Instagram, Shorts/Reels detection, and selected YouTube channel names (requires Accessibility permission and real-device validation)
 - Android home-screen quick-actions widget (Focus, Tasks, Exams, Habits) generated through an Expo config plugin
 - Light/dark/system themes, accent colours, local profile, and JSON backup/restore
 - Android package ID: `com.goback.focus`
 - EAS build profiles for development, preview APK and production APK
 
-**Not yet production-ready:** timer notifications, screen-time reporting and widget behavior need real-device validation; app blocking, encrypted backups, and device verification remain outstanding. Automated date/ID utility tests are included. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
+**Not yet production-ready:** timer notifications, screen-time reporting and widget behavior need real-device validation; blocking rules are experimental and need real-device verification; encrypted backups and device verification remain outstanding. Automated date/ID utility tests are included. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
 
 ## Requirements
 
@@ -62,7 +63,7 @@ eas build --platform android --profile preview
 
 ## Privacy approach
 
-The app is designed to keep personal data on-device using SQLite. Screen-time reports use Android UsageStatsManager after you explicitly grant Usage Access in Android settings; usage data is displayed locally and is not uploaded. Do not add external analytics, ad SDKs, AI APIs, or cloud sync without an explicit product decision and updated privacy documentation.
+The app is designed to keep personal data on-device using SQLite. Screen-time reports use Android UsageStatsManager after you explicitly grant Usage Access in Android settings; usage data is displayed locally and is not uploaded. The experimental blocking service reads visible accessibility text on YouTube/Instagram only to apply local rules; detection may be imperfect and requires you to enable the Android Accessibility service yourself. Do not add external analytics, ad SDKs, AI APIs, or cloud sync without an explicit product decision and updated privacy documentation.
 
 ## Project roadmap
 
