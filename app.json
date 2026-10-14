@@ -24,6 +24,18 @@
       "expo-router",
       "expo-sqlite",
       "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#07130F",
+          "dark": {
+            "backgroundColor": "#07130F"
+          }
+        }
+      ],
       "./plugins/withGoBackWidget"
     ],
     "experiments": {
