@@ -7,6 +7,7 @@ import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { daysUntilISODate, isValidISODate } from '@/lib/date';
 import { useAppTheme } from '@/state/theme';
+import { DateField } from '@/components/DateField';
 
 type Exam = { id: string; title: string; exam_date: string; details: string };
 const dateLabel = (date: string) => new Date(date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -39,7 +40,7 @@ export default function ExamsScreen() {
       <Text style={[styles.section, { color: theme.text }]}>Add an exam</Text>
       <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <TextInput value={title} onChangeText={setTitle} placeholder="Subject or exam name" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
-        <TextInput value={date} onChangeText={setDate} placeholder="Exam date (YYYY-MM-DD)" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} autoCapitalize="none" />
+        <DateField value={date} onChange={setDate} placeholder="Choose exam date" />
         <TextInput value={details} onChangeText={setDetails} placeholder="Time / room / notes (optional)" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
         <Pressable onPress={() => void add()} style={[styles.add, { backgroundColor: theme.primary }]}><Ionicons name="add" size={19} color={theme.background} /><Text style={[styles.addText, { color: theme.background }]}>Add to timetable</Text></Pressable>
       </View>
