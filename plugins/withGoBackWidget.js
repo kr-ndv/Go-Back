@@ -2,6 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { withAndroidManifest, withDangerousMod } = require('@expo/config-plugins');
 
+const usageModule = "package com.goback.focus\n\nimport android.app.AppOpsManager\nimport android.app.usage.UsageStatsManager\nimport android.content.Context\nimport android.content.Intent\nimport android.os.Process\nimport android.provider.Settings\nimport com.facebook.react.bridge.Arguments\nimport com.facebook.react.bridge.Promise\nimport com.facebook.react.bridge.ReactApplicationContext\nimport com.facebook.react.bridge.ReactContextBaseJavaModule\nimport com.facebook.react.bridge.ReactMethod\n\nclass GoBackUsageModule(private val appContext: ReactApplicationContext) : ReactContextBaseJavaModule(appContext) {\n  override fun getName() = \"GoBackUsage\"\n  private fun hasAccess(): Boolean {\n    val ops = appContext.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager\n    return ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), appContext.packageName) == AppOpsManager.MODE_ALLOWED\n  }\n  @ReactMethod fun hasUsageAccess(promise: Promise) {\n    try { promise.resolve(hasAccess()) } catch (error: Exception) { promise.reject(\"E_USAGE_ACCESS\", error) }\n  }\n  @ReactMethod fun openUsageAccessSettings(promise: Promise) {\n    try { appContext.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); promise.resolve(true) }\n    catch (error: Exception) { promise.reject(\"E_USAGE_SETTINGS\", error) }\n  }\n  @ReactMethod fun getUsageStats(days: Int, promise: Promise) {\n    try {\n      if (!hasAccess()) { promise.reject(\"E_USAGE_PERMISSION\", \"Usage access has not been granted in Android settings.\"); return }\n      val now = System.currentTimeMillis()\n      val start = now - days.coerceIn(1, 30).toLong() * 24L * 60L * 60L * 1000L\n      val manager = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager\n      val totals = mutableMapOf<String, Long>()\n      manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, now)?.forEach { stat ->\n        if (stat.packageName != appContext.packageName && stat.totalTimeInForeground > 0L) totals[stat.packageName] = (totals[stat.packageName] ?: 0L) + stat.totalTimeInForeground\n      }\n      val result = Arguments.createArray()\n      totals.entries.sortedByDescending { it.value }.forEach { entry ->\n        val item = Arguments.createMap()\n        val label = try { val info = appContext.packageManager.getApplicationInfo(entry.key, 0); appContext.packageManager.getApplicationLabel(info).toString() } catch (_: Exception) { entry.key }\n        item.putString(\"packageName\", entry.key); item.putString(\"appName\", label); item.putDouble(\"foregroundTimeMs\", entry.value.toDouble())\n        result.pushMap(item)\n      }\n      promise.resolve(result)\n    } catch (error: Exception) { promise.reject(\"E_USAGE_STATS\", error) }\n  }\n}\n";
+
+const usagePackage = "package com.goback.focus\n\nimport com.facebook.react.ReactPackage\nimport com.facebook.react.bridge.NativeModule\nimport com.facebook.react.bridge.ReactApplicationContext\nimport com.facebook.react.uimanager.ViewManager\n\nclass GoBackUsagePackage : ReactPackage {\n  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> = listOf(GoBackUsageModule(reactContext))\n  override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> = emptyList()\n}\n";
+
 const provider = `package com.goback.focus
 
 import android.app.PendingIntent
@@ -122,6 +126,10 @@ const widgetInfo = `<?xml version="1.0" encoding="utf-8"?>
 
 function withGoBackWidget(config) {
   config = withAndroidManifest(config, config => {
+    config.modResults.manifest['uses-permission'] = config.modResults.manifest['uses-permission'] ?? [];
+    if (!config.modResults.manifest['uses-permission'].some(item => item.$?.['android:name'] === 'android.permission.PACKAGE_USAGE_STATS')) {
+      config.modResults.manifest['uses-permission'].push({ $: { 'android:name': 'android.permission.PACKAGE_USAGE_STATS' } });
+    }
     const application = config.modResults.manifest.application?.[0];
     if (!application) throw new Error('Go Back widget: Android application node was not found.');
     application.receiver = application.receiver ?? [];
@@ -149,6 +157,16 @@ function withGoBackWidget(config) {
       fs.writeFileSync(file, value);
     };
     write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider);
+    write(path.join(javaRoot, 'GoBackUsageModule.kt'), usageModule);
+    write(path.join(javaRoot, 'GoBackUsagePackage.kt'), usagePackage);
+    const mainApplication = path.join(javaRoot, 'MainApplication.kt');
+    if (!fs.existsSync(mainApplication)) throw new Error('Go Back usage stats: MainApplication.kt was not found after Expo prebuild.');
+    const mainSource = fs.readFileSync(mainApplication, 'utf8');
+    if (!mainSource.includes('add(GoBackUsagePackage())')) {
+      const packageAnchor = 'PackageList(this).packages.apply {';
+      if (!mainSource.includes(packageAnchor)) throw new Error('Go Back usage stats: could not find PackageList registration in MainApplication.kt.');
+      fs.writeFileSync(mainApplication, mainSource.replace(packageAnchor, packageAnchor + '\n              add(GoBackUsagePackage())'));
+    }
     write(path.join(resRoot, 'layout', 'go_back_widget.xml'), layout);
     write(path.join(resRoot, 'values', 'go_back_widget_styles.xml'), styles);
     write(path.join(resRoot, 'drawable', 'go_back_widget_bg.xml'), widgetBackground);
