@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
+  profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
   profileId: { fontSize: 12, fontWeight: '800' },
   backupActions: { flexDirection: 'row', gap: 8, marginTop: 7 },
   backupButton: { borderRadius: 12, paddingHorizontal: 13, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
