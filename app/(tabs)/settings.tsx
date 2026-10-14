@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
