@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
@@ -16,16 +16,18 @@ export default function TodayScreen() {
   const [taskCount, setTaskCount] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [profileName, setProfileName] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
 
   useFocusEffect(useCallback(() => {
     let active = true;
     const load = async () => {
       const db = await getDatabase();
-      const [counts, name] = await Promise.all([
+      const [counts, name, picture] = await Promise.all([
         db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done FROM tasks'),
         getSetting<string>('profile.name', ''),
+        getSetting<string>('profile.picture', ''),
       ]);
-      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); setProfileName(name); }
+      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); setProfileName(name); setProfilePicture(picture); }
     };
     void load();
     return () => { active = false; };
@@ -38,21 +40,21 @@ export default function TodayScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>YOUR SPACE</Text>
           <Text style={[styles.title, { color: theme.text }]}>Go Back<Text style={{ color: theme.primary }}>.</Text></Text>
         </View>
-        <View style={[styles.avatar, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="person-outline" size={22} color={theme.primary} /></View>
+        <Pressable accessibilityLabel="Open local profile settings" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profilePicture ? <Image source={{ uri: profilePicture }} style={styles.avatarImage} /> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
       </View>
       <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Make today count, ${profileName.trim()}.` : 'Make today count.'}</Text>
       <Text style={[styles.sub, { color: theme.muted }]}>Small steps. Real progress. Less distraction.</Text>
 
-      <Pressable onPress={() => router.push('/focus')} style={styles.hero}>
+      <Pressable onPress={() => router.push('/focus')} style={[styles.hero, { backgroundColor: theme.primary }]}>
         <View style={styles.heroTop}>
           <View style={styles.liveDot} />
-          <Text style={styles.heroLabel}>TIME FOR YOURSELF</Text>
-          <Ionicons name="arrow-forward-outline" size={20} color="#D8F9B3" style={{ marginLeft: 'auto' }} />
+          <Text style={[styles.heroLabel, { color: theme.background }]}>TIME FOR YOURSELF</Text>
+          <Ionicons name="arrow-forward-outline" size={20} color={theme.background} style={{ marginLeft: 'auto' }} />
         </View>
-        <Text style={styles.heroTitle}>Find your{ '\n' }focus.</Text>
+        <Text style={[styles.heroTitle, { color: theme.background }]}>Find your{ '\n' }focus.</Text>
         <View style={styles.heroBottom}>
-          <Text style={styles.heroHint}>Start a focused session</Text>
-          <View style={styles.play}><Ionicons name="play" size={17} color="#14251B" /></View>
+          <Text style={[styles.heroHint, { color: theme.background }]}>Start a focused session</Text>
+          <View style={[styles.play, { backgroundColor: theme.background }]}><Ionicons name="play" size={17} color={theme.primary} /></View>
         </View>
       </Pressable>
 
@@ -99,17 +101,18 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { fontSize: 10, letterSpacing: 2.2, fontWeight: '800', marginBottom: 4 },
   title: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
-  avatar: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1 },
+  avatarImage: { width: '100%', height: '100%' },
   greeting: { fontSize: 25, fontWeight: '800', letterSpacing: -0.7, marginTop: 8 },
   sub: { fontSize: 13, marginTop: -12 },
-  hero: { backgroundColor: '#17352A', borderRadius: 28, padding: 22, minHeight: 222, justifyContent: 'space-between', overflow: 'hidden' },
+  hero: { borderRadius: 28, padding: 22, minHeight: 222, justifyContent: 'space-between', overflow: 'hidden' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#B8F36B' },
-  heroLabel: { color: '#B9D2C1', fontSize: 10, fontWeight: '800', letterSpacing: 1.6 },
-  heroTitle: { color: '#F5FAF2', fontSize: 37, lineHeight: 41, fontWeight: '800', letterSpacing: -1.4, marginVertical: 15 },
+  heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6, opacity: 0.78 },
+  heroTitle: { fontSize: 37, lineHeight: 41, fontWeight: '800', letterSpacing: -1.4, marginVertical: 15 },
   heroBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroHint: { color: '#D0DFD3', fontSize: 13, fontWeight: '500' },
-  play: { width: 42, height: 42, borderRadius: 15, backgroundColor: '#B8F36B', alignItems: 'center', justifyContent: 'center' },
+  heroHint: { fontSize: 13, fontWeight: '600', opacity: 0.82 },
+  play: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 },
   sectionTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.4 },
   sectionMeta: { fontSize: 9, letterSpacing: 1.4, fontWeight: '800' },
