@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
@@ -8,24 +8,30 @@ import { getDatabase, getSetting, setSetting } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { useAppTheme } from '@/state/theme';
 
-const PRESETS = [15, 25, 45, 60];
-type ActiveFocusSession = { minutes: number; remaining: number; endAt: number | null; startedAt: string };
+const FOCUS_PRESETS = [15, 25, 45, 60];
+const BREAK_PRESETS = [5, 10, 15];
+type SessionType = 'focus' | 'short-break' | 'long-break';
+type ActiveFocusSession = { minutes: number; remaining: number; endAt: number | null; startedAt: string; sessionType?: SessionType };
 
 export default function FocusScreen() {
   const theme = useAppTheme();
   const [minutes, setMinutes] = useState(25);
+  const [sessionType, setSessionType] = useState<SessionType>('focus');
+  const [customMinutes, setCustomMinutes] = useState('');
   const [remaining, setRemaining] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const [restoring, setRestoring] = useState(true);
   const startedAt = useRef<string | null>(null);
   const remainingRef = useRef(25 * 60);
   const minutesRef = useRef(25);
+  const sessionTypeRef = useRef<SessionType>('focus');
   const endAtRef = useRef<number | null>(null);
   const notificationIdRef = useRef<string | null>(null);
   const finishingRef = useRef(false);
 
   useEffect(() => { remainingRef.current = remaining; }, [remaining]);
   useEffect(() => { minutesRef.current = minutes; }, [minutes]);
+  useEffect(() => { sessionTypeRef.current = sessionType; }, [sessionType]);
 
   const cancelNotification = async () => {
     const id = notificationIdRef.current;
@@ -55,7 +61,7 @@ export default function FocusScreen() {
     try {
       const db = await getDatabase();
       if (elapsed > 0) {
-        await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed) VALUES (?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0);
+        await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed, session_type) VALUES (?, ?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0, sessionTypeRef.current);
       }
       await setSetting('focus.active', null);
       if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
@@ -72,7 +78,10 @@ export default function FocusScreen() {
       try {
         const session = await getSetting<ActiveFocusSession | null>('focus.active', null);
         if (!active) return;
-        if (session && [15, 25, 45, 60].includes(session.minutes) && Number.isFinite(session.remaining) && typeof session.startedAt === 'string') {
+        if (session && Number.isInteger(session.minutes) && session.minutes >= 1 && session.minutes <= 180 && Number.isFinite(session.remaining) && typeof session.startedAt === 'string') {
+          const restoredType: SessionType = session.sessionType === 'short-break' || session.sessionType === 'long-break' ? session.sessionType : 'focus';
+          sessionTypeRef.current = restoredType;
+          setSessionType(restoredType);
           minutesRef.current = session.minutes;
           setMinutes(session.minutes);
           startedAt.current = session.startedAt;
@@ -134,7 +143,7 @@ export default function FocusScreen() {
     }
     if (!startedAt.current) startedAt.current = new Date().toISOString();
     endAtRef.current = Date.now() + seconds * 1000;
-    void setSetting('focus.active', { minutes: minutesRef.current, remaining: seconds, endAt: endAtRef.current, startedAt: startedAt.current });
+    void setSetting('focus.active', { minutes: minutesRef.current, remaining: seconds, endAt: endAtRef.current, startedAt: startedAt.current, sessionType: sessionTypeRef.current });
     setRunning(true);
     try {
       if (Platform.OS === 'android') {
@@ -169,7 +178,7 @@ export default function FocusScreen() {
     setRunning(false);
     void cancelNotification();
     if (remainingRef.current === 0) void finish(true);
-    else if (startedAt.current) void setSetting('focus.active', { minutes: minutesRef.current, remaining: remainingRef.current, endAt: null, startedAt: startedAt.current });
+    else if (startedAt.current) void setSetting('focus.active', { minutes: minutesRef.current, remaining: remainingRef.current, endAt: null, startedAt: startedAt.current, sessionType: sessionTypeRef.current });
   };
 
   const endSession = async (goBack = false) => {
