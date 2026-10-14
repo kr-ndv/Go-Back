@@ -42,8 +42,8 @@ export default function TodayScreen() {
         </View>
         <Pressable accessibilityLabel="Open local profile settings" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profilePicture ? <Image source={{ uri: profilePicture }} style={styles.avatarImage} /> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
       </View>
-      <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Make today count, ${profileName.trim()}.` : 'Make today count.'}</Text>
-      <Text style={[styles.sub, { color: theme.muted }]}>Small steps. Real progress. Less distraction.</Text>
+      <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Welcome back, ${profileName.trim()}.` : 'Welcome back.'}</Text>
+      <Text style={[styles.sub, { color: theme.muted }]}>Your focus, tasks and goals in one place.</Text>
 
       <Pressable onPress={() => router.push('/focus')} style={[styles.hero, { backgroundColor: theme.primary }]}>
         <View style={styles.heroTop}>
@@ -59,7 +59,7 @@ export default function TodayScreen() {
       </Pressable>
 
       <View style={styles.sectionHead}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Your day</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Your overview</Text>
         <Text style={[styles.sectionMeta, { color: theme.muted }]}>AT A GLANCE</Text>
       </View>
       <View style={styles.grid}>
