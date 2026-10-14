@@ -1,6 +1,7 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { DateField } from '@/components/DateField';
@@ -26,24 +27,26 @@ export default function TasksScreen() {
 
   const add = async () => {
     const clean = title.trim();
-    if (!clean) return;
+    if (!clean) { showThemedDialog('Add a task', 'Type a task name first, then tap the plus button.'); return; }
     if (dueDate && !isValidISODate(dueDate)) {
-      Alert.alert('Check the due date', 'Use a real calendar date in YYYY-MM-DD format, or leave it blank.');
+      showThemedDialog('Check the due date', 'Choose a valid calendar date, or clear the optional due date.');
       return;
     }
-    const db = await getDatabase();
-    await db.runAsync('INSERT INTO tasks (id, title, completed, created_at, priority, due_date) VALUES (?, ?, 0, ?, ?, ?)', createLocalId('task'), clean, new Date().toISOString(), priority, dueDate.trim() || null);
-    setTitle('');
-    setDueDate('');
-    setPriority('normal');
-    await load();
+    try {
+      const db = await getDatabase();
+      await db.runAsync('INSERT INTO tasks (id, title, completed, created_at, priority, due_date) VALUES (?, ?, 0, ?, ?, ?)', createLocalId('task'), clean, new Date().toISOString(), priority, dueDate.trim() || null);
+      setTitle(''); setDueDate(''); setPriority('normal');
+      await load();
+    } catch (error) {
+      showThemedDialog('Task not saved', error instanceof Error ? error.message : 'Go Back could not save this task. Please try again.');
+    }
   };
   const toggle = async (task: Task) => {
     const db = await getDatabase();
     await db.runAsync('UPDATE tasks SET completed = ? WHERE id = ?', task.completed ? 0 : 1, task.id);
     await load();
   };
-  const remove = (task: Task) => Alert.alert('Delete task?', task.title, [
+  const remove = (task: Task) => showThemedDialog('Delete task?', task.title, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM tasks WHERE id = ?', task.id); await load(); } },
   ]);
