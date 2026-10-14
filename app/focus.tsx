@@ -42,7 +42,7 @@ export default function FocusScreen() {
         return;
       }
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete');
+      const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete' || item.content.title === 'Break complete');
       await Promise.all(focusNotifications.map(item => Notifications.cancelScheduledNotificationAsync(item.identifier)));
     } catch {
       // Notification state may be unavailable on this device.
