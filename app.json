@@ -5,13 +5,15 @@
     "scheme": "goback",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
       "package": "com.goback.focus",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#10231D"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#07130F"
       },
       "permissions": [
         "POST_NOTIFICATIONS",
