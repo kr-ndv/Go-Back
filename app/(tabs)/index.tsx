@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { useCallback, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
@@ -17,18 +17,16 @@ export default function TodayScreen() {
   const [taskCount, setTaskCount] = useState(0);
   const [doneCount, setDoneCount] = useState(0);
   const [profileName, setProfileName] = useState('');
-  const [profilePicture, setProfilePicture] = useState('');
 
   useFocusEffect(useCallback(() => {
     let active = true;
     const load = async () => {
       const db = await getDatabase();
-      const [counts, name, picture] = await Promise.all([
+      const [counts, name] = await Promise.all([
         db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as done FROM tasks'),
         getSetting<string>('profile.name', ''),
-        getSetting<string>('profile.picture', ''),
       ]);
-      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); setProfileName(name); setProfilePicture(picture); }
+      if (active) { setTaskCount(counts?.total ?? 0); setDoneCount(counts?.done ?? 0); setProfileName(name); }
     };
     void load();
     return () => { active = false; };
@@ -41,7 +39,7 @@ export default function TodayScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>YOUR SPACE</Text>
           <Text style={[styles.title, { color: theme.text }]}>Go Back<Text style={{ color: theme.primary }}>.</Text></Text>
         </View>
-        <Pressable accessibilityLabel="Open local profile settings" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profilePicture ? <Image source={{ uri: profilePicture }} style={styles.avatarImage} /> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
+        <Pressable accessibilityLabel="Open local profile settings" onPress={() => router.push("/(tabs)/settings")} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
       </View>
       <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Welcome back, ${profileName.trim()}.` : 'Welcome back.'}</Text>
       <Text style={[styles.sub, { color: theme.muted }]}>Your focus, tasks and goals in one place.</Text>
@@ -103,7 +101,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 10, letterSpacing: 2.2, fontWeight: '800', marginBottom: 4 },
   title: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
   avatar: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1 },
-  avatarImage: { width: '100%', height: '100%' },
   greeting: { fontSize: 25, fontWeight: '800', letterSpacing: -0.7, marginTop: 8 },
   sub: { fontSize: 13, marginTop: -12 },
   hero: { borderRadius: 28, padding: 22, minHeight: 222, justifyContent: 'space-between', overflow: 'hidden' },
