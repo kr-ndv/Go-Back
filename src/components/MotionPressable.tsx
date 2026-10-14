@@ -5,6 +5,8 @@ type MotionPressableProps = Omit<PressableProps, 'style'> & {
   style?: StyleProp<ViewStyle>;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 /** Small spring feedback for tappable surfaces; intentionally subtle and fast. */
 export function MotionPressable({ style, onPressIn, onPressOut, ...props }: MotionPressableProps) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -19,19 +21,17 @@ export function MotionPressable({ style, onPressIn, onPressOut, ...props }: Moti
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Pressable
-        {...props}
-        style={style}
-        onPressIn={event => {
-          animate(0.975);
-          onPressIn?.(event);
-        }}
-        onPressOut={event => {
-          animate(1);
-          onPressOut?.(event);
-        }}
-      />
-    </Animated.View>
+    <AnimatedPressable
+      {...props}
+      style={[style, { transform: [{ scale }] }]}
+      onPressIn={event => {
+        animate(0.975);
+        onPressIn?.(event);
+      }}
+      onPressOut={event => {
+        animate(1);
+        onPressOut?.(event);
+      }}
+    />
   );
 }
