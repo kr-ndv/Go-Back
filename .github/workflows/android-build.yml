@@ -7,7 +7,7 @@ on:
 
 jobs:
   android-apk:
-    name: Generate Android debug APK
+    name: Generate standalone Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,14 +25,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install --clean
-      - name: Build installable debug APK
-        run: cd android && ./gradlew assembleDebug
+      - name: Build standalone APK with bundled JavaScript
+        run: cd android && ./gradlew assembleRelease
       - name: Prepare APK and checksum
         run: |
           mkdir -p release
-          cp android/app/build/outputs/apk/debug/app-debug.apk release/Go-Back-1.0.0-debug.apk
-          sha256sum release/Go-Back-1.0.0-debug.apk > release/SHA256SUMS.txt
-          printf 'Build type: Android debug APK (device testing only)\nCommit: %s\nPackage: com.goback.focus\n' "$GITHUB_SHA" > release/BUILD-INFO.txt
+          cp android/app/build/outputs/apk/release/app-release.apk release/Go-Back-1.0.0.apk
+          sha256sum release/Go-Back-1.0.0.apk > release/SHA256SUMS.txt
+          printf 'Build type: Standalone Android APK with bundled JavaScript (test signing)\nCommit: %s\nPackage: com.goback.focus\n' "$GITHUB_SHA" > release/BUILD-INFO.txt
       - name: Package complete source and debug APK
         run: |
           zip -qr Go-Back-Complete-Project.zip . \
@@ -46,9 +46,9 @@ jobs:
       - name: Upload installable debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Go-Back-Android-Debug-APK
+          name: Go-Back-Android-Standalone-APK
           path: |
-            release/Go-Back-1.0.0-debug.apk
+            release/Go-Back-1.0.0.apk
             release/SHA256SUMS.txt
             release/BUILD-INFO.txt
           retention-days: 14
