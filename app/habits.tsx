@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,7 +46,7 @@ export default function HabitsScreen() {
     else await db.runAsync('INSERT INTO habit_logs (id, habit_id, log_date, completed) VALUES (?, ?, ?, 1) ON CONFLICT(habit_id, log_date) DO UPDATE SET completed = 1', createLocalId('habit-log'), habit.id, today);
     await load();
   };
-  const remove = (habit: HabitRow) => Alert.alert('Remove habit?', habit.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM habits WHERE id = ?', habit.id); await load(); } }]);
+  const remove = (habit: HabitRow) => showThemedDialog('Remove habit?', habit.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM habits WHERE id = ?', habit.id); await load(); } }]);
   const completed = habits.filter(h => h.done_today).length;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Daily habits</Text><View style={{ width: 40 }} /></View>
