@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,9 +21,9 @@ export default function GoalsScreen() {
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
     const clean = title.trim();
-    if (!clean) { Alert.alert('Name your goal', 'Add a short description of what you want to achieve.'); return; }
+    if (!clean) { showThemedDialog('Name your goal', 'Add a short description of what you want to achieve.'); return; }
     if (targetDate && !isValidISODate(targetDate)) {
-      Alert.alert('Check the target date', 'Use a real date in YYYY-MM-DD format, or leave it blank.'); return;
+      showThemedDialog('Check the target date', 'Use a real date in YYYY-MM-DD format, or leave it blank.'); return;
     }
     const db = await getDatabase();
     await db.runAsync('INSERT INTO goals (id, title, target_date, progress, created_at) VALUES (?, ?, ?, 0, ?)', createLocalId('goal'), clean, targetDate.trim() || null, new Date().toISOString());
@@ -33,7 +34,7 @@ export default function GoalsScreen() {
     await db.runAsync('UPDATE goals SET progress = ? WHERE id = ?', Math.max(0, Math.min(100, goal.progress + delta)), goal.id);
     await load();
   };
-  const remove = (goal: Goal) => Alert.alert('Delete goal?', goal.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM goals WHERE id = ?', goal.id); await load(); } }]);
+  const remove = (goal: Goal) => showThemedDialog('Delete goal?', goal.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM goals WHERE id = ?', goal.id); await load(); } }]);
   const completed = goals.filter(goal => goal.progress === 100).length;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Goals</Text><View style={{ width: 40 }} /></View>
