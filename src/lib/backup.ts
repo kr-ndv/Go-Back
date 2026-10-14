@@ -8,7 +8,7 @@ const COLUMNS: Record<TableName, string[]> = {
   tasks: ['id', 'title', 'completed', 'created_at', 'priority', 'due_date'],
   notes: ['id', 'title', 'body', 'updated_at'],
   subjects: ['id', 'name', 'chapters_json', 'updated_at'],
-  focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed'],
+  focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed', 'session_type'],
   exams: ['id', 'title', 'exam_date', 'details'],
   goals: ['id', 'title', 'target_date', 'progress', 'created_at'],
   habits: ['id', 'title', 'created_at', 'archived'],
