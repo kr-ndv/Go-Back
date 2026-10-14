@@ -169,6 +169,7 @@ function withGoBackWidget(config) {
     write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider);
     write(path.join(javaRoot, 'GoBackUsageModule.kt'), usageModule);
     write(path.join(javaRoot, 'GoBackUsagePackage.kt'), usagePackage);
+    write(path.join(javaRoot, 'GoBackBlockingModule.kt'), blockingModule);
     write(path.join(javaRoot, 'GoBackBlockingService.kt'), blockingService);
     const mainApplication = path.join(javaRoot, 'MainApplication.kt');
     if (!fs.existsSync(mainApplication)) throw new Error('Go Back usage stats: MainApplication.kt was not found after Expo prebuild.');
