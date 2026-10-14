@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -19,18 +20,32 @@ export default function SettingsScreen() {
   const setAccent = useThemeStore(s => s.setAccent);
   const [profileName, setProfileName] = useState('');
   const [profileId, setProfileId] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
   useEffect(() => {
     void (async () => {
-      const savedName = await getSetting<string>('profile.name', '');
+      const [savedName, savedPicture] = await Promise.all([getSetting<string>('profile.name', ''), getSetting<string>('profile.picture', '')]);
       let savedId = await getSetting<string>('profile.id', '');
       if (!savedId) {
         savedId = createLocalId('GB').toUpperCase();
         await setSetting('profile.id', savedId);
       }
       setProfileName(savedName);
+      setProfilePicture(savedPicture);
       setProfileId(savedId);
     })().catch(() => Alert.alert('Profile unavailable', 'Could not load your local profile.'));
   }, []);
+  const chooseProfilePicture = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) { Alert.alert('Photo permission needed', 'Allow photo access to choose a profile picture.'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+      if (result.canceled || !result.assets[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      await setSetting('profile.picture', uri);
+      setProfilePicture(uri);
+    } catch (error) { Alert.alert('Could not choose picture', error instanceof Error ? error.message : 'Please try again.'); }
+  };
+  const removeProfilePicture = async () => { await setSetting('profile.picture', ''); setProfilePicture(''); };
   const saveProfile = async () => {
     await setSetting('profile.name', profileName.trim());
     Alert.alert('Profile saved', 'Your display name is saved on this device.');
@@ -90,6 +105,11 @@ export default function SettingsScreen() {
     <Text style={[styles.section, { color: theme.text }]}>Local profile</Text>
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border, alignItems: 'flex-start' }]}>
       <View style={{ flex: 1, gap: 9 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {profilePicture ? <Image source={{ uri: profilePicture }} style={styles.profileAvatar} /> : <View style={[styles.profileAvatar, { backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}><Ionicons name="person-outline" size={26} color={theme.primary} /></View>}
+          <View style={{ flex: 1, gap: 7 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Profile picture</Text><Pressable onPress={() => void chooseProfilePicture()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>{profilePicture ? 'Change picture' : 'Choose picture'}</Text></Pressable></View>
+          {profilePicture ? <Pressable onPress={() => void removeProfilePicture()} accessibilityLabel="Remove profile picture" hitSlop={8}><Ionicons name="trash-outline" size={19} color={theme.muted} /></Pressable> : null}
+        </View>
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
         <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
@@ -121,6 +141,7 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13 },
   section: { fontSize: 17, fontWeight: '800', marginTop: 8 },
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
   profileId: { fontSize: 12, fontWeight: '800' },
