@@ -37,7 +37,8 @@
     "expo-sharing": "~14.0.0",
     "expo-font": "~14.0.12",
     "expo-image-picker": "~17.0.8",
-    "@react-native-community/datetimepicker": "~8.4.4"
+    "@react-native-community/datetimepicker": "~8.4.4",
+    "expo-splash-screen": "~31.0.13"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
