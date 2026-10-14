@@ -16,5 +16,5 @@ export function Screen({ children, contentStyle }: { children: React.ReactNode; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36, gap: 18 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 112, gap: 18 },
 });
