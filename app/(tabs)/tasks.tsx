@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
+import { DateField } from '@/components/DateField';
 import { useAppTheme } from '@/state/theme';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
@@ -56,7 +57,7 @@ export default function TasksScreen() {
         <TextInput value={title} onChangeText={setTitle} placeholder="What needs to get done?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} />
         <Pressable onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={23} color={theme.background} /></Pressable>
       </View>
-      <TextInput value={dueDate} onChangeText={setDueDate} placeholder="Due date (optional · YYYY-MM-DD)" placeholderTextColor={theme.muted} style={[styles.dueInput, { color: theme.text, borderColor: theme.border }]} />
+      <DateField value={dueDate} onChange={setDueDate} placeholder="Due date (optional)" optional />
       <View style={styles.priorities}><Text style={[styles.priorityLabel, { color: theme.muted }]}>PRIORITY</Text>{(['low', 'normal', 'high'] as Priority[]).map(value => <Pressable key={value} onPress={() => setPriority(value)} style={[styles.priorityOption, { borderColor: priority === value ? priorityColor(value) : theme.border, backgroundColor: priority === value ? theme.surfaceAlt : 'transparent' }]}><View style={[styles.priorityDot, { backgroundColor: priorityColor(value) }]} /><Text style={[styles.priorityText, { color: theme.text }]}>{value[0].toUpperCase() + value.slice(1)}</Text></Pressable>)}</View>
     </View>
     {tasks.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="leaf-outline" size={30} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>A clear mind starts here.</Text><Text style={[styles.sub, { color: theme.muted, textAlign: 'center' }]}>Add one small task and build momentum.</Text></View> :
