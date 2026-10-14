@@ -16,7 +16,7 @@
 
 ## Stage 3: Android system features
 - An Android home-screen quick-actions widget is implemented through an Expo config plugin; add a live focus-status and exam-countdown widget in a later pass
-- Usage access onboarding and usage-statistics integration where Android permits
+- Android UsageStatsManager bridge and explicit Usage Access onboarding are implemented in the native config plugin; real-device validation and usage-history accuracy checks remain
 - App blocking via an explicit, transparent Android implementation; assess AccessibilityService / UsageStatsManager limitations and Play policy before shipping
 - Scheduled blocking and strict mode with a clear emergency exit
 - Test on real Android devices and document battery/background behavior
@@ -33,4 +33,4 @@
 - iOS Screen Time / Family Controls capabilities require Apple entitlements and platform-specific review
 
 ## Current prototype limitations
-The timer recalculates elapsed time when the app returns to the foreground and schedules a completion notification when permitted, but background behavior must be tested on real devices. The quick-actions widget is implemented; live focus/exam widgets and app blocking are still outstanding. Do not market the prototype as production-ready until platform features are implemented and device-tested.
+The timer supports custom focus durations, short/long breaks, active-session persistence, elapsed-time recalculation when the app returns to the foreground and completion notifications when permitted; background behavior must be tested on real devices. Screen-time reporting uses Android UsageStatsManager behind explicit user-granted Usage Access. The quick-actions widget is implemented; live focus/exam widgets and app blocking are still outstanding. Do not market the prototype as production-ready until platform features are implemented and device-tested.
