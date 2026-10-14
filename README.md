@@ -8,7 +8,7 @@ The initial application foundation is in progress. It includes:
 - Expo Router navigation and a Today dashboard
 - Local SQLite tables for tasks, notes, subjects, focus sessions, exams and settings
 - Task list with priorities and optional due dates
-- Personal notes editor
+- Personal notes editor with title/body search
 - Focus timer with preset/custom durations, focus and break modes, elapsed-time recovery, completion notifications, and session history
 - Exam countdown and timetable
 - Subject/chapter syllabus tracker with automatic progress
