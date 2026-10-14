@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
+import { isValidISODate } from '@/lib/date';
 import { useAppTheme } from '@/state/theme';
 
 type Goal = { id: string; title: string; target_date: string | null; progress: number; created_at: string };
@@ -19,7 +20,7 @@ export default function GoalsScreen() {
   const add = async () => {
     const clean = title.trim();
     if (!clean) { Alert.alert('Name your goal', 'Add a short description of what you want to achieve.'); return; }
-    if (targetDate && (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate) || Number.isNaN(new Date(targetDate + 'T12:00:00').getTime()) || new Date(targetDate + 'T12:00:00').toISOString().slice(0, 10) !== targetDate)) {
+    if (targetDate && !isValidISODate(targetDate)) {
       Alert.alert('Check the target date', 'Use a real date in YYYY-MM-DD format, or leave it blank.'); return;
     }
     const db = await getDatabase();
