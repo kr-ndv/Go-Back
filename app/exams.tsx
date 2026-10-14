@@ -1,6 +1,7 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
@@ -19,17 +20,32 @@ export default function ExamsScreen() {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [details, setDetails] = useState('');
-  const load = useCallback(async () => { const db = await getDatabase(); setExams(await db.getAllAsync<Exam>('SELECT * FROM exams ORDER BY exam_date ASC')); }, []);
+  const [syllabusSubjects, setSyllabusSubjects] = useState<string[]>([]);
+  const load = useCallback(async () => {
+    const db = await getDatabase();
+    const [examRows, subjectRows] = await Promise.all([
+      db.getAllAsync<Exam>('SELECT * FROM exams ORDER BY exam_date ASC'),
+      db.getAllAsync<{ name: string }>('SELECT name FROM subjects ORDER BY name COLLATE NOCASE'),
+    ]);
+    setExams(examRows);
+    setSyllabusSubjects(subjectRows.map(subject => subject.name));
+  }, []);
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
     const cleanTitle = title.trim();
-    const validDate = isValidISODate(date);
-    if (!cleanTitle || !validDate) { Alert.alert('Check your exam details', 'Add a subject or exam name and a date in YYYY-MM-DD format.'); return; }
-    const db = await getDatabase();
-    await db.runAsync('INSERT INTO exams (id, title, exam_date, details) VALUES (?, ?, ?, ?)', createLocalId('exam'), cleanTitle, date, details.trim());
-    setTitle(''); setDate(''); setDetails(''); await load();
+    if (!cleanTitle) { showThemedDialog('Choose an exam subject', 'Type a subject name or select one from your syllabus list.'); return; }
+    if (!isValidISODate(date)) { showThemedDialog('Choose the exam date', 'Select a date from the calendar before adding the exam.'); return; }
+    try {
+      const db = await getDatabase();
+      await db.runAsync('INSERT INTO exams (id, title, exam_date, details) VALUES (?, ?, ?, ?)', createLocalId('exam'), cleanTitle, date, details.trim());
+      setTitle(''); setDate(''); setDetails('');
+      await load();
+      showThemedDialog('Exam added', cleanTitle + ' is now in your timetable.');
+    } catch (error) {
+      showThemedDialog('Exam not saved', error instanceof Error ? error.message : 'Go Back could not save this exam. Please try again.');
+    }
   };
-  const remove = (exam: Exam) => Alert.alert('Remove exam?', exam.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); } }]);
+  const remove = (exam: Exam) => showThemedDialog('Remove exam?', exam.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); } }]);
   const upcoming = exams.filter(e => daysUntil(e.exam_date) >= 0);
   const next = upcoming[0];
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -39,7 +55,13 @@ export default function ExamsScreen() {
       {next ? <View style={[styles.hero, { backgroundColor: theme.primary }]}><Text style={[styles.heroLabel, { color: theme.background }]}>UP NEXT</Text><Text style={[styles.heroTitle, { color: theme.background }]}>{next.title}</Text><View style={styles.countRow}><Text style={[styles.count, { color: theme.background }]}>{daysUntil(next.exam_date)}</Text><Text style={[styles.days, { color: theme.background }]}>DAYS TO GO</Text></View><Text style={[styles.heroDate, { color: theme.background }]}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
       <Text style={[styles.section, { color: theme.text }]}>Add an exam</Text>
       <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <TextInput value={title} onChangeText={setTitle} placeholder="Subject or exam name" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
+        <TextInput value={title} onChangeText={setTitle} placeholder="Subject or exam name" placeholderTextColor={theme.muted} returnKeyType="next" style={[styles.input, { color: theme.text }]} />
+        {syllabusSubjects.length > 0 && <View style={styles.subjectPicker}>
+          <Text style={[styles.pickerLabel, { color: theme.muted }]}>QUICK PICK FROM YOUR SYLLABUS</Text>
+          <View style={styles.subjectOptions}>
+            {syllabusSubjects.map(subject => <Pressable key={subject} onPress={() => setTitle(subject)} style={[styles.subjectChip, { backgroundColor: title === subject ? theme.surfaceAlt : 'transparent', borderColor: title === subject ? theme.primary : theme.border }]}><Text style={[styles.subjectChipText, { color: title === subject ? theme.primary : theme.text }]}>{subject}</Text></Pressable>)}
+          </View>
+        </View>}
         <DateField value={date} onChange={setDate} placeholder="Choose exam date" />
         <TextInput value={details} onChangeText={setDetails} placeholder="Time / room / notes (optional)" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
         <Pressable onPress={() => void add()} style={[styles.add, { backgroundColor: theme.primary }]}><Ionicons name="add" size={19} color={theme.background} /><Text style={[styles.addText, { color: theme.background }]}>Add to timetable</Text></Pressable>
@@ -58,6 +80,10 @@ const styles = StyleSheet.create({
   count: { fontSize: 52, fontWeight: '900', letterSpacing: -2 }, days: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, opacity: 0.8 },
   heroDate: { fontSize: 12, opacity: 0.8 }, section: { fontSize: 17, fontWeight: '800', marginTop: 7 },
   form: { borderWidth: 1, borderRadius: 20, padding: 12, gap: 7 }, input: { paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 },
+  subjectPicker: { gap: 8, paddingHorizontal: 4, paddingBottom: 4 }, pickerLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  subjectOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  subjectChip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8 },
+  subjectChipText: { fontSize: 11, fontWeight: '700' },
   add: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 13 }, addText: { fontSize: 13, fontWeight: '800' },
   empty: { borderWidth: 1, borderRadius: 22, padding: 24, alignItems: 'center', gap: 10 }, emptyTitle: { fontSize: 16, fontWeight: '800' },
   hint: { fontSize: 11, lineHeight: 17 }, exam: { borderWidth: 1, borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
