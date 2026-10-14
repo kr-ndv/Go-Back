@@ -5,11 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
+import { daysUntilISODate, isValidISODate } from '@/lib/date';
 import { useAppTheme } from '@/state/theme';
 
 type Exam = { id: string; title: string; exam_date: string; details: string };
 const dateLabel = (date: string) => new Date(date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-const daysUntil = (date: string) => Math.ceil((new Date(date + 'T00:00:00').getTime() - new Date(new Date().toDateString()).getTime()) / 86400000);
+const daysUntil = (date: string) => daysUntilISODate(date);
 
 export default function ExamsScreen() {
   const theme = useAppTheme();
@@ -21,8 +22,7 @@ export default function ExamsScreen() {
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
     const cleanTitle = title.trim();
-    const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T12:00:00') : null;
-    const validDate = !!parsedDate && !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === date;
+    const validDate = isValidISODate(date);
     if (!cleanTitle || !validDate) { Alert.alert('Check your exam details', 'Add a subject or exam name and a date in YYYY-MM-DD format.'); return; }
     const db = await getDatabase();
     await db.runAsync('INSERT INTO exams (id, title, exam_date, details) VALUES (?, ?, ?, ?)', createLocalId('exam'), cleanTitle, date, details.trim());
