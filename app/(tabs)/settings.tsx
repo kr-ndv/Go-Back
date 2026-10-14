@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useState } from 'react';
-import { Alert, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -30,11 +31,11 @@ export default function SettingsScreen() {
       }
       setProfileName(savedName);
       setProfileId(savedId);
-    })().catch(() => Alert.alert('Profile unavailable', 'Could not load your local profile.'));
+    })().catch(() => showThemedDialog('Profile unavailable', 'Could not load your local profile.'));
   }, []);
   const saveProfile = async () => {
     await setSetting('profile.name', profileName.trim());
-    Alert.alert('Profile saved', 'Your display name is saved on this device.');
+    showThemedDialog('Profile saved', 'Your display name is saved on this device.');
   };
   const exportBackup = async () => {
     try {
@@ -45,7 +46,7 @@ export default function SettingsScreen() {
       await FileSystem.writeAsStringAsync(uri, json, { encoding: FileSystem.EncodingType.UTF8 });
       await Sharing.shareAsync(uri, { mimeType: 'application/json', dialogTitle: 'Export Go Back backup' });
     } catch (error) {
-      Alert.alert('Backup export failed', error instanceof Error ? error.message : 'Please try again.');
+      showThemedDialog('Backup export failed', error instanceof Error ? error.message : 'Please try again.');
     }
   };
   const importBackup = async () => {
@@ -53,20 +54,20 @@ export default function SettingsScreen() {
       const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets[0]) return;
       const json = await FileSystem.readAsStringAsync(picked.assets[0].uri);
-      Alert.alert('Replace local data?', 'Restoring this backup replaces the tasks, notes, exams, syllabus, goals, habits, focus history and settings currently stored on this device.', [
+      showThemedDialog('Replace local data?', 'Restoring this backup replaces the tasks, notes, exams, syllabus, goals, habits, focus history and settings currently stored on this device.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Restore backup', style: 'destructive', onPress: () => { void (async () => {
           try {
             await restoreBackupJson(json);
             await useThemeStore.getState().hydrate();
-            Alert.alert('Backup restored', 'Your Go Back data has been restored.');
+            showThemedDialog('Backup restored', 'Your Go Back data has been restored.');
           } catch (error) {
-            Alert.alert('Restore failed', error instanceof Error ? error.message : 'The backup could not be restored.');
+            showThemedDialog('Restore failed', error instanceof Error ? error.message : 'The backup could not be restored.');
           }
         })(); } },
       ]);
     } catch (error) {
-      Alert.alert('Could not open backup', error instanceof Error ? error.message : 'Please choose a valid JSON backup.');
+      showThemedDialog('Could not open backup', error instanceof Error ? error.message : 'Please choose a valid JSON backup.');
     }
   };
   const choices: { value: ThemeMode; label: string; hint: string; icon: keyof typeof Ionicons.glyphMap }[] = [
