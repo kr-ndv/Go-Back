@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
+import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { useCallback, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
