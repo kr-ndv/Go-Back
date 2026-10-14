@@ -84,6 +84,7 @@ export default function TodayScreen() {
         <Action icon="leaf-outline" label="Daily habits & streaks" onPress={() => router.push('/habits')} theme={theme} />
         <Action icon="flag-outline" label="Goals & progress" onPress={() => router.push('/goals')} theme={theme} />
         <Action icon="analytics-outline" label="Screen-time insights" onPress={() => router.push('/usage')} theme={theme} />
+        <Action icon="shield-checkmark-outline" label="App & Shorts blocking" onPress={() => router.push('/blocking')} theme={theme} />
       </View>
       <Text style={[styles.footer, { color: theme.muted }]}>YOUR TIME. YOUR TERMS.</Text>
     </Screen>
