@@ -25,7 +25,7 @@ export default function TabsLayout() {
         borderTopWidth: 0,
         borderWidth: 1,
         borderColor: theme.border,
-        elevation: 20,
+        elevation: 14,
         shadowColor: '#000000',
         shadowOpacity: 0.12,
         shadowRadius: 12,
@@ -33,7 +33,6 @@ export default function TabsLayout() {
       },
       tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
       tabBarItemStyle: { borderRadius: 18, marginVertical: 3 },
-      tabBarActiveBackgroundColor: theme.primary + '18',
     }}>
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="tasks" options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} /> }} />
