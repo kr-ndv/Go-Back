@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, NativeModules, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, NativeModules, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +11,7 @@ type BlockingConfig = {
   blockInstagram: boolean;
   blockShorts: boolean;
   blockReels: boolean;
-  blockedChannels: string[];
+  allowedChannels: string[];
 };
 type BlockingBridge = {
   isAccessibilityEnabled: () => Promise<boolean>;
@@ -19,7 +20,7 @@ type BlockingBridge = {
   setConfig: (json: string) => Promise<boolean>;
 };
 const bridge = NativeModules.GoBackBlocking as BlockingBridge | undefined;
-const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, blockedChannels: [] };
+const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, allowedChannels: [] };
 
 export default function BlockingScreen() {
   const theme = useAppTheme();
@@ -35,7 +36,7 @@ export default function BlockingScreen() {
     try {
       const [saved, accessibilityEnabled] = await Promise.all([bridge.getConfig(), bridge.isAccessibilityEnabled()]);
       setConfig(saved);
-      setChannelText(saved.blockedChannels.join('\n'));
+      setChannelText('');
       setEnabled(accessibilityEnabled);
       setError('');
     } catch {
@@ -49,16 +50,27 @@ export default function BlockingScreen() {
     return () => subscription.remove();
   }, [refresh]);
 
-  const update = (key: keyof Omit<BlockingConfig, 'blockedChannels'>, value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const update = (key: keyof Omit<BlockingConfig, 'allowedChannels'>, value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const addChannel = () => {
+    const clean = channelText.trim().replace(/\s+/g, ' ');
+    if (!clean) { showThemedDialog('Add a YouTube channel', 'Enter a channel name or @handle, then tap Add channel.'); return; }
+    if (config.allowedChannels.length >= 50) { showThemedDialog('Channel list is full', 'You can save up to 50 allowed channels.'); return; }
+    if (config.allowedChannels.some(channel => channel.toLocaleLowerCase() === clean.toLocaleLowerCase())) {
+      setChannelText('');
+      return;
+    }
+    setConfig(current => ({ ...current, allowedChannels: [...current.allowedChannels, clean] }));
+    setChannelText('');
+  };
+  const removeChannel = (channel: string) => setConfig(current => ({ ...current, allowedChannels: current.allowedChannels.filter(item => item !== channel) }));
   const save = async () => {
     if (!bridge) { setError('Install a Go Back native Android build to configure blocking.'); return; }
     setSaving(true); setError('');
     try {
-      const channels = channelText.split(/[\n,]/).map(name => name.trim()).filter(Boolean).filter((name, index, all) => all.findIndex(other => other.toLocaleLowerCase() === name.toLocaleLowerCase()) === index).slice(0, 50);
-      const next = { ...config, blockedChannels: channels };
+      const next = { ...config, allowedChannels: config.allowedChannels.slice(0, 50) };
       await bridge.setConfig(JSON.stringify(next));
-      setConfig(next); setChannelText(channels.join('\n'));
-      Alert.alert('Blocking rules saved', 'Rules are stored on this device. Enable Go Back in Android Accessibility settings for them to take effect.');
+      setConfig(next);
+      showThemedDialog('Blocking rules saved', 'Only channels in your allowlist are exempt from YouTube video blocking. Enable Go Back in Android Accessibility settings for the rules to take effect.');
     } catch { setError('Could not save blocking rules. Please try again.'); }
     finally { setSaving(false); }
   };
@@ -92,7 +104,7 @@ export default function BlockingScreen() {
 
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Toggle title="Block YouTube" detail="Return to the home screen when YouTube opens." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
+        <Toggle title="Limit YouTube to allowed channels" detail="Browsing stays available, but video screens that do not match your allowlist are sent back." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
         <Toggle title="Block Instagram" detail="Return to the home screen when Instagram opens." value={config.blockInstagram} onValueChange={v => update('blockInstagram', v)} />
       </View>
 
@@ -102,11 +114,21 @@ export default function BlockingScreen() {
         <Toggle title="Block Instagram Reels" detail="Go Back tries to leave Reels when its selected tab is detected." value={config.blockReels} onValueChange={v => update('blockReels', v)} />
       </View>
 
-      <Text style={[styles.section, { color: theme.text }]}>Selected YouTube channels</Text>
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, gap: 10 }]}>
-        <Text style={[styles.detail, { color: theme.muted }]}>Enter channel names, one per line (or separated by commas). When a matching name appears in YouTube's visible accessibility text, Go Back attempts to leave that screen. Up to 50 names.</Text>
-        <TextInput value={channelText} onChangeText={setChannelText} multiline textAlignVertical="top" placeholder={'Example:\nChannel name one\nChannel name two'} placeholderTextColor={theme.muted} style={[styles.channelInput, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
-        <Text style={[styles.detail, { color: theme.muted }]}>{channelText.split(/[\n,]/).map(x => x.trim()).filter(Boolean).length} channel entries</Text>
+      <Text style={[styles.section, { color: theme.text }]}>YouTube channel allowlist</Text>
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, gap: 12, paddingVertical: 14 }]}>
+        <View style={styles.allowlistIntro}>
+          <View style={[styles.youtubeGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="logo-youtube" size={21} color={theme.primary} /></View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[styles.toggleTitle, { color: theme.text }]}>Allowed channels</Text>
+            <Text style={[styles.detail, { color: theme.muted }]}>Add only the channel names or @handles you want to watch. Other video screens are blocked when the YouTube limit is on.</Text>
+          </View>
+        </View>
+        <View style={styles.channelEntryRow}>
+          <TextInput value={channelText} onChangeText={setChannelText} onSubmitEditing={addChannel} returnKeyType="done" placeholder="@channelhandle or channel name" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.channelInput, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
+          <Pressable accessibilityLabel="Add allowed channel" onPress={addChannel} style={[styles.channelAddButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={22} color={theme.background} /></Pressable>
+        </View>
+        {config.allowedChannels.length > 0 ? <View style={styles.channelChips}>{config.allowedChannels.map(channel => <View key={channel} style={[styles.channelChip, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}><Text numberOfLines={1} style={[styles.channelChipText, { color: theme.text }]}>{channel}</Text><Pressable onPress={() => removeChannel(channel)} accessibilityLabel={'Remove ' + channel} hitSlop={6}><Ionicons name="close-circle" size={17} color={theme.muted} /></Pressable></View>)}</View> : <View style={[styles.emptyChannels, { borderColor: theme.border }]}><Ionicons name="people-outline" size={20} color={theme.muted} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>No allowed channels yet. When YouTube limiting is enabled, an empty list blocks YouTube entirely.</Text></View>}
+        <Text style={[styles.detail, { color: theme.muted }]}>{config.allowedChannels.length} of 50 channels selected</Text>
       </View>
 
       <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.background} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.background} />}<Text style={[styles.primaryText, { color: theme.background }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
@@ -137,7 +159,15 @@ const styles = StyleSheet.create({
   statusTitle: { fontSize: 13, fontWeight: '800' },
   notice: { flexDirection: 'row', gap: 12, padding: 16, borderWidth: 1, borderRadius: 18 },
   noticeTitle: { fontSize: 14, fontWeight: '800' },
-  channelInput: { minHeight: 115, borderRadius: 14, borderWidth: 1, padding: 12, fontSize: 13, lineHeight: 20 },
+  allowlistIntro: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  youtubeGlyph: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  channelEntryRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  channelInput: { minHeight: 44, flex: 1, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12 },
+  channelAddButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  channelChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  channelChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 13, paddingLeft: 11, paddingRight: 8, paddingVertical: 8 },
+  channelChipText: { maxWidth: 220, fontSize: 11, fontWeight: '700' },
+  emptyChannels: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 11, borderWidth: 1, borderStyle: 'dashed', borderRadius: 14 },
   primaryButton: { minHeight: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   primaryText: { fontSize: 14, fontWeight: '900' },
   secondaryButton: { minHeight: 50, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
