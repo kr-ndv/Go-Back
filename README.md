@@ -9,7 +9,7 @@ The initial application foundation is in progress. It includes:
 - Local SQLite tables for tasks, notes, subjects, focus sessions, exams and settings
 - Task list with priorities and optional due dates
 - Personal notes editor
-- Focus timer with preset durations, elapsed-time recovery, completion notifications, and session history
+- Focus timer with preset/custom durations, focus and break modes, elapsed-time recovery, completion notifications, and session history
 - Exam countdown and timetable
 - Subject/chapter syllabus tracker with automatic progress
 - Daily habits with streak tracking and goals with progress controls
@@ -39,15 +39,16 @@ Run on Android:
 npx expo run:android
 ```
 
-Type-check:
+Type-check and tests:
 
 ```bash
 npm run typecheck
+npm test -- --runInBand
 ```
 
 Build an installable **debug APK** from GitHub Actions:
 1. Open the repository's **Actions** tab.
-2. Select **Android APK Build**.
+2. Select **Android Debug APK**.
 3. Click **Run workflow** and wait for the job to finish.
 4. Download the `Go-Back-debug-apk` artifact from that run.
 
