@@ -32,7 +32,8 @@ export async function getDatabase() {
       id TEXT PRIMARY KEY NOT NULL,
       started_at TEXT NOT NULL,
       duration_seconds INTEGER NOT NULL,
-      completed INTEGER NOT NULL DEFAULT 0
+      completed INTEGER NOT NULL DEFAULT 0,
+      session_type TEXT NOT NULL DEFAULT 'focus'
     );
     CREATE TABLE IF NOT EXISTS exams (
       id TEXT PRIMARY KEY NOT NULL,
@@ -65,6 +66,10 @@ export async function getDatabase() {
       value TEXT NOT NULL
     );
   `);
+  const focusColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(focus_sessions)');
+  if (!focusColumns.some(column => column.name === 'session_type')) {
+    await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN session_type TEXT NOT NULL DEFAULT 'focus'");
+  }
   const taskColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(tasks)');
   if (!taskColumns.some(column => column.name === 'priority')) {
     await database.execAsync("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'");
