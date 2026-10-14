@@ -36,15 +36,23 @@ export default function SettingsScreen() {
   }, []);
   const chooseProfilePicture = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) { Alert.alert('Photo permission needed', 'Allow photo access to choose a profile picture.'); return; }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+      // Use Android's system photo picker without the legacy storage permission.
+      // The in-picker cropper can fail on some provider/HEIC URIs with setDataSource errors.
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.85,
+        selectionLimit: 1,
+      });
       if (result.canceled || !result.assets[0]?.uri) return;
       const sourceUri = result.assets[0].uri;
       const directory = FileSystem.documentDirectory;
       if (!directory) throw new Error('A permanent local storage directory is unavailable.');
-      const extension = result.assets[0].fileName?.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const extension = result.assets[0].fileName?.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '')?.toLowerCase() || 'jpg';
       const uri = directory + 'go-back-profile-picture.' + extension;
+      // A previous profile photo may already occupy this destination.
+      const existing = await FileSystem.getInfoAsync(uri);
+      if (existing.exists) await FileSystem.deleteAsync(uri, { idempotent: true });
       await FileSystem.copyAsync({ from: sourceUri, to: uri });
       await setSetting('profile.picture', uri);
       setProfilePicture(uri);
