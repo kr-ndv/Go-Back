@@ -1,6 +1,7 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useState } from 'react';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
@@ -19,7 +20,7 @@ export default function NotesScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   const create = async () => {
     const clean = title.trim();
-    if (!clean) { Alert.alert('Give your note a title', 'Enter a title to create a note.'); return; }
+    if (!clean) { showThemedDialog('Give your note a title', 'Enter a title to create a note.'); return; }
     const id = createLocalId('note');
     const db = await getDatabase();
     await db.runAsync('INSERT INTO notes (id, title, body, updated_at) VALUES (?, ?, ?, ?)', id, clean, '', new Date().toISOString());
