@@ -8,7 +8,66 @@ const usagePackage = "package com.goback.focus\n\nimport com.facebook.react.Reac
 
 const blockingModule = "package com.goback.focus\n\nimport android.content.Context\nimport android.content.Intent\nimport android.provider.Settings\nimport android.accessibilityservice.AccessibilityServiceInfo\nimport android.view.accessibility.AccessibilityManager\nimport com.facebook.react.bridge.Arguments\nimport com.facebook.react.bridge.Promise\nimport com.facebook.react.bridge.ReactApplicationContext\nimport com.facebook.react.bridge.ReactContextBaseJavaModule\nimport com.facebook.react.bridge.ReactMethod\nimport org.json.JSONArray\nimport org.json.JSONObject\n\nclass GoBackBlockingModule(private val appContext: ReactApplicationContext) : ReactContextBaseJavaModule(appContext) {\n  override fun getName() = \"GoBackBlocking\"\n  @ReactMethod fun isAccessibilityEnabled(promise: Promise) {\n    try {\n      val manager = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager\n      promise.resolve(manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK).any { it.resolveInfo.serviceInfo.packageName == appContext.packageName && it.resolveInfo.serviceInfo.name.endsWith(\"GoBackBlockingService\") })\n    } catch (error: Exception) { promise.reject(\"E_BLOCKING_ACCESSIBILITY\", error) }\n  }\n  @ReactMethod fun openAccessibilitySettings(promise: Promise) {\n    try { appContext.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); promise.resolve(true) }\n    catch (error: Exception) { promise.reject(\"E_BLOCKING_SETTINGS\", error) }\n  }\n  @ReactMethod fun getConfig(promise: Promise) {\n    try {\n      val value = JSONObject(appContext.getSharedPreferences(\"go_back_blocking\", 0).getString(\"config\", \"{}\") ?: \"{}\")\n      val result = Arguments.createMap()\n      result.putBoolean(\"blockYoutube\", value.optBoolean(\"blockYoutube\", false)); result.putBoolean(\"blockInstagram\", value.optBoolean(\"blockInstagram\", false))\n      result.putBoolean(\"blockShorts\", value.optBoolean(\"blockShorts\", false)); result.putBoolean(\"blockReels\", value.optBoolean(\"blockReels\", false))\n      val channels = value.optJSONArray(\"allowedChannels\") ?: JSONArray(); val array = Arguments.createArray()\n      for (i in 0 until channels.length()) array.pushString(channels.optString(i))\n      result.putArray(\"allowedChannels\", array); promise.resolve(result)\n    } catch (error: Exception) { promise.reject(\"E_BLOCKING_CONFIG\", error) }\n  }\n  @ReactMethod fun setConfig(configJson: String, promise: Promise) {\n    try {\n      val input = JSONObject(configJson); val channels = input.optJSONArray(\"allowedChannels\") ?: JSONArray(); val clean = JSONArray()\n      for (i in 0 until channels.length()) { val name = channels.optString(i).trim().take(80); if (name.isNotEmpty() && !contains(clean, name)) clean.put(name) }\n      val output = JSONObject(); output.put(\"blockYoutube\", input.optBoolean(\"blockYoutube\", false)); output.put(\"blockInstagram\", input.optBoolean(\"blockInstagram\", false))\n      output.put(\"blockShorts\", input.optBoolean(\"blockShorts\", false)); output.put(\"blockReels\", input.optBoolean(\"blockReels\", false)); output.put(\"allowedChannels\", clean)\n      appContext.getSharedPreferences(\"go_back_blocking\", 0).edit().putString(\"config\", output.toString()).apply(); promise.resolve(true)\n    } catch (error: Exception) { promise.reject(\"E_BLOCKING_CONFIG\", error) }\n  }\n  private fun contains(array: JSONArray, value: String): Boolean { for (i in 0 until array.length()) if (array.optString(i).equals(value, true)) return true; return false }\n}\n";
 
-const blockingService = "package com.goback.focus\n\nimport android.accessibilityservice.AccessibilityService\nimport android.view.accessibility.AccessibilityEvent\nimport android.view.accessibility.AccessibilityNodeInfo\nimport org.json.JSONArray\nimport org.json.JSONObject\nimport java.util.Locale\n\nclass GoBackBlockingService : AccessibilityService() {\n  private var lastActionAt = 0L\n  override fun onAccessibilityEvent(event: AccessibilityEvent?) {\n    if (event == null) return\n    val pkg = event.packageName?.toString() ?: return\n    if (pkg != YOUTUBE && pkg != INSTAGRAM) return\n    val config = try { JSONObject(getSharedPreferences(\"go_back_blocking\", 0).getString(\"config\", \"{}\") ?: \"{}\") } catch (_: Exception) { return }\n    if (pkg == INSTAGRAM && config.optBoolean(\"blockInstagram\", false)) { sendHome(); return }\n    val root = rootInActiveWindow ?: return\n    if (pkg == YOUTUBE) {\n      if (config.optBoolean(\"blockShorts\", false) && hasSelectedLabel(root, \"shorts\")) { sendBack(); return }\n      if (config.optBoolean(\"blockYoutube\", false)) {\n        val allowed = config.optJSONArray(\"allowedChannels\") ?: JSONArray()\n        if (allowed.length() == 0) { sendHome(); return }\n        if (!matchesChannel(root, allowed) && isVideoSurface(root)) { sendBack(); return }\n      }\n    }\n    if (pkg == INSTAGRAM && config.optBoolean(\"blockReels\", false) && hasSelectedLabel(root, \"reels\")) sendBack()\n  }\n  private fun sendHome() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1200) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_HOME) }\n  private fun sendBack() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK) }\n  private fun hasSelectedLabel(node: AccessibilityNodeInfo, label: String): Boolean {\n    val text = ((node.text?.toString() ?: \"\") + \" \" + (node.contentDescription?.toString() ?: \"\")).lowercase(Locale.ROOT)\n    if (text.contains(label) && (node.isSelected || node.isChecked || node.isAccessibilityFocused)) return true\n    for (i in 0 until node.childCount) { val child = node.getChild(i) ?: continue; val found = hasSelectedLabel(child, label); child.recycle(); if (found) return true }\n    return false\n  }\n  private fun matchesChannel(node: AccessibilityNodeInfo, channels: JSONArray): Boolean {\n    if (channels.length() == 0) return false\n    val visibleText = collectText(node).lowercase(Locale.ROOT)\n    for (i in 0 until channels.length()) { val name = channels.optString(i).trim().removePrefix("@").lowercase(Locale.ROOT); if (name.length >= 3 && visibleText.contains(name)) return true }\n    return false\n  }\n  private fun isVideoSurface(node: AccessibilityNodeInfo): Boolean {\n    val text = collectText(node).lowercase(Locale.ROOT)\n    val indicators = listOf("video player", "subscribe", "comments", "skip ad", "skip ads", "pause video", "play video", "dislike")\n    return indicators.any { text.contains(it) }\n  }\n  private fun collectText(node: AccessibilityNodeInfo): String {\n    val result = StringBuilder(); val text = node.text?.toString(); val desc = node.contentDescription?.toString()\n    if (!text.isNullOrBlank()) result.append(text).append(' '); if (!desc.isNullOrBlank()) result.append(desc).append(' ')\n    for (i in 0 until node.childCount) { val child = node.getChild(i) ?: continue; result.append(collectText(child)).append(' '); child.recycle() }\n    return result.toString()\n  }\n  override fun onInterrupt() = Unit\n  companion object { private const val YOUTUBE = \"com.google.android.youtube\"; private const val INSTAGRAM = \"com.instagram.android\" }\n}\n";
+const blockingService = `package com.goback.focus
+
+import android.accessibilityservice.AccessibilityService
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.Locale
+
+class GoBackBlockingService : AccessibilityService() {
+  private var lastActionAt = 0L
+  override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+    if (event == null) return
+    val pkg = event.packageName?.toString() ?: return
+    if (pkg != YOUTUBE && pkg != INSTAGRAM) return
+    val config = try { JSONObject(getSharedPreferences("go_back_blocking", 0).getString("config", "{}") ?: "{}") } catch (_: Exception) { return }
+    if (pkg == INSTAGRAM && config.optBoolean("blockInstagram", false)) { sendHome(); return }
+    val root = rootInActiveWindow ?: return
+    if (pkg == YOUTUBE) {
+      if (config.optBoolean("blockShorts", false) && hasSelectedLabel(root, "shorts")) { sendBack(); return }
+      if (config.optBoolean("blockYoutube", false)) {
+        val allowed = config.optJSONArray("allowedChannels") ?: JSONArray()
+        if (allowed.length() == 0) { sendHome(); return }
+        if (!matchesChannel(root, allowed) && isVideoSurface(root)) { sendBack(); return }
+      }
+    }
+    if (pkg == INSTAGRAM && config.optBoolean("blockReels", false) && hasSelectedLabel(root, "reels")) sendBack()
+  }
+  private fun sendHome() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1200) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_HOME) }
+  private fun sendBack() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK) }
+  private fun hasSelectedLabel(node: AccessibilityNodeInfo, label: String): Boolean {
+    val text = ((node.text?.toString() ?: "") + " " + (node.contentDescription?.toString() ?: "")).lowercase(Locale.ROOT)
+    if (text.contains(label) && (node.isSelected || node.isChecked || node.isAccessibilityFocused)) return true
+    for (i in 0 until node.childCount) { val child = node.getChild(i) ?: continue; val found = hasSelectedLabel(child, label); child.recycle(); if (found) return true }
+    return false
+  }
+  private fun matchesChannel(node: AccessibilityNodeInfo, channels: JSONArray): Boolean {
+    if (channels.length() == 0) return false
+    val visibleText = collectText(node).lowercase(Locale.ROOT)
+    for (i in 0 until channels.length()) {
+      val name = channels.optString(i).trim().removePrefix("@").lowercase(Locale.ROOT)
+      if (name.length >= 3 && visibleText.contains(name)) return true
+    }
+    return false
+  }
+  private fun isVideoSurface(node: AccessibilityNodeInfo): Boolean {
+    val text = collectText(node).lowercase(Locale.ROOT)
+    val indicators = listOf("video player", "subscribe", "comments", "skip ad", "skip ads", "pause video", "play video", "dislike")
+    return indicators.any { text.contains(it) }
+  }
+  private fun collectText(node: AccessibilityNodeInfo): String {
+    val result = StringBuilder(); val text = node.text?.toString(); val desc = node.contentDescription?.toString()
+    if (!text.isNullOrBlank()) result.append(text).append(' '); if (!desc.isNullOrBlank()) result.append(desc).append(' ')
+    for (i in 0 until node.childCount) { val child = node.getChild(i) ?: continue; result.append(collectText(child)).append(' '); child.recycle() }
+    return result.toString()
+  }
+  override fun onInterrupt() = Unit
+  companion object { private const val YOUTUBE = "com.google.android.youtube"; private const val INSTAGRAM = "com.instagram.android" }
+}
+`;
 
 const accessibilityXml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<accessibility-service xmlns:android=\"http://schemas.android.com/apk/res/android\" android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowContentChanged|typeViewSelected|typeViewFocused\" android:accessibilityFeedbackType=\"feedbackGeneric\" android:notificationTimeout=\"150\" android:canRetrieveWindowContent=\"true\" android:description=\"@string/go_back_accessibility_description\" android:accessibilityFlags=\"flagReportViewIds|flagRetrieveInteractiveWindows\" />\n";
 
