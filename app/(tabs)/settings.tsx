@@ -40,7 +40,12 @@ export default function SettingsScreen() {
       if (!permission.granted) { Alert.alert('Photo permission needed', 'Allow photo access to choose a profile picture.'); return; }
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
       if (result.canceled || !result.assets[0]?.uri) return;
-      const uri = result.assets[0].uri;
+      const sourceUri = result.assets[0].uri;
+      const directory = FileSystem.documentDirectory;
+      if (!directory) throw new Error('A permanent local storage directory is unavailable.');
+      const extension = result.assets[0].fileName?.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const uri = directory + 'go-back-profile-picture.' + extension;
+      await FileSystem.copyAsync({ from: sourceUri, to: uri });
       await setSetting('profile.picture', uri);
       setProfilePicture(uri);
     } catch (error) { Alert.alert('Could not choose picture', error instanceof Error ? error.message : 'Please try again.'); }
