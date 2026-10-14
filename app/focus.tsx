@@ -64,7 +64,7 @@ export default function FocusScreen() {
         await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed, session_type) VALUES (?, ?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0, sessionTypeRef.current);
       }
       await setSetting('focus.active', null);
-      if (completed) Alert.alert('Session complete', 'You showed up for yourself. Take a short break.');
+      if (completed) Alert.alert(sessionTypeRef.current === 'focus' ? 'Focus session complete' : 'Break complete', sessionTypeRef.current === 'focus' ? 'You showed up for yourself. Take a short break.' : 'Your break is complete. Return when you feel ready.');
     } catch {
       Alert.alert('Could not save session', 'Your focus session ended, but its history could not be saved.');
     } finally {
