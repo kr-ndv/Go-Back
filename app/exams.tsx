@@ -36,7 +36,7 @@ export default function ExamsScreen() {
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Exam planner</Text><View style={{ width: 40 }} /></View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>KEEP THE DATE IN SIGHT</Text>
-      {next ? <View style={styles.hero}><Text style={styles.heroLabel}>UP NEXT</Text><Text style={styles.heroTitle}>{next.title}</Text><View style={styles.countRow}><Text style={styles.count}>{daysUntil(next.exam_date)}</Text><Text style={styles.days}>DAYS TO GO</Text></View><Text style={styles.heroDate}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
+      {next ? <View style={[styles.hero, { backgroundColor: theme.primary }]}><Text style={[styles.heroLabel, { color: theme.background }]}>UP NEXT</Text><Text style={[styles.heroTitle, { color: theme.background }]}>{next.title}</Text><View style={styles.countRow}><Text style={[styles.count, { color: theme.background }]}>{daysUntil(next.exam_date)}</Text><Text style={[styles.days, { color: theme.background }]}>DAYS TO GO</Text></View><Text style={[styles.heroDate, { color: theme.background }]}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
       <Text style={[styles.section, { color: theme.text }]}>Add an exam</Text>
       <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <TextInput value={title} onChangeText={setTitle} placeholder="Subject or exam name" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
@@ -53,10 +53,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
   back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, headerTitle: { fontSize: 17, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 36, gap: 13 }, eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.7 },
-  hero: { backgroundColor: '#17352A', padding: 22, borderRadius: 25, gap: 8 }, heroLabel: { color: '#B8F36B', fontSize: 10, fontWeight: '800', letterSpacing: 1.6 },
-  heroTitle: { color: '#F5FAF2', fontSize: 23, fontWeight: '800' }, countRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  count: { color: '#B8F36B', fontSize: 52, fontWeight: '900', letterSpacing: -2 }, days: { color: '#C8D9CE', fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
-  heroDate: { color: '#C8D9CE', fontSize: 12 }, section: { fontSize: 17, fontWeight: '800', marginTop: 7 },
+  hero: { padding: 22, borderRadius: 25, gap: 8 }, heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6, opacity: 0.8 },
+  heroTitle: { fontSize: 23, fontWeight: '800' }, countRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  count: { fontSize: 52, fontWeight: '900', letterSpacing: -2 }, days: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, opacity: 0.8 },
+  heroDate: { fontSize: 12, opacity: 0.8 }, section: { fontSize: 17, fontWeight: '800', marginTop: 7 },
   form: { borderWidth: 1, borderRadius: 20, padding: 12, gap: 7 }, input: { paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 },
   add: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 13 }, addText: { fontSize: 13, fontWeight: '800' },
   empty: { borderWidth: 1, borderRadius: 22, padding: 24, alignItems: 'center', gap: 10 }, emptyTitle: { fontSize: 16, fontWeight: '800' },
