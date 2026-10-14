@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
@@ -57,16 +58,16 @@ export default function FocusScreen() {
     startedAt.current = null;
     endAtRef.current = null;
     setRunning(false);
-    await cancelNotification();
+    if (!completed) await cancelNotification();
     try {
       const db = await getDatabase();
       if (elapsed > 0) {
         await db.runAsync('INSERT INTO focus_sessions (id, started_at, duration_seconds, completed, session_type) VALUES (?, ?, ?, ?, ?)', createLocalId('focus'), sessionStart, elapsed, completed ? 1 : 0, sessionTypeRef.current);
       }
       await setSetting('focus.active', null);
-      if (completed) Alert.alert(sessionTypeRef.current === 'focus' ? 'Focus session complete' : 'Break complete', sessionTypeRef.current === 'focus' ? 'You showed up for yourself. Take a short break.' : 'Your break is complete. Return when you feel ready.');
+      if (completed) showThemedDialog(sessionTypeRef.current === 'focus' ? 'Focus session complete' : 'Break complete', sessionTypeRef.current === 'focus' ? 'You showed up for yourself. Take a short break.' : 'Your break is complete. Return when you feel ready.');
     } catch {
-      Alert.alert('Could not save session', 'Your focus session ended, but its history could not be saved.');
+      showThemedDialog('Could not save session', 'Your focus session ended, but its history could not be saved.');
     } finally {
       finishingRef.current = false;
     }
@@ -97,7 +98,7 @@ export default function FocusScreen() {
           }
         }
       } catch {
-        Alert.alert('Could not restore timer', 'A previous focus session could not be restored.');
+        showThemedDialog('Could not restore timer', 'A previous focus session could not be restored.');
       } finally {
         if (active) setRestoring(false);
       }
@@ -147,11 +148,12 @@ export default function FocusScreen() {
     setRunning(true);
     try {
       if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('focus-sessions', {
-          name: 'Focus sessions',
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
+        await Notifications.setNotificationChannelAsync('focus-alarms-v2', {
+          name: 'Focus timer alarms',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250, 250, 500],
           lightColor: '#B8F36B',
+          sound: 'default',
         });
       }
       let permission = await Notifications.getPermissionsAsync();
@@ -159,7 +161,13 @@ export default function FocusScreen() {
       if (permission.granted && endAtRef.current) {
         await cancelNotification();
         notificationIdRef.current = await Notifications.scheduleNotificationAsync({
-          content: { title: 'Focus session complete', body: 'Nice work. Take a short break before your next session.', ...(Platform.OS === 'android' ? { channelId: 'focus-sessions' } : {}) },
+          content: {
+            title: sessionTypeRef.current === 'focus' ? 'Focus session complete' : 'Break complete',
+            body: sessionTypeRef.current === 'focus' ? 'Nice work. Take a short break before your next session.' : 'Your break is over. Return when you feel ready.',
+            sound: 'default',
+            priority: Notifications.AndroidNotificationPriority.MAX,
+            ...(Platform.OS === 'android' ? { channelId: 'focus-alarms-v2' } : {}),
+          },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds },
         });
       }
@@ -200,7 +208,7 @@ export default function FocusScreen() {
 
   const close = () => {
     if (!running && !startedAt.current) { router.back(); return; }
-    Alert.alert('End focus session?', 'Your current session will stop.', [
+    showThemedDialog('End focus session?', 'Your current session will stop.', [
       { text: 'Keep focusing', style: 'cancel' },
       { text: 'End session', style: 'destructive', onPress: () => { void endSession(true); } },
     ]);
@@ -216,7 +224,7 @@ export default function FocusScreen() {
   const applyCustomMinutes = () => {
     const value = Number(customMinutes.trim());
     if (!Number.isInteger(value) || value < 1 || value > 180) {
-      Alert.alert('Choose a valid duration', 'Enter a whole number from 1 to 180 minutes.');
+      showThemedDialog('Choose a valid duration', 'Enter a whole number from 1 to 180 minutes.');
       return;
     }
     setSessionType('focus');
