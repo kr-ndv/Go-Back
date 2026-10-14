@@ -17,8 +17,8 @@
 ## Stage 3: Android system features
 - An Android home-screen quick-actions widget is implemented through an Expo config plugin; add a live focus-status and exam-countdown widget in a later pass
 - Android UsageStatsManager bridge and explicit Usage Access onboarding are implemented in the native config plugin; real-device validation and usage-history accuracy checks remain
-- App blocking via an explicit, transparent Android implementation; assess AccessibilityService / UsageStatsManager limitations and Play policy before shipping
-- Scheduled blocking and strict mode with a clear emergency exit
+- Experimental Android AccessibilityService blocking controls are implemented for whole-app YouTube/Instagram blocking, heuristic Shorts/Reels tab detection, and selected YouTube channel-name matching; validate on devices and refine false positives
+- Scheduled blocking, strict mode and a clear emergency exit remain planned
 - Test on real Android devices and document battery/background behavior
 
 ## Stage 4: Quality and release
@@ -33,4 +33,4 @@
 - iOS Screen Time / Family Controls capabilities require Apple entitlements and platform-specific review
 
 ## Current prototype limitations
-The timer supports custom focus durations, short/long breaks, active-session persistence, elapsed-time recalculation when the app returns to the foreground and completion notifications when permitted; background behavior must be tested on real devices. Screen-time reporting uses Android UsageStatsManager behind explicit user-granted Usage Access. The quick-actions widget is implemented; live focus/exam widgets and app blocking are still outstanding. Do not market the prototype as production-ready until platform features are implemented and device-tested.
+The timer supports custom focus durations, short/long breaks, active-session persistence, elapsed-time recalculation when the app returns to the foreground and completion notifications when permitted; background behavior must be tested on real devices. Screen-time reporting uses Android UsageStatsManager behind explicit user-granted Usage Access. The quick-actions widget and experimental AccessibilityService blocking controls are implemented; live focus/exam widgets, scheduled blocking and strict mode remain outstanding. Shorts/Reels and channel matching depend on accessibility labels exposed by third-party apps and are not guaranteed to detect every screen. Do not market the prototype as production-ready until platform features are implemented and device-tested.
