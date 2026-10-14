@@ -1,5 +1,5 @@
-import { createLocalId } from '../lib/id';
-import { daysUntilISODate, isValidISODate } from '../lib/date';
+import { createLocalId } from '../src/lib/id';
+import { daysUntilISODate, isValidISODate } from '../src/lib/date';
 
 describe('createLocalId', () => {
   it('includes the requested prefix', () => {
