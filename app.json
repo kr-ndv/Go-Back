@@ -12,7 +12,7 @@
       "package": "com.goback.focus",
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#07130F"
       },
       "permissions": [
