@@ -1,5 +1,6 @@
+import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,30 +17,48 @@ export default function SyllabusScreen() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [name, setName] = useState('');
   const [chapterDrafts, setChapterDrafts] = useState<Record<string, string>>({});
-  const load = useCallback(async () => { const db = await getDatabase(); setSubjects(await db.getAllAsync<Subject>('SELECT * FROM subjects ORDER BY name COLLATE NOCASE')); }, []);
+  const load = useCallback(async () => {
+    try {
+      const db = await getDatabase();
+      setSubjects(await db.getAllAsync<Subject>('SELECT * FROM subjects ORDER BY name COLLATE NOCASE'));
+    } catch (error) {
+      showThemedDialog('Syllabus could not load', error instanceof Error ? error.message : 'Could not read the saved syllabus.');
+    }
+  }, []);
   useEffect(() => { void load(); }, [load]);
   const addSubject = async () => {
     const clean = name.trim();
-    if (!clean) { Alert.alert('Add a subject name', 'For example, History or Political Science.'); return; }
-    const db = await getDatabase();
-    await db.runAsync('INSERT INTO subjects (id, name, chapters_json, updated_at) VALUES (?, ?, ?, ?)', createLocalId('subject'), clean, '[]', new Date().toISOString());
-    setName(''); await load();
+    if (!clean) { showThemedDialog('Add a subject name', 'For example, History or Political Science.'); return; }
+    try {
+      const db = await getDatabase();
+      await db.runAsync('INSERT INTO subjects (id, name, chapters_json, updated_at) VALUES (?, ?, ?, ?)', createLocalId('subject'), clean, '[]', new Date().toISOString());
+      setName('');
+      await load();
+    } catch (error) {
+      showThemedDialog('Subject not saved', error instanceof Error ? error.message : 'Go Back could not save this subject.');
+    }
   };
   const saveChapters = async (subject: Subject, chapters: Chapter[]) => {
-    const db = await getDatabase();
-    await db.runAsync('UPDATE subjects SET chapters_json = ?, updated_at = ? WHERE id = ?', JSON.stringify(chapters), new Date().toISOString(), subject.id);
-    await load();
+    try {
+      const db = await getDatabase();
+      await db.runAsync('UPDATE subjects SET chapters_json = ?, updated_at = ? WHERE id = ?', JSON.stringify(chapters), new Date().toISOString(), subject.id);
+      await load();
+      return true;
+    } catch (error) {
+      showThemedDialog('Chapter changes not saved', error instanceof Error ? error.message : 'Go Back could not update this subject.');
+      return false;
+    }
   };
   const addChapter = async (subject: Subject) => {
     const title = (chapterDrafts[subject.id] ?? '').trim();
-    if (!title) return;
-    await saveChapters(subject, [...parseChapters(subject.chapters_json), { id: createLocalId('chapter'), title, done: false }]);
-    setChapterDrafts(current => ({ ...current, [subject.id]: '' }));
+    if (!title) { showThemedDialog('Add a chapter name', 'Type the chapter name in the field at the bottom of the subject card.'); return; }
+    const saved = await saveChapters(subject, [...parseChapters(subject.chapters_json), { id: createLocalId('chapter'), title, done: false }]);
+    if (saved) setChapterDrafts(current => ({ ...current, [subject.id]: '' }));
   };
   const toggleChapter = async (subject: Subject, chapterId: string) => {
     await saveChapters(subject, parseChapters(subject.chapters_json).map(c => c.id === chapterId ? { ...c, done: !c.done } : c));
   };
-  const removeSubject = (subject: Subject) => Alert.alert('Delete subject?', 'This removes the subject and its chapter checklist.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM subjects WHERE id = ?', subject.id); await load(); } }]);
+  const removeSubject = (subject: Subject) => showThemedDialog('Delete subject?', 'This removes the subject and its chapter checklist.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM subjects WHERE id = ?', subject.id); await load(); } }]);
   const total = subjects.reduce((sum, s) => sum + parseChapters(s.chapters_json).length, 0);
   const done = subjects.reduce((sum, s) => sum + parseChapters(s.chapters_json).filter(c => c.done).length, 0);
   const percent = total ? Math.round(done / total * 100) : 0;
