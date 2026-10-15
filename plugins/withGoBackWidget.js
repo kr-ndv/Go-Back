@@ -52,10 +52,16 @@ class GoBackBlockingService : AccessibilityService() {
     }
     return false
   }
-  private fun isVideoSurface(node: AccessibilityNodeInfo): Boolean {
+  private fun isVideoPlaying(node: AccessibilityNodeInfo): Boolean {
     val text = collectText(node).lowercase(Locale.ROOT)
-    val indicators = listOf("video player", "subscribe", "comments", "skip ad", "skip ads", "pause video", "play video", "dislike")
-    return indicators.any { text.contains(it) }
+    val pauseControl = text.contains("pause video") ||
+      text.contains("pause playback") ||
+      (text.contains("pause") && (text.contains("seek bar") || text.contains("video player") || text.contains("playback controls")))
+    // Require watch-page controls as well, so a feed preview or the YouTube home screen is not enough to trigger blocking.
+    val watchPage = text.contains("video player") ||
+      text.contains("seek bar") ||
+      (text.contains("comments") && text.contains("subscribe") && text.contains("share"))
+    return pauseControl && watchPage
   }
   private fun collectText(node: AccessibilityNodeInfo): String {
     val result = StringBuilder(); val text = node.text?.toString(); val desc = node.contentDescription?.toString()
