@@ -28,10 +28,9 @@ class GoBackBlockingService : AccessibilityService() {
     val root = rootInActiveWindow ?: return
     if (pkg == YOUTUBE) {
       if (config.optBoolean("blockShorts", false) && hasSelectedLabel(root, "shorts")) { sendBack(); return }
-      if (config.optBoolean("blockYoutube", false)) {
+      if (config.optBoolean("blockYoutube", false) && isVideoPlaying(root)) {
         val allowed = config.optJSONArray("allowedChannels") ?: JSONArray()
-        if (allowed.length() == 0) { sendHome(); return }
-        if (!matchesChannel(root, allowed) && isVideoSurface(root)) { sendBack(); return }
+        if (!matchesChannel(root, allowed)) { sendBack(); return }
       }
     }
     if (pkg == INSTAGRAM && config.optBoolean("blockReels", false) && hasSelectedLabel(root, "reels")) sendBack()
@@ -46,7 +45,7 @@ class GoBackBlockingService : AccessibilityService() {
   }
   private fun matchesChannel(node: AccessibilityNodeInfo, channels: JSONArray): Boolean {
     if (channels.length() == 0) return false
-    val visibleText = collectText(node).lowercase(Locale.ROOT)
+    val visibleText = collectText(node).lowercase(Locale.ROOT).substringBefore("comments").substringBefore("up next")
     for (i in 0 until channels.length()) {
       val name = channels.optString(i).trim().removePrefix("@").lowercase(Locale.ROOT)
       if (name.length >= 3 && visibleText.contains(name)) return true

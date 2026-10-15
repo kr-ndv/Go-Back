@@ -1,0 +1,86 @@
+name: Publish Go Back Beta
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'plugins/**'
+      - 'assets/**'
+      - 'package.json'
+      - 'app.json'
+      - '.github/workflows/beta-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: go-back-beta-release
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    name: Build and publish public beta APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test -- --runInBand
+
+      - name: Build standalone APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+
+      - name: Prepare public release assets
+        shell: bash
+        run: |
+          mkdir -p release
+          VERSION="1.0.0-beta.${GITHUB_RUN_NUMBER}"
+          APK="release/Go-Back-${VERSION}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+          sha256sum "$APK" > "${APK}.sha256"
+          printf 'Version: %s\nBuild commit: %s\nPackage: com.goback.focus\nBuild: standalone Android APK, test-signed beta\n' "$VERSION" "$GITHUB_SHA" > release/BUILD-INFO.txt
+
+      - name: Publish GitHub prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-beta.${{ github.run_number }}
+          name: Go Back v1.0.0 Beta ${{ github.run_number }}
+          prerelease: true
+          make_latest: false
+          generate_release_notes: true
+          body: |
+            **Go Back Beta**
+
+            Install the standalone Android APK attached below. The APK is built with the JavaScript bundle included and does not require Expo Go.
+
+            This is a public beta/test-signed build. Back up local app data before uninstalling or changing builds. Device behavior (especially Accessibility-based YouTube blocking and background timer notifications) still needs real-phone testing.
+          files: |
+            release/Go-Back-*.apk
+            release/Go-Back-*.apk.sha256
+            release/BUILD-INFO.txt

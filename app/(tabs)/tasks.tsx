@@ -1,7 +1,7 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { DateField } from '@/components/DateField';
@@ -19,26 +19,42 @@ export default function TasksScreen() {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<Priority>('normal');
+  const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
-    const db = await getDatabase();
-    setTasks(await db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY completed ASC, CASE priority WHEN \'high\' THEN 0 WHEN \'normal\' THEN 1 ELSE 2 END, CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, created_at DESC'));
+    try {
+      const db = await getDatabase();
+      setTasks(await db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY completed ASC, CASE priority WHEN \'high\' THEN 0 WHEN \'normal\' THEN 1 ELSE 2 END, CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, created_at DESC'));
+    } catch (error) {
+      showThemedDialog('Tasks could not load', error instanceof Error ? error.message : 'Go Back could not read your saved tasks.');
+    }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
   const add = async () => {
     const clean = title.trim();
-    if (!clean) { showThemedDialog('Add a task', 'Type a task name first, then tap the plus button.'); return; }
+    if (saving) return;
+    if (!clean) { showThemedDialog('Add a task', 'Type a task name first, then tap Add task.'); return; }
     if (dueDate && !isValidISODate(dueDate)) {
       showThemedDialog('Check the due date', 'Choose a valid calendar date, or clear the optional due date.');
       return;
     }
+    setSaving(true);
     try {
       const db = await getDatabase();
-      await db.runAsync('INSERT INTO tasks (id, title, completed, created_at, priority, due_date) VALUES (?, ?, 0, ?, ?, ?)', createLocalId('task'), clean, new Date().toISOString(), priority, dueDate.trim() || null);
-      setTitle(''); setDueDate(''); setPriority('normal');
-      await load();
+      const id = createLocalId('task');
+      const created_at = new Date().toISOString();
+      const newTask: Task = { id, title: clean, completed: 0, created_at, priority, due_date: dueDate.trim() || null };
+      await db.runAsync('INSERT INTO tasks (id, title, completed, created_at, priority, due_date) VALUES (?, ?, 0, ?, ?, ?)', id, clean, created_at, priority, newTask.due_date);
+      setTasks(current => [...current, newTask]);
+      setTitle('');
+      setDueDate('');
+      setPriority('normal');
+      Keyboard.dismiss();
+      void load();
     } catch (error) {
       showThemedDialog('Task not saved', error instanceof Error ? error.message : 'Go Back could not save this task. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
   const toggle = async (task: Task) => {
@@ -59,7 +75,7 @@ export default function TasksScreen() {
     <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <View style={styles.addRow}>
         <TextInput value={title} onChangeText={setTitle} placeholder="What needs to get done?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} />
-        <Pressable onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={23} color={theme.background} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Add task" disabled={saving} onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary, opacity: saving ? 0.65 : 1 }]}>{saving ? <Ionicons name="time-outline" size={20} color={theme.background} /> : <Ionicons name="add" size={23} color={theme.background} />}</Pressable>
       </View>
       <DateField value={dueDate} onChange={setDueDate} placeholder="Due date (optional)" optional />
       <View style={styles.priorities}><Text style={[styles.priorityLabel, { color: theme.muted }]}>PRIORITY</Text>{(['low', 'normal', 'high'] as Priority[]).map(value => <Pressable key={value} onPress={() => setPriority(value)} style={[styles.priorityOption, { borderColor: priority === value ? priorityColor(value) : theme.border, backgroundColor: priority === value ? theme.surfaceAlt : 'transparent' }]}><View style={[styles.priorityDot, { backgroundColor: priorityColor(value) }]} /><Text style={[styles.priorityText, { color: theme.text }]}>{value[0].toUpperCase() + value.slice(1)}</Text></Pressable>)}</View>

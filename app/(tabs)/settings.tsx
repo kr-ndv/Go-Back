@@ -1,6 +1,6 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useState } from 'react';
-import { Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -118,7 +118,7 @@ export default function SettingsScreen() {
     <Text style={[styles.section, { color: theme.text }]}>Privacy</Text>
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="shield-checkmark-outline" size={23} color={theme.primary} /><View style={{ flex: 1, gap: 5 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Your data stays on your device</Text><Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>This starter uses local SQLite storage. No AI, ads, analytics, or cloud account is configured.</Text></View></View>
     <Text style={[styles.section, { color: theme.text }]}>About</Text>
-    <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.logo, { backgroundColor: theme.primary }]}><Text style={[styles.logoText, { color: theme.background }]}>G</Text></View><View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Go Back</Text><Text style={[styles.hint, { color: theme.muted }]}>Version 1.0.0 · Local-first focus companion</Text></View></View>
+    <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border }]}><Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="cover" accessibilityLabel="Go Back app icon" /><View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Go Back</Text><Text style={[styles.hint, { color: theme.muted }]}>Version 1.0.0 · Local-first focus companion</Text></View></View>
   </Screen>;
 }
 const styles = StyleSheet.create({
@@ -141,6 +141,5 @@ const styles = StyleSheet.create({
   choiceTitle: { fontSize: 13, fontWeight: '800' },
   hint: { fontSize: 11 },
   info: { borderWidth: 1, borderRadius: 19, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 13 },
-  logo: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontSize: 22, fontWeight: '900' },
+  logo: { width: 42, height: 42, borderRadius: 14, overflow: 'hidden' },
 });

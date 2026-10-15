@@ -1,7 +1,7 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
@@ -21,14 +21,21 @@ export default function ExamsScreen() {
   const [date, setDate] = useState('');
   const [details, setDetails] = useState('');
   const [syllabusSubjects, setSyllabusSubjects] = useState<string[]>([]);
+  const [subjectPickerVisible, setSubjectPickerVisible] = useState(false);
+  const [customSubject, setCustomSubject] = useState('');
+  const subjectOptions = Array.from(new Set([...syllabusSubjects, ...exams.map(exam => exam.title)])).sort((a, b) => a.localeCompare(b));
   const load = useCallback(async () => {
-    const db = await getDatabase();
-    const [examRows, subjectRows] = await Promise.all([
-      db.getAllAsync<Exam>('SELECT * FROM exams ORDER BY exam_date ASC'),
-      db.getAllAsync<{ name: string }>('SELECT name FROM subjects ORDER BY name COLLATE NOCASE'),
-    ]);
-    setExams(examRows);
-    setSyllabusSubjects(subjectRows.map(subject => subject.name));
+    try {
+      const db = await getDatabase();
+      const [examRows, subjectRows] = await Promise.all([
+        db.getAllAsync<Exam>('SELECT * FROM exams ORDER BY exam_date ASC'),
+        db.getAllAsync<{ name: string }>('SELECT name FROM subjects ORDER BY name COLLATE NOCASE'),
+      ]);
+      setExams(examRows);
+      setSyllabusSubjects(subjectRows.map(subject => subject.name));
+    } catch (error) {
+      showThemedDialog('Exam planner could not load', error instanceof Error ? error.message : 'Go Back could not read your timetable.');
+    }
   }, []);
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
@@ -45,6 +52,13 @@ export default function ExamsScreen() {
       showThemedDialog('Exam not saved', error instanceof Error ? error.message : 'Go Back could not save this exam. Please try again.');
     }
   };
+  const applyCustomSubject = () => {
+    const clean = customSubject.trim();
+    if (!clean) return;
+    setTitle(clean);
+    setCustomSubject('');
+    setSubjectPickerVisible(false);
+  };
   const remove = (exam: Exam) => showThemedDialog('Remove exam?', exam.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); } }]);
   const upcoming = exams.filter(e => daysUntil(e.exam_date) >= 0);
   const next = upcoming[0];
@@ -55,13 +69,11 @@ export default function ExamsScreen() {
       {next ? <View style={[styles.hero, { backgroundColor: theme.primary }]}><Text style={[styles.heroLabel, { color: theme.background }]}>UP NEXT</Text><Text style={[styles.heroTitle, { color: theme.background }]}>{next.title}</Text><View style={styles.countRow}><Text style={[styles.count, { color: theme.background }]}>{daysUntil(next.exam_date)}</Text><Text style={[styles.days, { color: theme.background }]}>DAYS TO GO</Text></View><Text style={[styles.heroDate, { color: theme.background }]}>{dateLabel(next.exam_date)}</Text></View> : <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="calendar-outline" size={28} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Your next milestone starts here.</Text><Text style={[styles.hint, { color: theme.muted }]}>Add your exams to see countdowns and keep the timetable in one place.</Text></View>}
       <Text style={[styles.section, { color: theme.text }]}>Add an exam</Text>
       <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <TextInput value={title} onChangeText={setTitle} placeholder="Subject or exam name" placeholderTextColor={theme.muted} returnKeyType="next" style={[styles.input, { color: theme.text }]} />
-        {syllabusSubjects.length > 0 && <View style={styles.subjectPicker}>
-          <Text style={[styles.pickerLabel, { color: theme.muted }]}>QUICK PICK FROM YOUR SYLLABUS</Text>
-          <View style={styles.subjectOptions}>
-            {syllabusSubjects.map(subject => <Pressable key={subject} onPress={() => setTitle(subject)} style={[styles.subjectChip, { backgroundColor: title === subject ? theme.surfaceAlt : 'transparent', borderColor: title === subject ? theme.primary : theme.border }]}><Text style={[styles.subjectChipText, { color: title === subject ? theme.primary : theme.text }]}>{subject}</Text></Pressable>)}
-          </View>
-        </View>}
+        <Pressable accessibilityRole="button" accessibilityLabel="Choose exam subject" onPress={() => { setCustomSubject(title); setSubjectPickerVisible(true); }} style={[styles.subjectField, { backgroundColor: theme.surfaceAlt, borderColor: title ? theme.primary : theme.border }]}>
+          <Ionicons name="book-outline" size={18} color={theme.primary} />
+          <Text numberOfLines={1} style={[styles.subjectFieldText, { color: title ? theme.text : theme.muted }]}>{title || 'Select subject'}</Text>
+          <Ionicons name="chevron-down" size={18} color={theme.muted} />
+        </Pressable>
         <DateField value={date} onChange={setDate} placeholder="Choose exam date" />
         <TextInput value={details} onChangeText={setDetails} placeholder="Time / room / notes (optional)" placeholderTextColor={theme.muted} style={[styles.input, { color: theme.text }]} />
         <Pressable onPress={() => void add()} style={[styles.add, { backgroundColor: theme.primary }]}><Ionicons name="add" size={19} color={theme.background} /><Text style={[styles.addText, { color: theme.background }]}>Add to timetable</Text></Pressable>
@@ -69,6 +81,35 @@ export default function ExamsScreen() {
       <Text style={[styles.section, { color: theme.text }]}>Your timetable</Text>
       {exams.length === 0 ? <Text style={[styles.hint, { color: theme.muted }]}>No exams added yet.</Text> : exams.map(exam => <Pressable key={exam.id} onLongPress={() => remove(exam)} style={[styles.exam, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.dateBox, { backgroundColor: theme.surfaceAlt }]}><Text style={[styles.dateDay, { color: theme.primary }]}>{new Date(exam.exam_date + 'T12:00:00').getDate()}</Text><Text style={[styles.dateMonth, { color: theme.muted }]}>{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.examTitle, { color: theme.text }]}>{exam.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{dateLabel(exam.exam_date)}{exam.details ? ' · ' + exam.details : ''}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={[styles.daysLeft, { color: theme.primary }]}>{daysUntil(exam.exam_date) < 0 ? 'Done' : daysUntil(exam.exam_date) + 'd'}</Text><Text style={[styles.hint, { color: theme.muted }]}>hold to remove</Text></View></Pressable>)}
     </ScrollView>
+    <Modal transparent visible={subjectPickerVisible} animationType="fade" statusBarTranslucent onRequestClose={() => setSubjectPickerVisible(false)}>
+      <View style={styles.subjectOverlay}>
+        <Pressable accessibilityLabel="Close subject picker" style={StyleSheet.absoluteFill} onPress={() => setSubjectPickerVisible(false)} />
+        <View style={[styles.subjectModal, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.subjectModalHeader}>
+            <View style={[styles.subjectModalGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="book-outline" size={22} color={theme.primary} /></View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={[styles.subjectModalTitle, { color: theme.text }]}>Choose a subject</Text>
+              <Text style={[styles.hint, { color: theme.muted }]}>Select one or enter a new subject below.</Text>
+            </View>
+            <Pressable accessibilityLabel="Close subject picker" onPress={() => setSubjectPickerVisible(false)} hitSlop={8}><Ionicons name="close" size={22} color={theme.muted} /></Pressable>
+          </View>
+          <ScrollView style={styles.subjectList} keyboardShouldPersistTaps="handled">
+            {subjectOptions.map(subject => <Pressable key={subject} onPress={() => { setTitle(subject); setCustomSubject(''); setSubjectPickerVisible(false); }} style={[styles.subjectOption, { backgroundColor: title === subject ? theme.surfaceAlt : 'transparent', borderColor: title === subject ? theme.primary : theme.border }]}>
+              <Ionicons name={title === subject ? 'radio-button-on' : 'radio-button-off'} size={19} color={title === subject ? theme.primary : theme.muted} />
+              <Text style={[styles.subjectOptionText, { color: theme.text }]}>{subject}</Text>
+              {title === subject && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
+            </Pressable>)}
+            {subjectOptions.length === 0 && <Text style={[styles.hint, { color: theme.muted, paddingVertical: 8 }]}>No saved subjects yet. Enter any subject name below.</Text>}
+          </ScrollView>
+          <Text style={[styles.pickerLabel, { color: theme.muted }]}>OR ENTER A NEW SUBJECT</Text>
+          <TextInput value={customSubject} onChangeText={setCustomSubject} placeholder="e.g. History, Geography, English" placeholderTextColor={theme.muted} returnKeyType="done" onSubmitEditing={applyCustomSubject} style={[styles.customSubjectInput, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, color: theme.text }]} />
+          <View style={styles.subjectModalActions}>
+            <Pressable onPress={() => setSubjectPickerVisible(false)} style={[styles.subjectModalButton, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}><Text style={[styles.addText, { color: theme.text }]}>Cancel</Text></Pressable>
+            <Pressable disabled={!customSubject.trim()} onPress={applyCustomSubject} style={[styles.subjectModalButton, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: customSubject.trim() ? 1 : 0.45 }]}><Text style={[styles.addText, { color: theme.background }]}>Use subject</Text></Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({
@@ -79,11 +120,21 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 23, fontWeight: '800' }, countRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   count: { fontSize: 52, fontWeight: '900', letterSpacing: -2 }, days: { fontSize: 10, fontWeight: '800', letterSpacing: 1.4, opacity: 0.8 },
   heroDate: { fontSize: 12, opacity: 0.8 }, section: { fontSize: 17, fontWeight: '800', marginTop: 7 },
-  form: { borderWidth: 1, borderRadius: 20, padding: 12, gap: 7 }, input: { paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 },
-  subjectPicker: { gap: 8, paddingHorizontal: 4, paddingBottom: 4 }, pickerLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
-  subjectOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  subjectChip: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8 },
-  subjectChipText: { fontSize: 11, fontWeight: '700' },
+  form: { borderWidth: 1, borderRadius: 20, padding: 12, gap: 9 }, input: { paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 },
+  subjectField: { minHeight: 46, borderWidth: 1, borderRadius: 13, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
+  subjectFieldText: { flex: 1, fontSize: 13, fontWeight: '700' },
+  subjectOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 22, backgroundColor: 'rgba(0,0,0,0.62)' },
+  subjectModal: { width: '100%', maxWidth: 390, maxHeight: '85%', borderWidth: 1, borderRadius: 25, padding: 18, gap: 11, elevation: 24, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 22, shadowOffset: { width: 0, height: 10 } },
+  subjectModalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  subjectModalGlyph: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  subjectModalTitle: { fontSize: 18, fontWeight: '900' },
+  subjectList: { flexGrow: 0, maxHeight: 230 },
+  subjectOption: { minHeight: 45, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  subjectOptionText: { flex: 1, color: '#F2F6EF', fontSize: 12, fontWeight: '700' },
+  pickerLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.1 },
+  customSubjectInput: { minHeight: 46, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, fontSize: 13 },
+  subjectModalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  subjectModalButton: { minHeight: 42, borderRadius: 13, borderWidth: 1, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   add: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 13 }, addText: { fontSize: 13, fontWeight: '800' },
   empty: { borderWidth: 1, borderRadius: 22, padding: 24, alignItems: 'center', gap: 10 }, emptyTitle: { fontSize: 16, fontWeight: '800' },
   hint: { fontSize: 11, lineHeight: 17 }, exam: { borderWidth: 1, borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
