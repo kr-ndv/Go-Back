@@ -64,7 +64,7 @@ export function DateField({ value, onChange, placeholder, optional = false, mini
       <Modal transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={close}>
         <View style={styles.overlay}>
           <Pressable accessibilityLabel="Close date picker" style={StyleSheet.absoluteFill} onPress={close} />
-          <View style={[styles.calendar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.calendar, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderRadius: theme.expressive ? 32 : 24 }]}>
             <View style={styles.calendarTop}>
               <View style={[styles.calendarGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="calendar" size={21} color={theme.primary} /></View>
               <View style={{ flex: 1, gap: 3 }}>
@@ -89,14 +89,14 @@ export function DateField({ value, onChange, placeholder, optional = false, mini
                 const isToday = iso === toISODate(new Date());
                 return (
                   <Pressable key={iso} disabled={disabled} accessibilityRole="button" accessibilityLabel={candidate.toLocaleDateString()} accessibilityState={{ selected, disabled }} onPress={() => setPendingDate(iso)} style={[styles.dayCell, styles.dayButton, { backgroundColor: selected ? theme.primary : isToday ? theme.surfaceAlt : 'transparent', borderColor: selected ? theme.primary : isToday ? theme.border : 'transparent', opacity: disabled ? 0.3 : 1 }]}>
-                    <Text style={[styles.dayText, { color: selected ? theme.background : theme.text, fontWeight: selected || isToday ? '900' : '600' }]}>{day}</Text>
+                    <Text style={[styles.dayText, { color: selected ? theme.onPrimary : theme.text, fontWeight: selected || isToday ? '900' : '600' }]}>{day}</Text>
                   </Pressable>
                 );
               })}
             </View>
             <View style={[styles.calendarFooter, { borderTopColor: theme.border }]}>
               <Pressable onPress={close} style={[styles.footerButton, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}><Text style={[styles.footerText, { color: theme.text }]}>Cancel</Text></Pressable>
-              <Pressable onPress={confirm} style={[styles.footerButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}><Text style={[styles.footerText, { color: theme.background }]}>Use date</Text></Pressable>
+              <Pressable onPress={confirm} style={[styles.footerButton, { backgroundColor: theme.primary, borderColor: theme.primary }]}><Text style={[styles.footerText, { color: theme.onPrimary }]}>Use date</Text></Pressable>
             </View>
           </View>
         </View>
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   label: { flex: 1, fontSize: 12, fontWeight: '600' },
   clear: { paddingLeft: 8, paddingVertical: 8 },
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.62)' },
-  calendar: { width: '100%', maxWidth: 390, borderWidth: 1, borderRadius: 26, padding: 17, gap: 14, elevation: 24, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 22, shadowOffset: { width: 0, height: 10 } },
+  calendar: { width: '100%', maxWidth: 390, borderWidth: 1, borderRadius: 28, padding: 18, gap: 14, elevation: 24, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 22, shadowOffset: { width: 0, height: 10 } },
   calendarTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   calendarGlyph: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   calendarEyebrow: { fontSize: 9, letterSpacing: 1.4, fontWeight: '900' },
@@ -126,6 +126,6 @@ const styles = StyleSheet.create({
   dayButton: { borderWidth: 1, borderRadius: 13 },
   dayText: { fontSize: 12 },
   calendarFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, borderTopWidth: 1, paddingTop: 13 },
-  footerButton: { minHeight: 43, minWidth: 98, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 15 },
+  footerButton: { minHeight: 43, minWidth: 98, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 15 },
   footerText: { fontSize: 12, fontWeight: '900' },
 });

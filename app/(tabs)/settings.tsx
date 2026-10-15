@@ -1,6 +1,6 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useState } from 'react';
-import { Image, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme, useThemeStore } from '@/state/theme';
-import type { AccentColor, ThemeMode } from '@/theme/palette';
+import { paletteNames, type AccentColor, type ThemeMode } from '@/theme/palette';
 import { getSetting, setSetting } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { createBackupJson, restoreBackupJson } from '@/lib/backup';
@@ -19,6 +19,8 @@ export default function SettingsScreen() {
   const setMode = useThemeStore(s => s.setMode);
   const accent = useThemeStore(s => s.accent);
   const setAccent = useThemeStore(s => s.setAccent);
+  const expressive = useThemeStore(s => s.expressive);
+  const setExpressive = useThemeStore(s => s.setExpressive);
   const [profileName, setProfileName] = useState('');
   const [profileId, setProfileId] = useState('');
   useEffect(() => {
@@ -76,10 +78,10 @@ export default function SettingsScreen() {
     { value: 'dark', label: 'Dark theme', hint: 'Deep forest, easier on the eyes', icon: 'moon-outline' },
   ];
   const accents: { value: AccentColor; label: string; color: string }[] = [
-    { value: 'forest', label: 'Forest', color: '#B8F36B' },
-    { value: 'blue', label: 'Blue', color: '#64A9FF' },
-    { value: 'violet', label: 'Violet', color: '#B49AFF' },
-    { value: 'amber', label: 'Amber', color: '#F2B75E' },
+    { value: 'forest', label: paletteNames.forest, color: '#B8F36B' },
+    { value: 'blue', label: paletteNames.blue, color: '#64A9FF' },
+    { value: 'violet', label: paletteNames.violet, color: '#B49AFF' },
+    { value: 'amber', label: paletteNames.amber, color: '#F2B75E' },
   ];
   return <Screen>
     <Text style={[styles.eyebrow, { color: theme.muted }]}>MAKE IT YOURS</Text>
@@ -87,8 +89,11 @@ export default function SettingsScreen() {
     <Text style={[styles.sub, { color: theme.muted }]}>A calmer space, tuned to you.</Text>
     <Text style={[styles.section, { color: theme.text }]}>Appearance</Text>
     <View style={{ gap: 9 }}>{choices.map(choice => <Pressable key={choice.value} onPress={() => void setMode(choice.value)} style={[styles.choice, { backgroundColor: theme.surface, borderColor: mode === choice.value ? theme.primary : theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name={choice.icon} size={20} color={theme.primary} /></View><View style={{ flex: 1, gap: 3 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>{choice.label}</Text><Text style={[styles.hint, { color: theme.muted }]}>{choice.hint}</Text></View><Ionicons name={mode === choice.value ? 'checkmark-circle' : 'ellipse-outline'} size={21} color={mode === choice.value ? theme.primary : theme.muted} /></Pressable>)}</View>
-    <Text style={[styles.section, { color: theme.text }]}>Accent colour</Text>
-    <View style={styles.accents}>{accents.map(choice => <Pressable key={choice.value} onPress={() => void setAccent(choice.value)} style={[styles.accentChoice, { backgroundColor: theme.surface, borderColor: accent === choice.value ? theme.primary : theme.border }]}><View style={[styles.swatch, { backgroundColor: choice.color }]} /><Text style={[styles.accentLabel, { color: theme.text }]}>{choice.label}</Text>{accent === choice.value && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}</Pressable>)}</View>
+    <Text style={[styles.section, { color: theme.text }]}>Theme Studio</Text>
+    <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Choose a complete colour personality. Your selection applies across Go Back and stays on this device.</Text>
+    <View style={styles.accents}>{accents.map(choice => <Pressable key={choice.value} accessibilityRole="radio" accessibilityState={{ selected: accent === choice.value }} onPress={() => void setAccent(choice.value)} style={[styles.accentChoice, { backgroundColor: theme.surface, borderColor: accent === choice.value ? theme.primary : theme.border, borderWidth: accent === choice.value ? 2 : 1 }]}><View style={[styles.swatch, { backgroundColor: choice.color }]} /><Text style={[styles.accentLabel, { color: theme.text }]}>{choice.label}</Text>{accent === choice.value && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}</Pressable>)}</View>
+    <View style={[styles.expressiveRow, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="sparkles-outline" size={20} color={theme.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Expressive styling</Text><Text style={[styles.hint, { color: theme.muted, lineHeight: 17 }]}>Use bolder shapes, stronger hierarchy and springier touch feedback.</Text></View><Switch accessibilityLabel="Expressive styling" value={expressive} onValueChange={value => void setExpressive(value)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={expressive ? theme.background : theme.surfaceAlt} />
+    </View>
     <Text style={[styles.section, { color: theme.text }]}>Local profile</Text>
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border, alignItems: 'flex-start' }]}>
       <View style={{ flex: 1, gap: 9 }}>
@@ -127,6 +132,7 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13 },
   section: { fontSize: 17, fontWeight: '800', marginTop: 8 },
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  expressiveRow: { borderWidth: 1, borderRadius: 20, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },

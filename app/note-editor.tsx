@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
@@ -45,10 +46,10 @@ export default function NoteEditorScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   toolbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 14 },
-  back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  back: { width: 40, height: 40, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   saved: { fontSize: 12, flex: 1 },
   save: { fontWeight: '800', fontSize: 14 },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 24, gap: 18 },
-  title: { fontSize: 27, fontWeight: '800', letterSpacing: -0.8 },
-  body: { flex: 1, fontSize: 16, lineHeight: 25 },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 28, gap: 22 },
+  title: { fontSize: 30, fontWeight: '900', letterSpacing: -0.9 },
+  body: { flex: 1, fontSize: 17, lineHeight: 27 },
 });

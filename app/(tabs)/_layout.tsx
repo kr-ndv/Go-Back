@@ -13,32 +13,32 @@ export default function TabsLayout() {
       tabBarInactiveTintColor: theme.muted,
       tabBarStyle: {
         position: 'absolute',
-        left: 18,
-        right: 18,
-        bottom: 18,
-        height: 70,
-        paddingTop: 8,
-        paddingBottom: 8,
-        paddingHorizontal: 4,
-        borderRadius: 24,
-        backgroundColor: theme.surface,
+        left: 16,
+        right: 16,
+        bottom: 16,
+        height: 76,
+        paddingTop: 9,
+        paddingBottom: 9,
+        paddingHorizontal: 6,
+        borderRadius: 28,
+        backgroundColor: theme.surfaceElevated,
         borderTopWidth: 0,
         borderWidth: 1,
         borderColor: theme.border,
-        elevation: 14,
+        elevation: 16,
         shadowColor: '#000000',
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
+        shadowOpacity: 0.16,
+        shadowRadius: 16,
         shadowOffset: { width: 0, height: 3 },
       },
-      tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
-      tabBarItemStyle: { borderRadius: 18, marginVertical: 3 },
+      tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: 2 },
+      tabBarItemStyle: { borderRadius: 22, marginVertical: 3 },
     }}>
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
-      <Tabs.Screen name="tasks" options={{ title: 'Tasks', tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" color={color} size={size} /> }} />
-      <Tabs.Screen name="focus-tab" options={{ title: 'Focus', tabBarIcon: ({ color, size }) => <Ionicons name="timer-outline" color={color} size={size} /> }} />
-      <Tabs.Screen name="notes" options={{ title: 'Notes', tabBarIcon: ({ color, size }) => <Ionicons name="document-text-outline" color={color} size={size} /> }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <Ionicons name="options-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={focused ? size + 1 : size} /> }} />
+      <Tabs.Screen name="tasks" options={{ title: 'Tasks', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'checkbox' : 'checkbox-outline'} color={color} size={focused ? size + 1 : size} /> }} />
+      <Tabs.Screen name="focus-tab" options={{ title: 'Focus', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'timer' : 'timer-outline'} color={color} size={focused ? size + 1 : size} /> }} />
+      <Tabs.Screen name="notes" options={{ title: 'Notes', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'document-text' : 'document-text-outline'} color={color} size={focused ? size + 1 : size} /> }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? 'options' : 'options-outline'} color={color} size={focused ? size + 1 : size} /> }} />
     </Tabs>
   );
 }

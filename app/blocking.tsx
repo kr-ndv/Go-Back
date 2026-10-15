@@ -1,6 +1,7 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, NativeModules, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, NativeModules, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -98,24 +99,24 @@ export default function BlockingScreen() {
       <Text style={[styles.title, { color: theme.text }]}>Choose what to block.</Text>
       <Text style={[styles.subtitle, { color: theme.muted }]}>Rules stay on this phone. Go Back uses Android Accessibility to notice the active app and apply your choices.</Text>
 
-      {!bridge && <View style={[styles.notice, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="construct-outline" size={22} color={theme.primary} /><View style={{ flex: 1, gap: 5 }}><Text style={[styles.noticeTitle, { color: theme.text }]}>Native Android build required</Text><Text style={[styles.detail, { color: theme.muted }]}>These controls need the Go Back debug APK or another native build. They do not work in Expo Go.</Text></View></View>}
+      {!bridge && <View style={[styles.notice, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="construct-outline" size={22} color={theme.primary} /><View style={{ flex: 1, gap: 5 }}><Text style={[styles.noticeTitle, { color: theme.text }]}>Native Android build required</Text><Text style={[styles.detail, { color: theme.muted }]}>These controls need the Go Back debug APK or another native build. They do not work in Expo Go.</Text></View></View>}
 
-      {bridge && <View style={[styles.status, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.statusDot, { backgroundColor: enabled ? theme.primary : '#E5A34D' }]} /><View style={{ flex: 1, gap: 3 }}><Text style={[styles.statusTitle, { color: theme.text }]}>{enabled ? 'Accessibility service enabled' : 'Accessibility service not enabled'}</Text><Text style={[styles.detail, { color: theme.muted }]}>{enabled ? 'Saved rules can be applied while the service is active.' : 'Save your rules, then enable Go Back in Android Accessibility settings.'}</Text></View></View>}
+      {bridge && <View style={[styles.status, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.statusDot, { backgroundColor: enabled ? theme.primary : '#E5A34D' }]} /><View style={{ flex: 1, gap: 3 }}><Text style={[styles.statusTitle, { color: theme.text }]}>{enabled ? 'Accessibility service enabled' : 'Accessibility service not enabled'}</Text><Text style={[styles.detail, { color: theme.muted }]}>{enabled ? 'Saved rules can be applied while the service is active.' : 'Save your rules, then enable Go Back in Android Accessibility settings.'}</Text></View></View>}
 
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Toggle title="Limit YouTube to allowed channels" detail="Opening YouTube and browsing its feed stays allowed. Only active playback from a channel outside this list is stopped." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
         <Toggle title="Block Instagram" detail="Return to the home screen when Instagram opens." value={config.blockInstagram} onValueChange={v => update('blockInstagram', v)} />
       </View>
 
       <Text style={[styles.section, { color: theme.text }]}>Short-form video</Text>
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Toggle title="Block YouTube Shorts" detail="Go Back tries to leave Shorts when its selected tab is detected." value={config.blockShorts} onValueChange={v => update('blockShorts', v)} />
         <Toggle title="Block Instagram Reels" detail="Go Back tries to leave Reels when its selected tab is detected." value={config.blockReels} onValueChange={v => update('blockReels', v)} />
       </View>
 
       <Text style={[styles.section, { color: theme.text }]}>YouTube channel allowlist</Text>
-      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border, gap: 12, paddingVertical: 14 }]}>
+      <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, gap: 12, paddingVertical: 14 }]}>
         <View style={styles.allowlistIntro}>
           <View style={[styles.youtubeGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="logo-youtube" size={21} color={theme.primary} /></View>
           <View style={{ flex: 1, gap: 4 }}>
@@ -131,11 +132,11 @@ export default function BlockingScreen() {
         <Text style={[styles.detail, { color: theme.muted }]}>{config.allowedChannels.length} of 50 channels selected</Text>
       </View>
 
-      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.background} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.background} />}<Text style={[styles.primaryText, { color: theme.background }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
-      <Pressable onPress={() => void openSettings()} disabled={!bridge} style={[styles.secondaryButton, { backgroundColor: theme.surface, borderColor: theme.border, opacity: bridge ? 1 : 0.55 }]}><Ionicons name="settings-outline" size={18} color={theme.primary} /><Text style={[styles.secondaryText, { color: theme.text }]}>Open Android Accessibility settings</Text></Pressable>
+      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.background} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.background} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
+      <Pressable onPress={() => void openSettings()} disabled={!bridge} style={[styles.secondaryButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, opacity: bridge ? 1 : 0.55 }]}><Ionicons name="settings-outline" size={18} color={theme.primary} /><Text style={[styles.secondaryText, { color: theme.text }]}>Open Android Accessibility settings</Text></Pressable>
 
       <View style={[styles.caution, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="information-circle-outline" size={19} color={theme.primary} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>Important: Android requires you to enable this service yourself. Detection depends on what YouTube and Instagram expose to accessibility; app updates, language, ads, or recommendations can affect Shorts/Reels and channel matching. Test each rule before relying on it. Go Back does not read passwords or send screen content to a server.</Text></View>
-      {!!error && <Text style={styles.error}>{error}</Text>}
+      {!!error && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
     </ScrollView>
   </SafeAreaView>;
 }
@@ -150,11 +151,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '900', letterSpacing: -1.1 },
   subtitle: { fontSize: 12, lineHeight: 18, marginTop: -8 },
   section: { fontSize: 18, fontWeight: '800', marginTop: 7 },
-  card: { borderWidth: 1, borderRadius: 22, paddingHorizontal: 15, paddingVertical: 3 },
+  card: { borderWidth: 1, borderRadius: 26, paddingHorizontal: 15, paddingVertical: 3 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   toggleTitle: { fontSize: 14, fontWeight: '800' },
   detail: { fontSize: 12, lineHeight: 18 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 15, borderWidth: 1, borderRadius: 18 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 15, borderWidth: 1, borderRadius: 22 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusTitle: { fontSize: 13, fontWeight: '800' },
   notice: { flexDirection: 'row', gap: 12, padding: 16, borderWidth: 1, borderRadius: 18 },
@@ -173,5 +174,5 @@ const styles = StyleSheet.create({
   secondaryButton: { minHeight: 50, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
   secondaryText: { fontSize: 13, fontWeight: '800' },
   caution: { borderRadius: 16, padding: 14, flexDirection: 'row', gap: 9, alignItems: 'flex-start' },
-  error: { fontSize: 12, color: '#D85D52', lineHeight: 18 },
+  error: { fontSize: 12, lineHeight: 18 },
 });
