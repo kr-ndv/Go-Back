@@ -113,7 +113,7 @@ class GoBackWidgetProvider : AppWidgetProvider() {
 }
 `;
 
-abstract class GoBackSingleActionWidgetProvider : AppWidgetProvider() {
+const singleProvider = `abstract class GoBackSingleActionWidgetProvider : AppWidgetProvider() {
   protected abstract val route: String
   protected abstract val title: String
   protected abstract val subtitle: String
@@ -177,7 +177,7 @@ class GoBackBlockingWidgetProvider : GoBackSingleActionWidgetProvider() {
   override val route = "blocking"
   override val title = "App blocking"
   override val subtitle = "Manage your distraction rules"
-}
+}`;
 
 const layout = `<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -377,7 +377,7 @@ function withGoBackWidget(config) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, value);
     };
-    write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider);
+    write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider + singleProvider);
     write(path.join(javaRoot, 'GoBackUsageModule.kt'), usageModule);
     write(path.join(javaRoot, 'GoBackUsagePackage.kt'), usagePackage);
     write(path.join(javaRoot, 'GoBackBlockingModule.kt'), blockingModule);
