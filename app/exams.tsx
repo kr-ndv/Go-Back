@@ -60,7 +60,17 @@ export default function ExamsScreen() {
     setCustomSubject('');
     setSubjectPickerVisible(false);
   };
-  const remove = (exam: Exam) => showThemedDialog('Remove exam?', exam.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); } }]);
+  const remove = (exam: Exam) => showThemedDialog('Remove exam?', `Remove ${exam.title} from your timetable?`, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Remove', style: 'destructive', onPress: async () => {
+      try { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); }
+      catch (error) { showThemedDialog('Exam not removed', error instanceof Error ? error.message : 'Go Back could not remove this exam.'); }
+    } },
+  ]);
+  const showExamOptions = (exam: Exam) => showThemedDialog(exam.title, 'Manage this exam entry.', [
+    { text: 'Remove exam', style: 'destructive', onPress: () => remove(exam) },
+    { text: 'Cancel', style: 'cancel' },
+  ]);
   const upcoming = exams.filter(e => daysUntil(e.exam_date) >= 0);
   const next = upcoming[0];
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -80,11 +90,11 @@ export default function ExamsScreen() {
         <Pressable onPress={() => void add()} style={[styles.add, { backgroundColor: theme.primary }]}><Ionicons name="add" size={19} color={theme.background} /><Text style={[styles.addText, { color: theme.onPrimary }]}>Add to timetable</Text></Pressable>
       </View>
       <Text style={[styles.section, { color: theme.text }]}>Your timetable</Text>
-      {exams.length === 0 ? <Text style={[styles.hint, { color: theme.muted }]}>No exams added yet.</Text> : exams.map(exam => <Pressable key={exam.id} onLongPress={() => remove(exam)} style={[styles.exam, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.dateBox, { backgroundColor: theme.surfaceAlt }]}><Text style={[styles.dateDay, { color: theme.primary }]}>{new Date(exam.exam_date + 'T12:00:00').getDate()}</Text><Text style={[styles.dateMonth, { color: theme.muted }]}>{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.examTitle, { color: theme.text }]}>{exam.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{dateLabel(exam.exam_date)}{exam.details ? ' · ' + exam.details : ''}</Text></View><View style={{ alignItems: 'flex-end' }}><Text style={[styles.daysLeft, { color: theme.primary }]}>{daysUntil(exam.exam_date) < 0 ? 'Done' : daysUntil(exam.exam_date) + 'd'}</Text><Text style={[styles.hint, { color: theme.muted }]}>hold to remove</Text></View></Pressable>)}
+      {exams.length === 0 ? <Text style={[styles.hint, { color: theme.muted }]}>No exams added yet.</Text> : exams.map(exam => <View key={exam.id} style={[styles.exam, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.dateBox, { backgroundColor: theme.surfaceAlt }]}><Text style={[styles.dateDay, { color: theme.primary }]}>{new Date(exam.exam_date + 'T12:00:00').getDate()}</Text><Text style={[styles.dateMonth, { color: theme.muted }]}>{new Date(exam.exam_date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.examTitle, { color: theme.text }]}>{exam.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{dateLabel(exam.exam_date)}{exam.details ? ' · ' + exam.details : ''}</Text></View><View style={{ alignItems: 'flex-end', gap: 3 }}><Text style={[styles.daysLeft, { color: theme.primary }]}>{daysUntil(exam.exam_date) < 0 ? 'Done' : daysUntil(exam.exam_date) + 'd'}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Options for ${exam.title}`} onPress={() => showExamOptions(exam)} hitSlop={8} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View></View>)}
     </ScrollView>
     <Modal transparent visible={subjectPickerVisible} animationType="fade" statusBarTranslucent onRequestClose={() => setSubjectPickerVisible(false)}>
       <View style={styles.subjectOverlay}>
-        <Pressable accessibilityLabel="Close subject picker" style={StyleSheet.absoluteFill} onPress={() => setSubjectPickerVisible(false)} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Dismiss subject picker" style={StyleSheet.absoluteFill} onPress={() => setSubjectPickerVisible(false)} />
         <View style={[styles.subjectModal, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <View style={styles.subjectModalHeader}>
             <View style={[styles.subjectModalGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="book-outline" size={22} color={theme.primary} /></View>
@@ -92,7 +102,7 @@ export default function ExamsScreen() {
               <Text style={[styles.subjectModalTitle, { color: theme.text }]}>Choose a subject</Text>
               <Text style={[styles.hint, { color: theme.muted }]}>Select one or enter a new subject below.</Text>
             </View>
-            <Pressable accessibilityLabel="Close subject picker" onPress={() => setSubjectPickerVisible(false)} hitSlop={8}><Ionicons name="close" size={22} color={theme.muted} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close subject picker" onPress={() => setSubjectPickerVisible(false)} hitSlop={8} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={22} color={theme.muted} /></Pressable>
           </View>
           <ScrollView style={styles.subjectList} keyboardShouldPersistTaps="handled">
             {subjectOptions.map(subject => <Pressable key={subject} onPress={() => { setTitle(subject); setCustomSubject(''); setSubjectPickerVisible(false); }} style={[styles.subjectOption, { backgroundColor: title === subject ? theme.surfaceAlt : 'transparent', borderColor: title === subject ? theme.primary : theme.border }]}>
@@ -131,7 +141,7 @@ const styles = StyleSheet.create({
   subjectModalTitle: { fontSize: 18, fontWeight: '900' },
   subjectList: { flexGrow: 0, maxHeight: 230 },
   subjectOption: { minHeight: 45, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  subjectOptionText: { flex: 1, color: '#F2F6EF', fontSize: 12, fontWeight: '700' },
+  subjectOptionText: { flex: 1, fontSize: 12, fontWeight: '700' },
   pickerLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.1 },
   customSubjectInput: { minHeight: 46, borderWidth: 1, borderRadius: 13, paddingHorizontal: 12, fontSize: 13 },
   subjectModalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
