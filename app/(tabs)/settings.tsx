@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   previewSwatch: { width: 17, height: 17, borderRadius: 7 },
   expressiveRow: { borderWidth: 1, borderRadius: 20, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
-  photoButton: { minHeight: 42, alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  photoButton: { minHeight: 48, alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
   profileId: { fontSize: 12, fontWeight: '800' },
