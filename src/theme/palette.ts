@@ -55,6 +55,7 @@ export function createTheme(mode: Exclude<ThemeMode, 'system'>, accent: AccentCo
   const primary = mode === 'light' ? selected.light : selected.dark;
   const onPrimary = mode === 'light' ? '#FFFFFF' : (accent === 'forest' || accent === 'amber') ? '#182015' : '#171322';
   return {
+    mode,
     ...palette,
     ...colors,
     primary,
