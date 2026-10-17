@@ -64,7 +64,7 @@ export default function SettingsScreen() {
       const directory = FileSystem.documentDirectory;
       if (!directory) throw new Error('Local app storage is unavailable.');
       const fileName = asset.fileName ?? asset.uri;
-      const extensionMatch = fileName.match(/\\.([a-zA-Z0-9]{2,5})(?:[?#]|$)/);
+      const extensionMatch = fileName.match(/\.([a-zA-Z0-9]{2,5})(?:[?#]|$)/);
       const extension = extensionMatch?.[1]?.toLowerCase() ?? 'jpg';
       const destination = directory + 'profile-picture-' + Date.now() + '.' + extension;
       await FileSystem.copyAsync({ from: asset.uri, to: destination });
