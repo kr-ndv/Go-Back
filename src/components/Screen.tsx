@@ -26,5 +26,5 @@ export function Screen({ children, contentStyle }: { children: React.ReactNode; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { width: '100%', alignSelf: 'center', paddingTop: 16, paddingBottom: 128, gap: 20 },
+  content: { width: '100%', alignSelf: 'center', paddingTop: 16, paddingBottom: 40, gap: 20 },
 });
