@@ -92,6 +92,7 @@ export default function SettingsScreen() {
     <Text style={[styles.section, { color: theme.text }]}>Theme Studio</Text>
     <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Choose a complete colour personality. Your selection applies across Go Back and stays on this device.</Text>
     <View style={styles.accents}>{accents.map(choice => <Pressable key={choice.value} accessibilityRole="radio" accessibilityState={{ selected: accent === choice.value }} onPress={() => void setAccent(choice.value)} style={[styles.accentChoice, { backgroundColor: theme.surface, borderColor: accent === choice.value ? theme.primary : theme.border, borderWidth: accent === choice.value ? 2 : 1 }]}><View style={[styles.swatch, { backgroundColor: choice.color }]} /><Text style={[styles.accentLabel, { color: theme.text }]}>{choice.label}</Text>{accent === choice.value && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}</Pressable>)}</View>
+    <View style={[styles.themePreview, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={{ flex: 1, gap: 5 }}><Text style={[styles.previewEyebrow, { color: theme.primary }]}>LIVE PREVIEW</Text><Text style={[styles.previewTitle, { color: theme.text }]}>Your space, your palette</Text><Text style={[styles.hint, { color: theme.muted }]}>Backgrounds, cards, borders, icons and buttons update together.</Text></View><View style={[styles.previewMiniCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.previewLine, { backgroundColor: theme.primary }]} /><View style={[styles.previewLineShort, { backgroundColor: theme.muted }]} /><View style={styles.previewSwatches}><View style={[styles.previewSwatch, { backgroundColor: theme.primary }]} /><View style={[styles.previewSwatch, { backgroundColor: theme.secondary }]} /><View style={[styles.previewSwatch, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, borderWidth: 1 }]} /></View></View></View>
     <View style={[styles.expressiveRow, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="sparkles-outline" size={20} color={theme.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Expressive styling</Text><Text style={[styles.hint, { color: theme.muted, lineHeight: 17 }]}>Use bolder shapes, stronger hierarchy and springier touch feedback.</Text></View><Switch accessibilityLabel="Expressive styling" value={expressive} onValueChange={value => void setExpressive(value)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={expressive ? theme.background : theme.surfaceAlt} />
     </View>
     <Text style={[styles.section, { color: theme.text }]}>Local profile</Text>
@@ -132,6 +133,14 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13 },
   section: { fontSize: 17, fontWeight: '800', marginTop: 8 },
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  themePreview: { borderWidth: 1, borderRadius: 26, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  previewEyebrow: { fontSize: 9, letterSpacing: 1.5, fontWeight: '900' },
+  previewTitle: { fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
+  previewMiniCard: { width: 96, height: 100, borderWidth: 1, borderRadius: 20, padding: 11, justifyContent: 'center', gap: 8 },
+  previewLine: { height: 7, width: '78%', borderRadius: 5 },
+  previewLineShort: { height: 5, width: '55%', borderRadius: 5 },
+  previewSwatches: { flexDirection: 'row', gap: 5, marginTop: 5 },
+  previewSwatch: { width: 17, height: 17, borderRadius: 7 },
   expressiveRow: { borderWidth: 1, borderRadius: 20, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
