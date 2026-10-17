@@ -116,7 +116,7 @@ export default function TodayScreen() {
       </View>
       <View style={styles.dashboard}>
         {actions.map((action, index) => <MotionReveal key={action.label} delay={Math.min(index * 20, 120)} style={styles.dashboardReveal}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${action.label}: ${action.metric}`} onPress={() => router.push(action.route as never)} style={[styles.actionCard, { backgroundColor: index % 2 === 0 ? theme.surfaceElevated : theme.surfaceAlt, borderRadius: theme.expressive ? (index % 3 === 0 ? 28 : 22) : 18 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${action.label}: ${action.metric}`} onPress={() => router.push(action.route as never)} style={[styles.actionCard, { backgroundColor: index % 2 === 0 ? theme.surfaceElevated : theme.surfaceAlt, borderRadius: theme.expressive ? 24 : 18 }]}>
             <View style={[styles.actionIcon, { backgroundColor: action.tone === 'secondary' ? theme.secondaryContainer : theme.primaryContainer }]}><Ionicons name={action.icon} size={20} color={action.tone === 'secondary' ? theme.secondary : theme.primary} /></View>
             <Text style={[styles.actionLabel, { color: theme.text }]}>{action.label}</Text>
             <Text numberOfLines={1} style={[styles.actionMetric, { color: theme.primary }]}>{action.metric}</Text>
