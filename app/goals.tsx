@@ -18,7 +18,10 @@ export default function GoalsScreen() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [title, setTitle] = useState('');
   const [targetDate, setTargetDate] = useState('');
-  const load = useCallback(async () => { const db = await getDatabase(); setGoals(await db.getAllAsync<Goal>('SELECT * FROM goals ORDER BY progress ASC, created_at DESC')); }, []);
+  const load = useCallback(async () => {
+    try { const db = await getDatabase(); setGoals(await db.getAllAsync<Goal>('SELECT * FROM goals ORDER BY progress ASC, created_at DESC')); }
+    catch (error) { showThemedDialog('Goals could not load', error instanceof Error ? error.message : 'Go Back could not read your saved goals.'); }
+  }, []);
   useEffect(() => { void load(); }, [load]);
   const add = async () => {
     const clean = title.trim();
@@ -26,16 +29,34 @@ export default function GoalsScreen() {
     if (targetDate && !isValidISODate(targetDate)) {
       showThemedDialog('Check the target date', 'Use a real date in YYYY-MM-DD format, or leave it blank.'); return;
     }
-    const db = await getDatabase();
-    await db.runAsync('INSERT INTO goals (id, title, target_date, progress, created_at) VALUES (?, ?, ?, 0, ?)', createLocalId('goal'), clean, targetDate.trim() || null, new Date().toISOString());
-    setTitle(''); setTargetDate(''); await load();
+    try {
+      const db = await getDatabase();
+      await db.runAsync('INSERT INTO goals (id, title, target_date, progress, created_at) VALUES (?, ?, ?, 0, ?)', createLocalId('goal'), clean, targetDate.trim() || null, new Date().toISOString());
+      setTitle(''); setTargetDate(''); await load();
+    } catch (error) {
+      showThemedDialog('Goal not saved', error instanceof Error ? error.message : 'Go Back could not save this goal.');
+    }
   };
   const updateProgress = async (goal: Goal, delta: number) => {
-    const db = await getDatabase();
-    await db.runAsync('UPDATE goals SET progress = ? WHERE id = ?', Math.max(0, Math.min(100, goal.progress + delta)), goal.id);
-    await load();
+    try {
+      const db = await getDatabase();
+      await db.runAsync('UPDATE goals SET progress = ? WHERE id = ?', Math.max(0, Math.min(100, goal.progress + delta)), goal.id);
+      await load();
+    } catch (error) {
+      showThemedDialog('Progress not updated', error instanceof Error ? error.message : 'Go Back could not update this goal.');
+    }
   };
-  const remove = (goal: Goal) => showThemedDialog('Delete goal?', goal.title, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM goals WHERE id = ?', goal.id); await load(); } }]);
+  const remove = (goal: Goal) => showThemedDialog('Delete goal?', `Delete “${goal.title}”?`, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Delete', style: 'destructive', onPress: async () => {
+      try { const db = await getDatabase(); await db.runAsync('DELETE FROM goals WHERE id = ?', goal.id); await load(); }
+      catch (error) { showThemedDialog('Goal not deleted', error instanceof Error ? error.message : 'Go Back could not delete this goal.'); }
+    } },
+  ]);
+  const showGoalOptions = (goal: Goal) => showThemedDialog(goal.title, 'Manage this goal.', [
+    { text: 'Delete goal', style: 'destructive', onPress: () => remove(goal) },
+    { text: 'Cancel', style: 'cancel' },
+  ]);
   const completed = goals.filter(goal => goal.progress === 100).length;
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable><Text style={[styles.headerTitle, { color: theme.text }]}>Goals</Text><View style={{ width: 40 }} /></View>
@@ -45,8 +66,8 @@ export default function GoalsScreen() {
       <Text style={[styles.section, { color: theme.text }]}>Create a goal</Text>
       <View style={[styles.form, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><TextInput value={title} onChangeText={setTitle} placeholder="What do you want to achieve?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} style={[styles.input, { color: theme.text }]} /><DateField value={targetDate} onChange={setTargetDate} placeholder="Target date (optional)" optional /><Pressable onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={18} color={theme.background} /><Text style={[styles.addText, { color: theme.onPrimary }]}>Add goal</Text></Pressable></View>
       <Text style={[styles.section, { color: theme.text }]}>Your goals</Text>
-      {goals.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="trending-up-outline" size={29} color={theme.primary} /><Text style={[styles.summaryTitle, { color: theme.text }]}>Progress, not perfection.</Text><Text style={[styles.hint, { color: theme.muted, textAlign: 'center' }]}>Set a meaningful goal, then update progress as you move forward.</Text></View> : goals.map(goal => <View key={goal.id} style={[styles.goal, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={styles.goalHead}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.goalTitle, { color: theme.text }]}>{goal.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{goal.progress === 100 ? 'Completed' : goal.target_date ? 'Target · ' + goal.target_date : 'No target date'}</Text></View><Pressable onLongPress={() => remove(goal)} hitSlop={8}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.fill, { width: `${goal.progress}%` as `${number}%`, backgroundColor: theme.primary }]} /></View><View style={styles.progressControls}><Text style={[styles.percentSmall, { color: theme.primary }]}>{goal.progress}%</Text><View style={styles.controlRow}><Pressable disabled={goal.progress === 0} onPress={() => void updateProgress(goal, -10)} style={[styles.control, { borderColor: theme.border, opacity: goal.progress === 0 ? 0.35 : 1 }]}><Ionicons name="remove" size={16} color={theme.text} /></Pressable><Pressable disabled={goal.progress === 100} onPress={() => void updateProgress(goal, 10)} style={[styles.control, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: goal.progress === 100 ? 0.35 : 1 }]}><Ionicons name="add" size={16} color={theme.background} /></Pressable></View></View></View>)}
-      <Text style={[styles.hint, { color: theme.muted }]}>Use the + and − controls to update progress in 10% steps. Long-press a goal to remove it.</Text>
+      {goals.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="trending-up-outline" size={29} color={theme.primary} /><Text style={[styles.summaryTitle, { color: theme.text }]}>Progress, not perfection.</Text><Text style={[styles.hint, { color: theme.muted, textAlign: 'center' }]}>Set a meaningful goal, then update progress as you move forward.</Text></View> : goals.map(goal => <View key={goal.id} style={[styles.goal, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={styles.goalHead}><View style={{ flex: 1, gap: 4 }}><Text style={[styles.goalTitle, { color: theme.text }]}>{goal.title}</Text><Text style={[styles.hint, { color: theme.muted }]}>{goal.progress === 100 ? 'Completed' : goal.target_date ? 'Target · ' + goal.target_date : 'No target date'}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Options for ${goal.title}`} onPress={() => showGoalOptions(goal)} hitSlop={8} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.fill, { width: `${goal.progress}%` as `${number}%`, backgroundColor: theme.primary }]} /></View><View style={styles.progressControls}><Text style={[styles.percentSmall, { color: theme.primary }]}>{goal.progress}%</Text><View style={styles.controlRow}><Pressable accessibilityRole="button" accessibilityLabel={`Decrease ${goal.title} progress`} disabled={goal.progress === 0} onPress={() => void updateProgress(goal, -10)} hitSlop={8} style={[styles.control, { borderColor: theme.border, opacity: goal.progress === 0 ? 0.35 : 1 }]}><Ionicons name="remove" size={16} color={theme.text} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Increase ${goal.title} progress`} disabled={goal.progress === 100} onPress={() => void updateProgress(goal, 10)} hitSlop={8} style={[styles.control, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: goal.progress === 100 ? 0.35 : 1 }]}><Ionicons name="add" size={16} color={theme.background} /></Pressable></View></View></View>)}
+      <Text style={[styles.hint, { color: theme.muted }]}>Use the + and − controls to update progress in 10% steps. Open a goal’s options menu to remove it.</Text>
     </ScrollView>
   </SafeAreaView>;
 }
