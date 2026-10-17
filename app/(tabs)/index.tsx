@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { MotionReveal } from '@/components/MotionReveal';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
@@ -24,6 +24,7 @@ export default function TodayScreen() {
   const theme = useAppTheme();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [profileName, setProfileName] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState('');
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -31,7 +32,7 @@ export default function TodayScreen() {
       try {
         const db = await getDatabase();
         const today = localDate(new Date());
-        const [tasks, notes, exams, subjects, habits, habitLogs, goals, focus, name] = await Promise.all([
+        const [tasks, notes, exams, subjects, habits, habitLogs, goals, focus, name, imageUri] = await Promise.all([
           db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END), 0) as done FROM tasks'),
           db.getFirstAsync<{ total: number }>('SELECT COUNT(*) as total FROM notes'),
           db.getFirstAsync<{ title: string; exam_date: string }>('SELECT title, exam_date FROM exams WHERE exam_date >= ? ORDER BY exam_date ASC LIMIT 1', today),
@@ -41,6 +42,7 @@ export default function TodayScreen() {
           db.getFirstAsync<{ total: number; done: number }>('SELECT COUNT(*) as total, COALESCE(SUM(CASE WHEN progress = 100 THEN 1 ELSE 0 END), 0) as done FROM goals'),
           db.getFirstAsync<{ seconds: number }>('SELECT COALESCE(SUM(duration_seconds), 0) as seconds FROM focus_sessions WHERE completed = 1 AND substr(started_at, 1, 10) = ?', today),
           getSetting<string>('profile.name', ''),
+          getSetting<string>('profile.imageUri', ''),
         ]);
         let chaptersTotal = 0, chaptersDone = 0;
         for (const subject of subjects) {
@@ -62,6 +64,7 @@ export default function TodayScreen() {
             focusMinutes: Math.floor((focus?.seconds ?? 0) / 60),
           });
           setProfileName(name);
+          setProfileImageUri(imageUri);
         }
       } catch (error) {
         console.warn('Could not refresh the Go Back dashboard', error);
@@ -90,7 +93,7 @@ export default function TodayScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>YOUR SPACE</Text>
           <Text style={[styles.title, { color: theme.text }]}>Go Back<Text style={{ color: theme.primary }}>.</Text></Text>
         </View>
-        <Pressable accessibilityLabel="Open local profile settings" onPress={() => router.push('/(tabs)/settings')} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open local profile settings" onPress={() => router.push('/(tabs)/settings')} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profileImageUri ? <Image source={{ uri: profileImageUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityLabel="Your profile photo" /> : profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
       </View>
       <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Welcome back, ${profileName.trim()}.` : 'Welcome back.'}</Text>
       <Text style={[styles.sub, { color: theme.muted }]}>Your day, at a glance. No digging through screens.</Text>
