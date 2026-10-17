@@ -142,7 +142,7 @@ export default function SettingsScreen() {
         </View>
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
-        <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
+        <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
         <Text style={[styles.hint, { color: theme.muted }]}>Local Go Back ID · not connected to social features yet</Text>
         <Pressable onPress={() => void Share.share({ message: profileId })}><Text style={[styles.profileId, { color: theme.primary }]}>{profileId || 'Creating your ID…'}  ·  Share</Text></Pressable>
       </View>
@@ -154,8 +154,8 @@ export default function SettingsScreen() {
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Your data stays on your device</Text>
         <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Export a portable JSON backup or restore one. Restoring replaces the current local dataset. Backups are not encrypted in this version, so keep the file private.</Text>
         <View style={styles.backupActions}>
-          <Pressable onPress={() => void exportBackup()} style={[styles.backupButton, { backgroundColor: theme.primary }]}><Ionicons name="download-outline" size={17} color={theme.background} /><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>Export</Text></Pressable>
-          <Pressable onPress={() => void importBackup()} style={[styles.backupButton, { borderColor: theme.border, borderWidth: 1 }]}><Ionicons name="cloud-upload-outline" size={17} color={theme.primary} /><Text style={{ color: theme.text, fontWeight: '800', fontSize: 12 }}>Restore</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Export Go Back backup" onPress={() => void exportBackup()} style={[styles.backupButton, { backgroundColor: theme.primary }]}><Ionicons name="download-outline" size={17} color={theme.onPrimary} /><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Export</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Import Go Back backup" onPress={() => void importBackup()} style={[styles.backupButton, { borderColor: theme.border, borderWidth: 1 }]}><Ionicons name="cloud-upload-outline" size={17} color={theme.primary} /><Text style={{ color: theme.text, fontWeight: '800', fontSize: 12 }}>Restore</Text></Pressable>
         </View>
       </View>
     </View>

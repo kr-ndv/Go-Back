@@ -13,7 +13,7 @@ export default function FocusTab() {
     <Text style={[styles.sub, { color: theme.muted }]}>One thing at a time is enough.</Text>
     <View style={[styles.panel, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
       <View style={[styles.ring, { borderColor: theme.primary }]}><Ionicons name="hourglass-outline" size={38} color={theme.primary} /><Text style={[styles.time, { color: theme.text }]}>25:00</Text><Text style={[styles.label, { color: theme.muted }]}>READY WHEN YOU ARE</Text></View>
-      <Pressable onPress={() => router.push('/focus')} style={[styles.button, { backgroundColor: theme.primary }]}><Ionicons name="play" size={18} color={theme.background} /><Text style={[styles.buttonText, { color: theme.onPrimary }]}>Start focus session</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Start a focus session" onPress={() => router.push('/focus')} style={[styles.button, { backgroundColor: theme.primary }]}><Ionicons name="play" size={18} color={theme.onPrimary} /><Text style={[styles.buttonText, { color: theme.onPrimary }]}>Start focus session</Text></Pressable>
     </View>
     <Text style={[styles.smallTitle, { color: theme.text }]}>A little structure goes a long way</Text>
     <Text style={[styles.sub, { color: theme.muted }]}>Choose a session, put distractions aside, and take breaks when you need them. The timer supports focused sessions and duration presets.</Text>
