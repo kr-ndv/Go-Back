@@ -58,30 +58,37 @@ export default function TasksScreen() {
     }
   };
   const toggle = async (task: Task) => {
-    const db = await getDatabase();
-    await db.runAsync('UPDATE tasks SET completed = ? WHERE id = ?', task.completed ? 0 : 1, task.id);
-    await load();
+    try {
+      const db = await getDatabase();
+      await db.runAsync('UPDATE tasks SET completed = ? WHERE id = ?', task.completed ? 0 : 1, task.id);
+      await load();
+    } catch (error) {
+      showThemedDialog('Task not updated', error instanceof Error ? error.message : 'Go Back could not update this task.');
+    }
   };
   const remove = (task: Task) => showThemedDialog('Delete task?', task.title, [
     { text: 'Cancel', style: 'cancel' },
-    { text: 'Delete', style: 'destructive', onPress: async () => { const db = await getDatabase(); await db.runAsync('DELETE FROM tasks WHERE id = ?', task.id); await load(); } },
+    { text: 'Delete', style: 'destructive', onPress: async () => {
+      try { const db = await getDatabase(); await db.runAsync('DELETE FROM tasks WHERE id = ?', task.id); await load(); }
+      catch (error) { showThemedDialog('Task not deleted', error instanceof Error ? error.message : 'Go Back could not delete this task.'); }
+    } },
   ]);
-  const priorityColor = (value: Priority) => value === 'high' ? '#D85D52' : value === 'low' ? '#64A9FF' : theme.muted;
+  const priorityColor = (value: Priority) => value === 'high' ? theme.danger : value === 'low' ? '#64A9FF' : theme.muted;
 
   return <Screen>
     <Text style={[styles.eyebrow, { color: theme.muted }]}>STAY ON TRACK</Text>
     <Text style={[styles.title, { color: theme.text }]}>Your tasks</Text>
     <Text style={[styles.sub, { color: theme.muted }]}>{tasks.filter(t => t.completed).length} of {tasks.length} completed · saved on this device</Text>
-    <View style={[styles.form, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View style={[styles.form, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
       <View style={styles.addRow}>
-        <TextInput value={title} onChangeText={setTitle} placeholder="What needs to get done?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Add task" disabled={saving} onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary, opacity: saving ? 0.65 : 1 }]}>{saving ? <Ionicons name="time-outline" size={20} color={theme.background} /> : <Ionicons name="add" size={23} color={theme.background} />}</Pressable>
+        <TextInput accessibilityLabel="New task title" value={title} onChangeText={setTitle} placeholder="What needs to get done?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Add task" disabled={saving} onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary, opacity: saving ? 0.65 : 1 }]}>{saving ? <Ionicons name="time-outline" size={20} color={theme.onPrimary} /> : <Ionicons name="add" size={23} color={theme.onPrimary} />}</Pressable>
       </View>
       <DateField value={dueDate} onChange={setDueDate} placeholder="Due date (optional)" optional />
       <View style={styles.priorities}><Text style={[styles.priorityLabel, { color: theme.muted }]}>PRIORITY</Text>{(['low', 'normal', 'high'] as Priority[]).map(value => <Pressable key={value} onPress={() => setPriority(value)} style={[styles.priorityOption, { borderColor: priority === value ? priorityColor(value) : theme.border, backgroundColor: priority === value ? theme.surfaceAlt : 'transparent' }]}><View style={[styles.priorityDot, { backgroundColor: priorityColor(value) }]} /><Text style={[styles.priorityText, { color: theme.text }]}>{value[0].toUpperCase() + value.slice(1)}</Text></Pressable>)}</View>
     </View>
-    {tasks.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="leaf-outline" size={30} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>A clear mind starts here.</Text><Text style={[styles.sub, { color: theme.muted, textAlign: 'center' }]}>Add one small task and build momentum.</Text></View> :
-      <View style={{ gap: 9 }}>{tasks.map(task => <View key={task.id} style={[styles.task, { backgroundColor: theme.surface, borderColor: theme.border }]}><Pressable onPress={() => void toggle(task)} style={[styles.check, { borderColor: task.completed ? theme.primary : theme.muted, backgroundColor: task.completed ? theme.primary : 'transparent' }]}>{task.completed ? <Ionicons name="checkmark" size={16} color={theme.background} /> : null}</Pressable><Pressable onPress={() => void toggle(task)} style={{ flex: 1, gap: 5 }}><Text style={[styles.taskText, { color: task.completed ? theme.muted : theme.text, textDecorationLine: task.completed ? 'line-through' : 'none' }]}>{task.title}</Text><View style={styles.meta}><Text style={[styles.metaText, { color: priorityColor(task.priority) }]}>{task.priority.toUpperCase()} PRIORITY</Text>{task.due_date && <Text style={[styles.metaText, { color: task.due_date < new Date().toISOString().slice(0, 10) && !task.completed ? '#D85D52' : theme.muted }]}>DUE {task.due_date}</Text>}</View></Pressable><Pressable onPress={() => remove(task)} hitSlop={10}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View>)}</View>}
+    {tasks.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="leaf-outline" size={30} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>A clear mind starts here.</Text><Text style={[styles.sub, { color: theme.muted, textAlign: 'center' }]}>Add one small task and build momentum.</Text></View> :
+      <View style={{ gap: 9 }}>{tasks.map(task => <View key={task.id} style={[styles.task, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!task.completed }} accessibilityLabel={`Mark ${task.title} ${task.completed ? 'incomplete' : 'complete'}`} onPress={() => void toggle(task)} hitSlop={10} style={[styles.check, { borderColor: task.completed ? theme.primary : theme.muted, backgroundColor: task.completed ? theme.primary : 'transparent' }]}>{task.completed ? <Ionicons name="checkmark" size={16} color={theme.onPrimary} /> : null}</Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Toggle task ${task.title}`} onPress={() => void toggle(task)} style={{ flex: 1, gap: 5 }}><Text style={[styles.taskText, { color: task.completed ? theme.muted : theme.text, textDecorationLine: task.completed ? 'line-through' : 'none' }]}>{task.title}</Text><View style={styles.meta}><Text style={[styles.metaText, { color: priorityColor(task.priority) }]}>{task.priority.toUpperCase()} PRIORITY</Text>{task.due_date && <Text style={[styles.metaText, { color: task.due_date < new Date().toISOString().slice(0, 10) && !task.completed ? theme.danger : theme.muted }]}>DUE {task.due_date}</Text>}</View></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Options for ${task.title}`} onPress={() => remove(task)} hitSlop={10} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View>)}</View>}
   </Screen>;
 }
 const styles = StyleSheet.create({
@@ -97,9 +104,9 @@ const styles = StyleSheet.create({
   priorityLabel: { fontSize: 9, letterSpacing: 1, fontWeight: '800', marginRight: 2 },
   priorityOption: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 5 },
   priorityDot: { width: 6, height: 6, borderRadius: 3 }, priorityText: { fontSize: 11, fontWeight: '700' },
-  empty: { alignItems: 'center', padding: 28, borderRadius: 22, borderWidth: 1, gap: 12, marginTop: 12 },
+  empty: { alignItems: 'center', padding: 28, borderRadius: 26, borderWidth: 1, gap: 12, marginTop: 12 },
   emptyTitle: { fontSize: 17, fontWeight: '800' },
-  task: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderRadius: 17, borderWidth: 1 },
+  task: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderRadius: 21, borderWidth: 1 },
   check: { width: 24, height: 24, borderWidth: 1.5, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   taskText: { fontSize: 14, fontWeight: '600' }, meta: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' }, metaText: { fontSize: 9, letterSpacing: 0.5, fontWeight: '800' },
 });

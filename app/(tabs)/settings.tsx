@@ -1,14 +1,15 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useState } from 'react';
-import { Image, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme, useThemeStore } from '@/state/theme';
-import type { AccentColor, ThemeMode } from '@/theme/palette';
+import { accentColors, paletteNames, type AccentColor, type ThemeMode } from '@/theme/palette';
 import { getSetting, setSetting } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { createBackupJson, restoreBackupJson } from '@/lib/backup';
@@ -19,23 +20,62 @@ export default function SettingsScreen() {
   const setMode = useThemeStore(s => s.setMode);
   const accent = useThemeStore(s => s.accent);
   const setAccent = useThemeStore(s => s.setAccent);
+  const expressive = useThemeStore(s => s.expressive);
+  const setExpressive = useThemeStore(s => s.setExpressive);
   const [profileName, setProfileName] = useState('');
   const [profileId, setProfileId] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState('');
+  const [choosingProfileImage, setChoosingProfileImage] = useState(false);
   useEffect(() => {
     void (async () => {
       const savedName = await getSetting<string>('profile.name', '');
+      const savedImageUri = await getSetting<string>('profile.imageUri', '');
       let savedId = await getSetting<string>('profile.id', '');
       if (!savedId) {
         savedId = createLocalId('GB').toUpperCase();
         await setSetting('profile.id', savedId);
       }
       setProfileName(savedName);
+      setProfileImageUri(savedImageUri);
       setProfileId(savedId);
     })().catch(() => showThemedDialog('Profile unavailable', 'Could not load your local profile.'));
   }, []);
   const saveProfile = async () => {
-    await setSetting('profile.name', profileName.trim());
-    showThemedDialog('Profile saved', 'Your display name is saved on this device.');
+    try {
+      await setSetting('profile.name', profileName.trim());
+      showThemedDialog('Profile saved', 'Your display name is saved on this device.');
+    } catch (error) {
+      showThemedDialog('Could not save profile', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
+
+  const chooseProfileImage = async () => {
+    if (choosingProfileImage) return;
+    setChoosingProfileImage(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const directory = FileSystem.documentDirectory;
+      if (!directory) throw new Error('Local app storage is unavailable.');
+      const fileName = asset.fileName ?? asset.uri;
+      const extensionMatch = fileName.match(/\.([a-zA-Z0-9]{2,5})(?:[?#]|$)/);
+      const extension = extensionMatch?.[1]?.toLowerCase() ?? 'jpg';
+      const destination = directory + 'profile-picture-' + Date.now() + '.' + extension;
+      await FileSystem.copyAsync({ from: asset.uri, to: destination });
+      await setSetting('profile.imageUri', destination);
+      setProfileImageUri(destination);
+      showThemedDialog('Profile photo updated', 'Your photo is stored locally on this device.');
+    } catch (error) {
+      showThemedDialog('Could not choose photo', error instanceof Error ? error.message : 'The photo picker is unavailable. You can still use your display-name initial.');
+    } finally {
+      setChoosingProfileImage(false);
+    }
   };
   const exportBackup = async () => {
     try {
@@ -76,10 +116,10 @@ export default function SettingsScreen() {
     { value: 'dark', label: 'Dark theme', hint: 'Deep forest, easier on the eyes', icon: 'moon-outline' },
   ];
   const accents: { value: AccentColor; label: string; color: string }[] = [
-    { value: 'forest', label: 'Forest', color: '#B8F36B' },
-    { value: 'blue', label: 'Blue', color: '#64A9FF' },
-    { value: 'violet', label: 'Violet', color: '#B49AFF' },
-    { value: 'amber', label: 'Amber', color: '#F2B75E' },
+    { value: 'forest', label: paletteNames.forest, color: accentColors.forest[theme.mode] },
+    { value: 'blue', label: paletteNames.blue, color: accentColors.blue[theme.mode] },
+    { value: 'violet', label: paletteNames.violet, color: accentColors.violet[theme.mode] },
+    { value: 'amber', label: paletteNames.amber, color: accentColors.amber[theme.mode] },
   ];
   return <Screen>
     <Text style={[styles.eyebrow, { color: theme.muted }]}>MAKE IT YOURS</Text>
@@ -87,18 +127,22 @@ export default function SettingsScreen() {
     <Text style={[styles.sub, { color: theme.muted }]}>A calmer space, tuned to you.</Text>
     <Text style={[styles.section, { color: theme.text }]}>Appearance</Text>
     <View style={{ gap: 9 }}>{choices.map(choice => <Pressable key={choice.value} onPress={() => void setMode(choice.value)} style={[styles.choice, { backgroundColor: theme.surface, borderColor: mode === choice.value ? theme.primary : theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name={choice.icon} size={20} color={theme.primary} /></View><View style={{ flex: 1, gap: 3 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>{choice.label}</Text><Text style={[styles.hint, { color: theme.muted }]}>{choice.hint}</Text></View><Ionicons name={mode === choice.value ? 'checkmark-circle' : 'ellipse-outline'} size={21} color={mode === choice.value ? theme.primary : theme.muted} /></Pressable>)}</View>
-    <Text style={[styles.section, { color: theme.text }]}>Accent colour</Text>
-    <View style={styles.accents}>{accents.map(choice => <Pressable key={choice.value} onPress={() => void setAccent(choice.value)} style={[styles.accentChoice, { backgroundColor: theme.surface, borderColor: accent === choice.value ? theme.primary : theme.border }]}><View style={[styles.swatch, { backgroundColor: choice.color }]} /><Text style={[styles.accentLabel, { color: theme.text }]}>{choice.label}</Text>{accent === choice.value && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}</Pressable>)}</View>
+    <Text style={[styles.section, { color: theme.text }]}>Theme Studio</Text>
+    <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Choose a complete colour personality. Your selection applies across Go Back and stays on this device.</Text>
+    <View style={styles.accents}>{accents.map(choice => <Pressable key={choice.value} accessibilityRole="radio" accessibilityState={{ selected: accent === choice.value }} onPress={() => void setAccent(choice.value)} style={[styles.accentChoice, { backgroundColor: theme.surface, borderColor: accent === choice.value ? theme.primary : theme.border, borderWidth: accent === choice.value ? 2 : 1 }]}><View style={[styles.swatch, { backgroundColor: choice.color }]} /><Text style={[styles.accentLabel, { color: theme.text }]}>{choice.label}</Text>{accent === choice.value && <Ionicons name="checkmark-circle" size={17} color={theme.primary} />}</Pressable>)}</View>
+    <View style={[styles.themePreview, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={{ flex: 1, gap: 5 }}><Text style={[styles.previewEyebrow, { color: theme.primary }]}>LIVE PREVIEW</Text><Text style={[styles.previewTitle, { color: theme.text }]}>Your space, your palette</Text><Text style={[styles.hint, { color: theme.muted }]}>Backgrounds, cards, borders, icons and buttons update together.</Text></View><View style={[styles.previewMiniCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.previewLine, { backgroundColor: theme.primary }]} /><View style={[styles.previewLineShort, { backgroundColor: theme.muted }]} /><View style={styles.previewSwatches}><View style={[styles.previewSwatch, { backgroundColor: theme.primary }]} /><View style={[styles.previewSwatch, { backgroundColor: theme.secondary }]} /><View style={[styles.previewSwatch, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, borderWidth: 1 }]} /></View></View></View>
+    <View style={[styles.expressiveRow, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.glyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="sparkles-outline" size={20} color={theme.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Expressive styling</Text><Text style={[styles.hint, { color: theme.muted, lineHeight: 17 }]}>Use bolder shapes, stronger hierarchy and springier touch feedback.</Text></View><Switch accessibilityLabel="Expressive styling" value={expressive} onValueChange={value => void setExpressive(value)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={expressive ? theme.background : theme.surfaceAlt} />
+    </View>
     <Text style={[styles.section, { color: theme.text }]}>Local profile</Text>
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border, alignItems: 'flex-start' }]}>
       <View style={{ flex: 1, gap: 9 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={[styles.profileAvatar, { backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}>{profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 28, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={26} color={theme.primary} />}</View>
-          <View style={{ flex: 1, gap: 7 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Profile</Text><Text style={[styles.hint, { color: theme.muted }]}>{profileName.trim() ? 'Hello, ' + profileName.trim() : 'Add a display name below'}</Text></View>
+          <View style={[styles.profileAvatar, { backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}>{profileImageUri ? <Image source={{ uri: profileImageUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityLabel="Your local profile photo" /> : profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 28, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={26} color={theme.primary} />}</View>
+          <View style={{ flex: 1, gap: 7 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Profile</Text><Text style={[styles.hint, { color: theme.muted }]}>{profileName.trim() ? 'Hello, ' + profileName.trim() : 'Add a display name below'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose a local profile photo" disabled={choosingProfileImage} onPress={() => void chooseProfileImage()} style={[styles.photoButton, { backgroundColor: theme.primaryContainer, opacity: choosingProfileImage ? 0.6 : 1 }]}><Ionicons name="image-outline" size={16} color={theme.primary} /><Text style={{ color: theme.primary, fontWeight: '800', fontSize: 12 }}>{choosingProfileImage ? 'Opening photos…' : profileImageUri ? 'Change photo' : 'Add profile photo'}</Text></Pressable></View>
         </View>
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
-        <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
+        <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
         <Text style={[styles.hint, { color: theme.muted }]}>Local Go Back ID · not connected to social features yet</Text>
         <Pressable onPress={() => void Share.share({ message: profileId })}><Text style={[styles.profileId, { color: theme.primary }]}>{profileId || 'Creating your ID…'}  ·  Share</Text></Pressable>
       </View>
@@ -110,8 +154,8 @@ export default function SettingsScreen() {
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Your data stays on your device</Text>
         <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Export a portable JSON backup or restore one. Restoring replaces the current local dataset. Backups are not encrypted in this version, so keep the file private.</Text>
         <View style={styles.backupActions}>
-          <Pressable onPress={() => void exportBackup()} style={[styles.backupButton, { backgroundColor: theme.primary }]}><Ionicons name="download-outline" size={17} color={theme.background} /><Text style={{ color: theme.background, fontWeight: '800', fontSize: 12 }}>Export</Text></Pressable>
-          <Pressable onPress={() => void importBackup()} style={[styles.backupButton, { borderColor: theme.border, borderWidth: 1 }]}><Ionicons name="cloud-upload-outline" size={17} color={theme.primary} /><Text style={{ color: theme.text, fontWeight: '800', fontSize: 12 }}>Restore</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Export Go Back backup" onPress={() => void exportBackup()} style={[styles.backupButton, { backgroundColor: theme.primary }]}><Ionicons name="download-outline" size={17} color={theme.onPrimary} /><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Export</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Import Go Back backup" onPress={() => void importBackup()} style={[styles.backupButton, { borderColor: theme.border, borderWidth: 1 }]}><Ionicons name="cloud-upload-outline" size={17} color={theme.primary} /><Text style={{ color: theme.text, fontWeight: '800', fontSize: 12 }}>Restore</Text></Pressable>
         </View>
       </View>
     </View>
@@ -127,7 +171,17 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13 },
   section: { fontSize: 17, fontWeight: '800', marginTop: 8 },
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  themePreview: { borderWidth: 1, borderRadius: 26, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  previewEyebrow: { fontSize: 9, letterSpacing: 1.5, fontWeight: '900' },
+  previewTitle: { fontSize: 15, fontWeight: '900', letterSpacing: -0.3 },
+  previewMiniCard: { width: 96, height: 100, borderWidth: 1, borderRadius: 20, padding: 11, justifyContent: 'center', gap: 8 },
+  previewLine: { height: 7, width: '78%', borderRadius: 5 },
+  previewLineShort: { height: 5, width: '55%', borderRadius: 5 },
+  previewSwatches: { flexDirection: 'row', gap: 5, marginTop: 5 },
+  previewSwatch: { width: 17, height: 17, borderRadius: 7 },
+  expressiveRow: { borderWidth: 1, borderRadius: 20, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
+  photoButton: { minHeight: 48, alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
   profileId: { fontSize: 12, fontWeight: '800' },
