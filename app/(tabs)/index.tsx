@@ -116,8 +116,8 @@ export default function TodayScreen() {
       </View>
       <View style={styles.dashboard}>
         {actions.map((action, index) => <MotionReveal key={action.label} delay={Math.min(index * 20, 120)} style={styles.dashboardReveal}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${action.label}: ${action.metric}`} onPress={() => router.push(action.route as never)} style={[styles.actionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderRadius: theme.expressive ? (index % 3 === 0 ? 28 : 22) : 18 }]}>
-            <View style={[styles.actionIcon, { backgroundColor: action.tone === 'secondary' ? theme.secondaryContainer : theme.primaryContainer }]}><Ionicons name={action.icon} size={20} color={theme.primary} /></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${action.label}: ${action.metric}`} onPress={() => router.push(action.route as never)} style={[styles.actionCard, { backgroundColor: index % 2 === 0 ? theme.surfaceElevated : theme.surfaceAlt, borderRadius: theme.expressive ? (index % 3 === 0 ? 28 : 22) : 18 }]}>
+            <View style={[styles.actionIcon, { backgroundColor: action.tone === 'secondary' ? theme.secondaryContainer : theme.primaryContainer }]}><Ionicons name={action.icon} size={20} color={action.tone === 'secondary' ? theme.secondary : theme.primary} /></View>
             <Text style={[styles.actionLabel, { color: theme.text }]}>{action.label}</Text>
             <Text numberOfLines={1} style={[styles.actionMetric, { color: theme.primary }]}>{action.metric}</Text>
             <Text numberOfLines={2} style={[styles.actionDetail, { color: theme.muted }]}>{action.detail}</Text>
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   sectionBadge: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   dashboard: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   dashboardReveal: { width: '48%', flexGrow: 1, flexBasis: '45%' },
-  actionCard: { minHeight: 164, borderWidth: 1, padding: 14, overflow: 'hidden' },
+  actionCard: { minHeight: 164, padding: 14, overflow: 'hidden' },
   actionIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
   actionLabel: { fontSize: 13, fontWeight: '800' },
   actionMetric: { fontSize: 19, fontWeight: '900', letterSpacing: -0.4, marginTop: 6 },
