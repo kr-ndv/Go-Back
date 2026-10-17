@@ -5,6 +5,7 @@ import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme, useThemeStore } from '@/state/theme';
@@ -23,21 +24,58 @@ export default function SettingsScreen() {
   const setExpressive = useThemeStore(s => s.setExpressive);
   const [profileName, setProfileName] = useState('');
   const [profileId, setProfileId] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState('');
+  const [choosingProfileImage, setChoosingProfileImage] = useState(false);
   useEffect(() => {
     void (async () => {
       const savedName = await getSetting<string>('profile.name', '');
+      const savedImageUri = await getSetting<string>('profile.imageUri', '');
       let savedId = await getSetting<string>('profile.id', '');
       if (!savedId) {
         savedId = createLocalId('GB').toUpperCase();
         await setSetting('profile.id', savedId);
       }
       setProfileName(savedName);
+      setProfileImageUri(savedImageUri);
       setProfileId(savedId);
     })().catch(() => showThemedDialog('Profile unavailable', 'Could not load your local profile.'));
   }, []);
   const saveProfile = async () => {
-    await setSetting('profile.name', profileName.trim());
-    showThemedDialog('Profile saved', 'Your display name is saved on this device.');
+    try {
+      await setSetting('profile.name', profileName.trim());
+      showThemedDialog('Profile saved', 'Your display name is saved on this device.');
+    } catch (error) {
+      showThemedDialog('Could not save profile', error instanceof Error ? error.message : 'Please try again.');
+    }
+  };
+
+  const chooseProfileImage = async () => {
+    if (choosingProfileImage) return;
+    setChoosingProfileImage(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const directory = FileSystem.documentDirectory;
+      if (!directory) throw new Error('Local app storage is unavailable.');
+      const fileName = asset.fileName ?? asset.uri;
+      const extensionMatch = fileName.match(/\\.([a-zA-Z0-9]{2,5})(?:[?#]|$)/);
+      const extension = extensionMatch?.[1]?.toLowerCase() ?? 'jpg';
+      const destination = directory + 'profile-picture-' + Date.now() + '.' + extension;
+      await FileSystem.copyAsync({ from: asset.uri, to: destination });
+      await setSetting('profile.imageUri', destination);
+      setProfileImageUri(destination);
+      showThemedDialog('Profile photo updated', 'Your photo is stored locally on this device.');
+    } catch (error) {
+      showThemedDialog('Could not choose photo', error instanceof Error ? error.message : 'The photo picker is unavailable. You can still use your display-name initial.');
+    } finally {
+      setChoosingProfileImage(false);
+    }
   };
   const exportBackup = async () => {
     try {
@@ -99,8 +137,8 @@ export default function SettingsScreen() {
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border, alignItems: 'flex-start' }]}>
       <View style={{ flex: 1, gap: 9 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={[styles.profileAvatar, { backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}>{profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 28, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={26} color={theme.primary} />}</View>
-          <View style={{ flex: 1, gap: 7 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Profile</Text><Text style={[styles.hint, { color: theme.muted }]}>{profileName.trim() ? 'Hello, ' + profileName.trim() : 'Add a display name below'}</Text></View>
+          <View style={[styles.profileAvatar, { backgroundColor: theme.surfaceAlt, alignItems: 'center', justifyContent: 'center' }]}>{profileImageUri ? <Image source={{ uri: profileImageUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityLabel="Your local profile photo" /> : profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 28, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={26} color={theme.primary} />}</View>
+          <View style={{ flex: 1, gap: 7 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Profile</Text><Text style={[styles.hint, { color: theme.muted }]}>{profileName.trim() ? 'Hello, ' + profileName.trim() : 'Add a display name below'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Choose a local profile photo" disabled={choosingProfileImage} onPress={() => void chooseProfileImage()} style={[styles.photoButton, { backgroundColor: theme.primaryContainer, opacity: choosingProfileImage ? 0.6 : 1 }]}><Ionicons name="image-outline" size={16} color={theme.primary} /><Text style={{ color: theme.primary, fontWeight: '800', fontSize: 12 }}>{choosingProfileImage ? 'Opening photos…' : profileImageUri ? 'Change photo' : 'Add profile photo'}</Text></Pressable></View>
         </View>
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
@@ -143,6 +181,7 @@ const styles = StyleSheet.create({
   previewSwatch: { width: 17, height: 17, borderRadius: 7 },
   expressiveRow: { borderWidth: 1, borderRadius: 20, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
   profileAvatar: { width: 66, height: 66, borderRadius: 22, overflow: 'hidden' },
+  photoButton: { minHeight: 42, alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
   profileInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13 },
   profileButton: { borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
   profileId: { fontSize: 12, fontWeight: '800' },
