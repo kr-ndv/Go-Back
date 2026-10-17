@@ -46,7 +46,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style={theme.background === '#F5F6F0' ? 'dark' : 'light'} />
+      <StatusBar style={theme.mode === 'light' ? 'dark' : 'light'} />
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
         <Stack.Screen name="focus" options={{ presentation: 'modal', animation: 'none' }} />
