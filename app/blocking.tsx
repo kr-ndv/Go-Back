@@ -90,9 +90,9 @@ export default function BlockingScreen() {
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="arrow-back" size={20} color={theme.text} /></Pressable>
       <Text style={[styles.headerTitle, { color: theme.text }]}>App blocking</Text>
-      <Pressable onPress={() => void refresh()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="refresh" size={18} color={theme.text} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Refresh blocking status" onPress={() => void refresh()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="refresh" size={18} color={theme.text} /></Pressable>
     </View>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow, { color: theme.muted }]}>PROTECT YOUR ATTENTION</Text>
@@ -126,13 +126,13 @@ export default function BlockingScreen() {
         </View>
         <View style={styles.channelEntryRow}>
           <TextInput value={channelText} onChangeText={setChannelText} onSubmitEditing={addChannel} returnKeyType="done" placeholder="@channelhandle or channel name" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.channelInput, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
-          <Pressable accessibilityLabel="Add allowed channel" onPress={addChannel} style={[styles.channelAddButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={22} color={theme.background} /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add allowed channel" onPress={addChannel} style={[styles.channelAddButton, { backgroundColor: theme.primary }]}><Ionicons name="add" size={22} color={theme.onPrimary} /></Pressable>
         </View>
         {config.allowedChannels.length > 0 ? <View style={styles.channelChips}>{config.allowedChannels.map(channel => <View key={channel} style={[styles.channelChip, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}><Text numberOfLines={1} style={[styles.channelChipText, { color: theme.text }]}>{channel}</Text><Pressable onPress={() => removeChannel(channel)} accessibilityLabel={'Remove ' + channel} hitSlop={6}><Ionicons name="close-circle" size={17} color={theme.muted} /></Pressable></View>)}</View> : <View style={[styles.emptyChannels, { borderColor: theme.border }]}><Ionicons name="people-outline" size={20} color={theme.muted} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>No allowed channels yet. YouTube and its feed stay available; any video you start playing is treated as not allowed.</Text></View>}
         <Text style={[styles.detail, { color: theme.muted }]}>{config.allowedChannels.length} of 50 channels selected</Text>
       </View>
 
-      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.background} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.background} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
+      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.onPrimary} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.onPrimary} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
       <Pressable onPress={() => void openSettings()} disabled={!bridge} style={[styles.secondaryButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, opacity: bridge ? 1 : 0.55 }]}><Ionicons name="settings-outline" size={18} color={theme.primary} /><Text style={[styles.secondaryText, { color: theme.text }]}>Open Android Accessibility settings</Text></Pressable>
 
       <View style={[styles.caution, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="information-circle-outline" size={19} color={theme.primary} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>Important: Android requires you to enable this service yourself. Detection depends on what YouTube and Instagram expose to accessibility; app updates, language, ads, or recommendations can affect Shorts/Reels and channel matching. Test each rule before relying on it. Go Back does not read passwords or send screen content to a server.</Text></View>
