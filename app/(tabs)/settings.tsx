@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme, useThemeStore } from '@/state/theme';
-import { paletteNames, type AccentColor, type ThemeMode } from '@/theme/palette';
+import { accentColors, paletteNames, type AccentColor, type ThemeMode } from '@/theme/palette';
 import { getSetting, setSetting } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
 import { createBackupJson, restoreBackupJson } from '@/lib/backup';
@@ -78,10 +78,10 @@ export default function SettingsScreen() {
     { value: 'dark', label: 'Dark theme', hint: 'Deep forest, easier on the eyes', icon: 'moon-outline' },
   ];
   const accents: { value: AccentColor; label: string; color: string }[] = [
-    { value: 'forest', label: paletteNames.forest, color: '#B8F36B' },
-    { value: 'blue', label: paletteNames.blue, color: '#64A9FF' },
-    { value: 'violet', label: paletteNames.violet, color: '#B49AFF' },
-    { value: 'amber', label: paletteNames.amber, color: '#F2B75E' },
+    { value: 'forest', label: paletteNames.forest, color: accentColors.forest[theme.mode] },
+    { value: 'blue', label: paletteNames.blue, color: accentColors.blue[theme.mode] },
+    { value: 'violet', label: paletteNames.violet, color: accentColors.violet[theme.mode] },
+    { value: 'amber', label: paletteNames.amber, color: accentColors.amber[theme.mode] },
   ];
   return <Screen>
     <Text style={[styles.eyebrow, { color: theme.muted }]}>MAKE IT YOURS</Text>
