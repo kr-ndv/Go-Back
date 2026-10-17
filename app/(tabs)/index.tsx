@@ -123,7 +123,7 @@ export default function TodayScreen() {
             <Text numberOfLines={2} style={[styles.actionDetail, { color: theme.muted }]}>{action.detail}</Text>
             {action.label === 'Tasks' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.tasksTotal ? Math.min(100, stats.tasksDone / stats.tasksTotal * 100) : 0}%` as `${number}%` }]} /></View>}
             {action.label === 'Syllabus' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.chaptersTotal ? stats.chaptersDone / stats.chaptersTotal * 100 : 0}%` as `${number}%` }]} /></View>}
-            <Ionicons name="arrow-up-forward-outline" size={15} color={theme.muted} style={styles.actionArrow} />
+            <Ionicons name="arrow-forward-outline" size={15} color={theme.muted} style={styles.actionArrow} />
           </Pressable>
         </MotionReveal>)}
       </View>
