@@ -125,6 +125,8 @@ export default function TodayScreen() {
             <Text numberOfLines={2} style={[styles.actionDetail, { color: theme.muted }]}>{action.detail}</Text>
             {action.label === 'Tasks' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.tasksTotal ? Math.min(100, stats.tasksDone / stats.tasksTotal * 100) : 0}%` as `${number}%` }]} /></View>}
             {action.label === 'Syllabus' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.chaptersTotal ? stats.chaptersDone / stats.chaptersTotal * 100 : 0}%` as `${number}%` }]} /></View>}
+            {action.label === 'Habits' && <View style={[styles.miniTrack, { backgroundColor: theme.border }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: (stats.habitsTotal ? Math.min(100, stats.habitsDone / stats.habitsTotal * 100) : 0) + '%' as any }]} /></View>}
+            {action.label === 'Goals' && <View style={[styles.miniTrack, { backgroundColor: theme.border }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: (stats.goalsTotal ? stats.goalsDone / stats.goalsTotal * 100 : 0) + '%' as any }]} /></View>}
           </Pressable>
         </MotionReveal>)}
       </View>
