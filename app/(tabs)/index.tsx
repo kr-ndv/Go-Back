@@ -81,7 +81,6 @@ export default function TodayScreen() {
     { icon: 'book-outline', label: 'Syllabus', metric: `${stats.chaptersDone}/${stats.chaptersTotal}`, detail: 'chapters complete', route: '/syllabus', tone: 'secondary' },
     { icon: 'leaf-outline', label: 'Habits', metric: `${stats.habitsDone}/${stats.habitsTotal}`, detail: 'done today', route: '/habits' },
     { icon: 'flag-outline', label: 'Goals', metric: `${stats.goalsDone}/${stats.goalsTotal}`, detail: 'goals completed', route: '/goals', tone: 'secondary' },
-    { icon: 'hourglass-outline', label: 'Focus', metric: `${stats.focusMinutes} min`, detail: 'focused today', route: '/focus' },
     { icon: 'analytics-outline', label: 'Insights', metric: 'View trends', detail: 'screen-time & usage', route: '/usage', tone: 'secondary' },
     { icon: 'shield-checkmark-outline', label: 'Blocking', metric: 'Your rules', detail: 'apps & short videos', route: '/blocking' },
   ];
@@ -126,7 +125,6 @@ export default function TodayScreen() {
             <Text numberOfLines={2} style={[styles.actionDetail, { color: theme.muted }]}>{action.detail}</Text>
             {action.label === 'Tasks' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.tasksTotal ? Math.min(100, stats.tasksDone / stats.tasksTotal * 100) : 0}%` as `${number}%` }]} /></View>}
             {action.label === 'Syllabus' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.chaptersTotal ? stats.chaptersDone / stats.chaptersTotal * 100 : 0}%` as `${number}%` }]} /></View>}
-            <Ionicons name="arrow-forward-outline" size={15} color={theme.muted} style={styles.actionArrow} />
           </Pressable>
         </MotionReveal>)}
       </View>
@@ -156,12 +154,11 @@ const styles = StyleSheet.create({
   sectionBadge: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   dashboard: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   dashboardReveal: { width: '48%', flexGrow: 1, flexBasis: '45%' },
-  actionCard: { minHeight: 164, padding: 14, overflow: 'hidden' },
+  actionCard: { minHeight: 150, padding: 14, overflow: 'hidden' },
   actionIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
   actionLabel: { fontSize: 13, fontWeight: '800' },
   actionMetric: { fontSize: 19, fontWeight: '900', letterSpacing: -0.4, marginTop: 6 },
-  actionDetail: { fontSize: 10, lineHeight: 14, marginTop: 3, paddingRight: 4 },
-  actionArrow: { position: 'absolute', right: 13, top: 15 },
+  actionDetail: { fontSize: 11, lineHeight: 15, marginTop: 3, paddingRight: 4 },
   miniTrack: { height: 4, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
   miniFill: { height: '100%', borderRadius: 3 },
   footer: { textAlign: 'center', fontSize: 9, letterSpacing: 2, fontWeight: '800', marginTop: 5 },
