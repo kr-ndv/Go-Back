@@ -19,6 +19,7 @@ export default function TasksScreen() {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [priority, setPriority] = useState<Priority>('normal');
+  const [showOptions, setShowOptions] = useState(false);
   const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -84,8 +85,11 @@ export default function TasksScreen() {
         <TextInput accessibilityLabel="New task title" value={title} onChangeText={setTitle} placeholder="What needs to get done?" placeholderTextColor={theme.muted} onSubmitEditing={() => void add()} returnKeyType="done" style={[styles.input, { color: theme.text }]} />
         <Pressable accessibilityRole="button" accessibilityLabel="Add task" disabled={saving} onPress={() => void add()} style={[styles.addButton, { backgroundColor: theme.primary, opacity: saving ? 0.65 : 1 }]}>{saving ? <Ionicons name="time-outline" size={20} color={theme.onPrimary} /> : <Ionicons name="add" size={23} color={theme.onPrimary} />}</Pressable>
       </View>
-      <DateField value={dueDate} onChange={setDueDate} placeholder="Due date (optional)" optional />
-      <View style={styles.priorities}><Text style={[styles.priorityLabel, { color: theme.muted }]}>PRIORITY</Text>{(['low', 'normal', 'high'] as Priority[]).map(value => <Pressable key={value} onPress={() => setPriority(value)} style={[styles.priorityOption, { borderColor: priority === value ? priorityColor(value) : theme.border, backgroundColor: priority === value ? theme.surfaceAlt : 'transparent' }]}><View style={[styles.priorityDot, { backgroundColor: priorityColor(value) }]} /><Text style={[styles.priorityText, { color: theme.text }]}>{value[0].toUpperCase() + value.slice(1)}</Text></Pressable>)}</View>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: showOptions }} accessibilityLabel={showOptions ? 'Hide optional task details' : 'Add a due date or priority'} onPress={() => setShowOptions(value => !value)} style={styles.optionsToggle}><Ionicons name={showOptions ? 'chevron-up' : 'options-outline'} size={17} color={theme.primary} /><Text style={[styles.optionsToggleText, { color: theme.primary }]}>{showOptions ? 'Hide options' : 'Add due date or priority'}</Text></Pressable>
+      {showOptions && <>
+        <DateField value={dueDate} onChange={setDueDate} placeholder="Due date (optional)" optional />
+        <View style={styles.priorities}><Text style={[styles.priorityLabel, { color: theme.muted }]}>PRIORITY</Text>{(['low', 'normal', 'high'] as Priority[]).map(value => <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: priority === value }} accessibilityLabel={value + ' priority'} onPress={() => setPriority(value)} style={[styles.priorityOption, { borderColor: priority === value ? priorityColor(value) : theme.border, backgroundColor: priority === value ? theme.surfaceAlt : 'transparent' }]}><View style={[styles.priorityDot, { backgroundColor: priorityColor(value) }]} /><Text style={[styles.priorityText, { color: theme.text }]}>{value[0].toUpperCase() + value.slice(1)}</Text></Pressable>)}</View>
+      </>}
     </View>
     {tasks.length === 0 ? <View style={[styles.empty, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="leaf-outline" size={30} color={theme.primary} /><Text style={[styles.emptyTitle, { color: theme.text }]}>A clear mind starts here.</Text><Text style={[styles.sub, { color: theme.muted, textAlign: 'center' }]}>Add one small task and build momentum.</Text></View> :
       <View style={{ gap: 9 }}>{tasks.map(task => <View key={task.id} style={[styles.task, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: !!task.completed }} accessibilityLabel={`Mark ${task.title} ${task.completed ? 'incomplete' : 'complete'}`} onPress={() => void toggle(task)} hitSlop={10} style={[styles.check, { borderColor: task.completed ? theme.primary : theme.muted, backgroundColor: task.completed ? theme.primary : 'transparent' }]}>{task.completed ? <Ionicons name="checkmark" size={16} color={theme.onPrimary} /> : null}</Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Toggle task ${task.title}`} onPress={() => void toggle(task)} style={{ flex: 1, gap: 5 }}><Text style={[styles.taskText, { color: task.completed ? theme.muted : theme.text, textDecorationLine: task.completed ? 'line-through' : 'none' }]}>{task.title}</Text><View style={styles.meta}><Text style={[styles.metaText, { color: priorityColor(task.priority) }]}>{task.priority.toUpperCase()} PRIORITY</Text>{task.due_date && <Text style={[styles.metaText, { color: task.due_date < new Date().toISOString().slice(0, 10) && !task.completed ? theme.danger : theme.muted }]}>DUE {task.due_date}</Text>}</View></Pressable><Pressable accessibilityRole="button" accessibilityLabel={`Options for ${task.title}`} onPress={() => remove(task)} hitSlop={10} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="ellipsis-horizontal" size={19} color={theme.muted} /></Pressable></View>)}</View>}
@@ -97,12 +101,14 @@ const styles = StyleSheet.create({
   sub: { fontSize: 12, marginTop: -12 },
   form: { borderWidth: 1, borderRadius: 18, padding: 9, gap: 7 },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  optionsToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 6 },
+  optionsToggleText: { fontSize: 12, fontWeight: '800' },
   input: { flex: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14 },
   dueInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12 },
-  addButton: { width: 43, height: 43, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  addButton: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   priorities: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap', paddingHorizontal: 3, paddingVertical: 3 },
   priorityLabel: { fontSize: 9, letterSpacing: 1, fontWeight: '800', marginRight: 2 },
-  priorityOption: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  priorityOption: { minHeight: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   priorityDot: { width: 6, height: 6, borderRadius: 3 }, priorityText: { fontSize: 11, fontWeight: '700' },
   empty: { alignItems: 'center', padding: 28, borderRadius: 26, borderWidth: 1, gap: 12, marginTop: 12 },
   emptyTitle: { fontSize: 17, fontWeight: '800' },
