@@ -89,7 +89,7 @@ export default function BlockingScreen() {
   const Toggle = ({ title, detail, value, onValueChange }: { title: string; detail: string; value: boolean; onValueChange: (next: boolean) => void }) => (
     <View style={[styles.toggleRow, { borderColor: theme.border }]}>
       <View style={{ flex: 1, gap: 4 }}><Text style={[styles.toggleTitle, { color: theme.text }]}>{title}</Text><Text style={[styles.detail, { color: theme.muted }]}>{detail}</Text></View>
-      <Switch value={value} onValueChange={onValueChange} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={value ? theme.background : '#E8EAE5'} />
+      <Switch accessibilityLabel={title} accessibilityState={{ checked: value }} value={value} onValueChange={onValueChange} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={value ? theme.onPrimary : '#E8EAE5'} />
     </View>
   );
 
@@ -149,7 +149,7 @@ export default function BlockingScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
-  back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  back: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 16, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 40, gap: 13 },
   eyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6 },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 26, paddingHorizontal: 15, paddingVertical: 3 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
   toggleTitle: { fontSize: 14, fontWeight: '800' },
-  detail: { fontSize: 12, lineHeight: 18 },
+  detail: { fontSize: 13, lineHeight: 19 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 15, borderWidth: 1, borderRadius: 22 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusTitle: { fontSize: 13, fontWeight: '800' },
@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
   youtubeGlyph: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   channelEntryRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   channelInput: { minHeight: 44, flex: 1, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12 },
-  channelAddButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  channelAddButton: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   channelChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  channelChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 13, paddingLeft: 11, paddingRight: 8, paddingVertical: 8 },
+  channelChip: { maxWidth: '100%', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 13, paddingLeft: 11, paddingRight: 8, paddingVertical: 8 },
   channelChipText: { maxWidth: 220, fontSize: 11, fontWeight: '700' },
   emptyChannels: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 11, borderWidth: 1, borderStyle: 'dashed', borderRadius: 14 },
   primaryButton: { minHeight: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9 },
