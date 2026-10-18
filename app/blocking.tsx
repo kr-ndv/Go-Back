@@ -26,6 +26,7 @@ const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: fa
 export default function BlockingScreen() {
   const theme = useAppTheme();
   const [config, setConfig] = useState<BlockingConfig>(DEFAULT_CONFIG);
+  const [savedConfig, setSavedConfig] = useState<BlockingConfig>(DEFAULT_CONFIG);
   const [channelText, setChannelText] = useState('');
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,7 @@ export default function BlockingScreen() {
     try {
       const [saved, accessibilityEnabled] = await Promise.all([bridge.getConfig(), bridge.isAccessibilityEnabled()]);
       setConfig(saved);
+      setSavedConfig(saved);
       setChannelText('');
       setEnabled(accessibilityEnabled);
       setError('');
@@ -51,6 +53,7 @@ export default function BlockingScreen() {
     return () => subscription.remove();
   }, [refresh]);
 
+  const hasUnsavedChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
   const update = (key: keyof Omit<BlockingConfig, 'allowedChannels'>, value: boolean) => setConfig(current => ({ ...current, [key]: value }));
   const addChannel = () => {
     const clean = channelText.trim().replace(/\s+/g, ' ');
@@ -69,10 +72,12 @@ export default function BlockingScreen() {
     setSaving(true); setError('');
     try {
       const next = { ...config, allowedChannels: config.allowedChannels.slice(0, 50) };
-      await bridge.setConfig(JSON.stringify(next));
+      const saved = await bridge.setConfig(JSON.stringify(next));
+      if (!saved) throw new Error('Native blocking service did not confirm the save');
       setConfig(next);
-      showThemedDialog('Blocking rules saved', 'Only channels in your allowlist are exempt from YouTube video blocking. Enable Go Back in Android Accessibility settings for the rules to take effect.');
-    } catch { setError('Could not save blocking rules. Please try again.'); }
+      setSavedConfig(next);
+      showThemedDialog('Blocking rules saved', enabled ? 'Your saved rules can now be applied while the Accessibility service is active. Test each rule before relying on it.' : 'Your rules are saved, but blocking will not take effect until you enable Go Back in Android Accessibility settings.');
+    } catch { setError('Could not confirm that the rules were saved. Your changes may still be pending; retry before relying on blocking.'); }
     finally { setSaving(false); }
   };
   const openSettings = async () => {
@@ -101,7 +106,7 @@ export default function BlockingScreen() {
 
       {!bridge && <View style={[styles.notice, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="construct-outline" size={22} color={theme.primary} /><View style={{ flex: 1, gap: 5 }}><Text style={[styles.noticeTitle, { color: theme.text }]}>Native Android build required</Text><Text style={[styles.detail, { color: theme.muted }]}>These controls need the Go Back debug APK or another native build. They do not work in Expo Go.</Text></View></View>}
 
-      {bridge && <View style={[styles.status, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.statusDot, { backgroundColor: enabled ? theme.primary : '#E5A34D' }]} /><View style={{ flex: 1, gap: 3 }}><Text style={[styles.statusTitle, { color: theme.text }]}>{enabled ? 'Accessibility service enabled' : 'Accessibility service not enabled'}</Text><Text style={[styles.detail, { color: theme.muted }]}>{enabled ? 'Saved rules can be applied while the service is active.' : 'Save your rules, then enable Go Back in Android Accessibility settings.'}</Text></View></View>}
+      {bridge && <View style={[styles.status, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.statusDot, { backgroundColor: enabled ? theme.primary : '#E5A34D' }]} /><View style={{ flex: 1, gap: 3 }}><Text style={[styles.statusTitle, { color: theme.text }]}>{enabled ? 'Accessibility service enabled' : 'Accessibility service not enabled'}</Text><Text style={[styles.detail, { color: theme.muted }]}>{hasUnsavedChanges ? 'You have unsaved changes. Save them before relying on these rules.' : enabled ? 'Saved rules can be applied while the service is active.' : 'Rules are saved, but blocking is off until you enable the Accessibility service.'}</Text></View></View>}
 
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
       <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
@@ -132,7 +137,7 @@ export default function BlockingScreen() {
         <Text style={[styles.detail, { color: theme.muted }]}>{config.allowedChannels.length} of 50 channels selected</Text>
       </View>
 
-      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.onPrimary} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.onPrimary} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : 'Save blocking rules'}</Text></Pressable>
+      <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.onPrimary} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.onPrimary} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : hasUnsavedChanges ? 'Save blocking rules · Changes pending' : 'Blocking rules saved'}</Text></Pressable>
       <Pressable onPress={() => void openSettings()} disabled={!bridge} style={[styles.secondaryButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, opacity: bridge ? 1 : 0.55 }]}><Ionicons name="settings-outline" size={18} color={theme.primary} /><Text style={[styles.secondaryText, { color: theme.text }]}>Open Android Accessibility settings</Text></Pressable>
 
       <View style={[styles.caution, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="information-circle-outline" size={19} color={theme.primary} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>Important: Android requires you to enable this service yourself. Detection depends on what YouTube and Instagram expose to accessibility; app updates, language, ads, or recommendations can affect Shorts/Reels and channel matching. Test each rule before relying on it. Go Back does not read passwords or send screen content to a server.</Text></View>
