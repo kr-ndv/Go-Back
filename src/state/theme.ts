@@ -26,7 +26,8 @@ export const useThemeStore = create<ThemeState>((set) => ({
       getSetting<unknown>('theme.expressive', true),
     ]);
     const mode: ThemeMode = storedMode === 'light' || storedMode === 'dark' || storedMode === 'system' ? storedMode : 'system';
-    const accent: AccentColor = storedAccent === 'blue' || storedAccent === 'violet' || storedAccent === 'amber' || storedAccent === 'forest' ? storedAccent : 'forest';
+    const validAccents: AccentColor[] = ['forest', 'blue', 'violet', 'amber', 'rose', 'teal', 'berry', 'sakura', 'graphite', 'coral', 'lavender', 'crimson'];
+    const accent: AccentColor = typeof storedAccent === 'string' && validAccents.includes(storedAccent as AccentColor) ? storedAccent as AccentColor : 'forest';
     const expressive = typeof storedExpressive === 'boolean' ? storedExpressive : true;
     set({ mode, accent, expressive, ready: true });
   },
