@@ -1,7 +1,7 @@
 import { accentColors, createTheme, paletteNames, type AccentColor } from '../src/theme/palette';
 
 describe('Material 3 Expressive palettes', () => {
-  const accents: AccentColor[] = ['forest', 'blue', 'violet', 'amber'];
+  const accents: AccentColor[] = ['forest', 'blue', 'violet', 'amber', 'rose', 'teal', 'berry', 'sakura', 'graphite', 'coral', 'lavender', 'crimson'];
 
   it('provides a named palette and distinct primary colours for each accent', () => {
     const lightPrimaries = accents.map(accent => createTheme('light', accent).primary);
@@ -9,6 +9,14 @@ describe('Material 3 Expressive palettes', () => {
     expect(paletteNames.blue).toBe('Ocean Blue');
     expect(paletteNames.violet).toBe('Violet Pulse');
     expect(paletteNames.amber).toBe('Sunset Amber');
+    expect(paletteNames.rose).toBe('Rose Quartz');
+    expect(paletteNames.teal).toBe('Arctic Teal');
+    expect(paletteNames.berry).toBe('Midnight Berry');
+    expect(paletteNames.sakura).toBe('Sakura Pink');
+    expect(paletteNames.graphite).toBe('Graphite Mint');
+    expect(paletteNames.coral).toBe('Coral Bloom');
+    expect(paletteNames.lavender).toBe('Lavender Sky');
+    expect(paletteNames.crimson).toBe('Crimson Ember');
     expect(new Set(lightPrimaries).size).toBe(4);
   });
 
