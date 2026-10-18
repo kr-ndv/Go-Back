@@ -94,9 +94,11 @@ export default function SettingsScreen() {
       const picked = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets[0]) return;
       const json = await FileSystem.readAsStringAsync(picked.assets[0].uri);
-      showThemedDialog('Replace local data?', 'Restoring this backup replaces the tasks, notes, exams, syllabus, goals, habits, focus history and settings currently stored on this device.', [
+      const asset = picked.assets[0];
+      const sizeLabel = typeof asset.size === 'number' ? (asset.size < 1024 * 1024 ? Math.max(1, Math.round(asset.size / 1024)) + ' KB' : (asset.size / (1024 * 1024)).toFixed(1) + ' MB') : 'size unavailable';
+      showThemedDialog('Replace current local data?', 'Selected file: ' + asset.name + ' (' + sizeLabel + '). Restoring replaces tasks, notes, exams, syllabus, goals, habits, focus history and settings on this device. Export a backup first if you may need the current data.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Restore backup', style: 'destructive', onPress: () => { void (async () => {
+        { text: 'Replace current data', style: 'destructive', onPress: () => { void (async () => {
           try {
             await restoreBackupJson(json);
             await useThemeStore.getState().hydrate();
@@ -152,7 +154,11 @@ export default function SettingsScreen() {
       <Ionicons name="shield-checkmark-outline" size={23} color={theme.primary} />
       <View style={{ flex: 1, gap: 5 }}>
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Your data stays on your device</Text>
-        <Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>Export a portable JSON backup or restore one. Restoring replaces the current local dataset. Backups are not encrypted in this version, so keep the file private.</Text>
+        <Text style={[styles.hint, { color: theme.muted, lineHeight: 19, fontSize: 12 }]}>Export a portable JSON backup or restore one. Restoring replaces the current local dataset.</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: 14, padding: 11, backgroundColor: theme.surfaceAlt }}>
+          <Ionicons name="warning-outline" size={18} color={theme.warning} />
+          <Text style={{ color: theme.text, fontSize: 12, lineHeight: 18, flex: 1 }}>Backup files are not encrypted. Anyone with the file may be able to read its contents. Keep it private and store it somewhere you trust.</Text>
+        </View>
         <View style={styles.backupActions}>
           <Pressable accessibilityRole="button" accessibilityLabel="Export Go Back backup" onPress={() => void exportBackup()} style={[styles.backupButton, { backgroundColor: theme.primary }]}><Ionicons name="download-outline" size={17} color={theme.onPrimary} /><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Export</Text></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Import Go Back backup" onPress={() => void importBackup()} style={[styles.backupButton, { borderColor: theme.border, borderWidth: 1 }]}><Ionicons name="cloud-upload-outline" size={17} color={theme.primary} /><Text style={{ color: theme.text, fontWeight: '800', fontSize: 12 }}>Restore</Text></Pressable>
