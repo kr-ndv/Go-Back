@@ -207,12 +207,16 @@ export default function FocusScreen() {
     }
   };
 
+  const confirmEndSession = (goBack = false) => {
+    showThemedDialog('End this session?', 'Your progress so far will be saved, but this session will not count as completed.', [
+      { text: 'Keep session', style: 'cancel' },
+      { text: 'End session', style: 'destructive', onPress: () => { void endSession(goBack); } },
+    ]);
+  };
+
   const close = () => {
     if (!running && !startedAt.current) { router.back(); return; }
-    showThemedDialog('End focus session?', 'Your current session will stop.', [
-      { text: 'Keep focusing', style: 'cancel' },
-      { text: 'End session', style: 'destructive', onPress: () => { void endSession(true); } },
-    ]);
+    confirmEndSession(true);
   };
 
   const changeSessionType = (value: SessionType) => {
@@ -245,8 +249,8 @@ export default function FocusScreen() {
         <View style={styles.presets}>{(sessionType === 'focus' ? FOCUS_PRESETS : BREAK_PRESETS).map(p => <Pressable key={p} accessibilityRole="button" accessibilityLabel={p + " minute " + (sessionType === "focus" ? "focus" : "break") + " preset"} accessibilityState={{ selected: minutes === p }} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.onPrimary : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View>
         {sessionType === 'focus' && <View style={styles.customRow}><TextInput accessibilityLabel="Custom focus duration in minutes" value={customMinutes} onChangeText={setCustomMinutes} keyboardType="number-pad" maxLength={3} placeholder="Custom minutes (1–180)" placeholderTextColor={theme.muted} style={[styles.customInput, { color: theme.text, backgroundColor: theme.surfaceElevated, borderColor: theme.border }]} /><Pressable accessibilityRole="button" accessibilityLabel="Set custom focus duration" onPress={applyCustomMinutes} style={[styles.customButton, { backgroundColor: theme.surfaceAlt }]}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>Set</Text></Pressable></View>}
       </> : <Text style={[styles.runningNote, { color: theme.muted }]}>The countdown uses elapsed time, so it catches up when you return to the app. A completion notification is scheduled when permission is granted.</Text>}
-      <Pressable accessibilityRole="button" accessibilityLabel={restoring ? "Restoring focus session" : running ? "Pause focus session" : "Begin focus session"} disabled={restoring} onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.onPrimary} /><Text style={[styles.startText, { color: theme.onPrimary }]}>{restoring ? 'Restoring session…' : running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
-      {startedAt.current && <Pressable accessibilityRole="button" accessibilityLabel="End focus session" onPress={() => void endSession(false)}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
+      <Pressable accessibilityRole="button" accessibilityLabel={restoring ? "Restoring focus session" : running ? "Pause focus session" : sessionType === 'short-break' ? 'Start short break' : sessionType === 'long-break' ? 'Start long break' : 'Start focus session'} disabled={restoring} onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.onPrimary} /><Text style={[styles.startText, { color: theme.onPrimary }]}>{restoring ? 'Restoring session…' : running ? 'Pause session' : sessionType === 'short-break' ? 'Start short break' : sessionType === 'long-break' ? 'Start long break' : 'Start focus session'}</Text></Pressable>
+      {startedAt.current && <Pressable accessibilityRole="button" accessibilityLabel="End focus session" onPress={() => confirmEndSession(false)} style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 }}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
     </View>
   </SafeAreaView>;
 }
