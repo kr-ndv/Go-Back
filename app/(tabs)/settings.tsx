@@ -122,6 +122,14 @@ export default function SettingsScreen() {
     { value: 'blue', label: paletteNames.blue, color: accentColors.blue[theme.mode] },
     { value: 'violet', label: paletteNames.violet, color: accentColors.violet[theme.mode] },
     { value: 'amber', label: paletteNames.amber, color: accentColors.amber[theme.mode] },
+    { value: 'rose', label: paletteNames.rose, color: accentColors.rose[theme.mode] },
+    { value: 'teal', label: paletteNames.teal, color: accentColors.teal[theme.mode] },
+    { value: 'berry', label: paletteNames.berry, color: accentColors.berry[theme.mode] },
+    { value: 'sakura', label: paletteNames.sakura, color: accentColors.sakura[theme.mode] },
+    { value: 'graphite', label: paletteNames.graphite, color: accentColors.graphite[theme.mode] },
+    { value: 'coral', label: paletteNames.coral, color: accentColors.coral[theme.mode] },
+    { value: 'lavender', label: paletteNames.lavender, color: accentColors.lavender[theme.mode] },
+    { value: 'crimson', label: paletteNames.crimson, color: accentColors.crimson[theme.mode] },
   ];
   return <Screen>
     <Text style={[styles.eyebrow, { color: theme.muted }]}>MAKE IT YOURS</Text>
