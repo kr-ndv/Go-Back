@@ -116,15 +116,15 @@ export default function SyllabusScreen() {
 }
 const styles = StyleSheet.create({
   safe: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
-  back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, headerTitle: { fontSize: 17, fontWeight: '800' },
+  back: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }, headerTitle: { fontSize: 17, fontWeight: '800' },
   content: { padding: 20, paddingBottom: 36, gap: 13 }, eyebrow: { fontSize: 10, letterSpacing: 1.7, fontWeight: '800' },
   progressCard: { borderWidth: 1, borderRadius: 20, padding: 17, gap: 14 }, progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressTitle: { fontSize: 14, fontWeight: '800' }, hint: { fontSize: 11, lineHeight: 17 }, percent: { fontSize: 28, fontWeight: '900' },
   track: { height: 6, borderRadius: 6, overflow: 'hidden' }, fill: { height: 6, borderRadius: 6 }, addRow: { borderWidth: 1, borderRadius: 17, padding: 6, flexDirection: 'row', alignItems: 'center' },
-  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 }, addButton: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 11, fontSize: 13 }, addButton: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   empty: { borderWidth: 1, borderRadius: 26, padding: 25, alignItems: 'center', gap: 10 }, emptyTitle: { fontSize: 16, fontWeight: '800' },
   subject: { borderWidth: 1, borderRadius: 24, padding: 15, gap: 12 }, subjectHead: { flexDirection: 'row', alignItems: 'center', gap: 8 }, subjectName: { fontSize: 15, fontWeight: '800' }, subjectEditRow: { flexDirection: 'row', alignItems: 'center', gap: 6 }, subjectOptions: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  chapter: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 }, check: { width: 21, height: 21, borderWidth: 1.5, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  chapter: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 }, check: { width: 28, height: 28, borderWidth: 1.5, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   chapterText: { fontSize: 12, flex: 1 }, chapterAdd: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'transparent', paddingTop: 8, gap: 10 },
-  chapterInput: { flex: 1, fontSize: 12, paddingVertical: 7 }, editChapterInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10 }, editChapterButton: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }
+  chapterInput: { flex: 1, fontSize: 12, paddingVertical: 7 }, editChapterInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10 }, editChapterButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }
 });
