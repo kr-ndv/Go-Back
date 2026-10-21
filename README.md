@@ -39,6 +39,37 @@ Go Back brings everyday study and focus tools into one place, with a clean **Mat
 | **Personalization** | Light, dark, or system appearance; multiple accent palettes; local profile |
 | **Backup & restore** | Export and restore app data using JSON files |
 
+## Screenshots
+
+Explore the app screens below. These are screenshots from the current app, shown in its Forest Lime dark theme.
+
+<table>
+  <tr>
+    <td align="center" width="50%"><strong>Today dashboard</strong><br /><img src="docs/screenshots/01-dashboard.jpg" alt="Go Back Today dashboard" width="280" /></td>
+    <td align="center" width="50%"><strong>Tasks</strong><br /><img src="docs/screenshots/02-tasks.jpg" alt="Go Back tasks screen" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><strong>Focus timer</strong><br /><img src="docs/screenshots/03-focus.jpg" alt="Go Back focus timer" width="280" /></td>
+    <td align="center" width="50%"><strong>Personal notes</strong><br /><img src="docs/screenshots/04-notes.jpg" alt="Go Back notes screen" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><strong>Settings and color palettes</strong><br /><img src="docs/screenshots/05-settings-themes.jpg" alt="Go Back appearance settings and color palettes" width="280" /></td>
+    <td align="center" width="50%"><strong>Exam planner</strong><br /><img src="docs/screenshots/06-exams.jpg" alt="Go Back exam planner" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><strong>Syllabus tracker</strong><br /><img src="docs/screenshots/07-syllabus.jpg" alt="Go Back syllabus tracker" width="280" /></td>
+    <td align="center" width="50%"><strong>Daily habits</strong><br /><img src="docs/screenshots/08-habits.jpg" alt="Go Back daily habits" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><strong>Goals</strong><br /><img src="docs/screenshots/09-goals.jpg" alt="Go Back goals screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Screen-time insights</strong><br /><img src="docs/screenshots/10-screen-time.jpg" alt="Go Back screen-time insights" width="280" /></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><strong>App blocking (experimental)</strong><br /><img src="docs/screenshots/11-app-blocking.jpg" alt="Go Back experimental app blocking controls" width="280" /></td>
+    <td align="center"><em>More improvements are in progress.</em></td>
+  </tr>
+</table>
+
 ## Design
 
 - Material 3 Expressive-inspired visual language with rounded surfaces and clear hierarchy
