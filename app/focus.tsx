@@ -1,6 +1,7 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
@@ -16,6 +17,9 @@ type ActiveFocusSession = { minutes: number; remaining: number; endAt: number | 
 
 export default function FocusScreen() {
   const theme = useAppTheme();
+  const { width, height } = useWindowDimensions();
+  const ringSize = Math.max(210, Math.min(270, width - 48, height * 0.36));
+  const compactLayout = height < 720;
   const [minutes, setMinutes] = useState(25);
   const [sessionType, setSessionType] = useState<SessionType>('focus');
   const [customMinutes, setCustomMinutes] = useState('');
@@ -206,12 +210,16 @@ export default function FocusScreen() {
     }
   };
 
+  const confirmEndSession = (goBack = false) => {
+    showThemedDialog('End this session?', 'Your progress so far will be saved, but this session will not count as completed.', [
+      { text: 'Keep session', style: 'cancel' },
+      { text: 'End session', style: 'destructive', onPress: () => { void endSession(goBack); } },
+    ]);
+  };
+
   const close = () => {
     if (!running && !startedAt.current) { router.back(); return; }
-    showThemedDialog('End focus session?', 'Your current session will stop.', [
-      { text: 'Keep focusing', style: 'cancel' },
-      { text: 'End session', style: 'destructive', onPress: () => { void endSession(true); } },
-    ]);
+    confirmEndSession(true);
   };
 
   const changeSessionType = (value: SessionType) => {
@@ -236,16 +244,16 @@ export default function FocusScreen() {
   const format = (seconds: number) => `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-    <View style={styles.top}><Pressable onPress={close} style={[styles.close, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="close" size={22} color={theme.text} /></Pressable><Text style={[styles.topLabel, { color: theme.muted }]}>FOCUS SESSION</Text><View style={{ width: 42 }} /></View>
-    <View style={styles.main}>
-      <View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
+    <View style={styles.top}><Pressable accessibilityRole="button" accessibilityLabel="Close focus session" onPress={close} style={[styles.close, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="close" size={22} color={theme.text} /></Pressable><Text style={[styles.topLabel, { color: theme.muted }]}>FOCUS SESSION</Text><View style={{ width: 42 }} /></View>
+    <View style={[styles.main, { gap: compactLayout ? 16 : 26, paddingHorizontal: width < 360 ? 18 : 26 }]}>
+      <View style={[styles.ring, { borderColor: theme.primary, width: ringSize, height: ringSize, borderRadius: ringSize / 2 }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text, fontSize: Math.min(58, ringSize * 0.215) }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
       {!running ? <>
-        <View style={styles.modes}>{([{ value: 'focus', label: 'Focus' }, { value: 'short-break', label: 'Short break' }, { value: 'long-break', label: 'Long break' }] as { value: SessionType; label: string }[]).map(mode => <Pressable key={mode.value} onPress={() => changeSessionType(mode.value)} style={[styles.mode, { backgroundColor: sessionType === mode.value ? theme.surfaceAlt : theme.surface, borderColor: sessionType === mode.value ? theme.primary : theme.border }]}><Text style={{ color: sessionType === mode.value ? theme.primary : theme.text, fontWeight: '800', fontSize: 11 }}>{mode.label}</Text></Pressable>)}</View>
-        <View style={styles.presets}>{(sessionType === 'focus' ? FOCUS_PRESETS : BREAK_PRESETS).map(p => <Pressable key={p} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.background : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View>
-        {sessionType === 'focus' && <View style={styles.customRow}><TextInput value={customMinutes} onChangeText={setCustomMinutes} keyboardType="number-pad" maxLength={3} placeholder="Custom minutes (1–180)" placeholderTextColor={theme.muted} style={[styles.customInput, { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border }]} /><Pressable onPress={applyCustomMinutes} style={[styles.customButton, { backgroundColor: theme.surfaceAlt }]}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>Set</Text></Pressable></View>}
+        <View style={styles.modes}>{([{ value: 'focus', label: 'Focus' }, { value: 'short-break', label: 'Short break' }, { value: 'long-break', label: 'Long break' }] as { value: SessionType; label: string }[]).map(mode => <Pressable key={mode.value} accessibilityRole="button" accessibilityLabel={mode.label + " session"} accessibilityState={{ selected: sessionType === mode.value, disabled: running || restoring }} onPress={() => changeSessionType(mode.value)} style={[styles.mode, { backgroundColor: sessionType === mode.value ? theme.surfaceAlt : theme.surface, borderColor: sessionType === mode.value ? theme.primary : theme.border }]}><Text style={{ color: sessionType === mode.value ? theme.primary : theme.text, fontWeight: '800', fontSize: 11 }}>{mode.label}</Text></Pressable>)}</View>
+        <View style={styles.presets}>{(sessionType === 'focus' ? FOCUS_PRESETS : BREAK_PRESETS).map(p => <Pressable key={p} accessibilityRole="button" accessibilityLabel={p + " minute " + (sessionType === "focus" ? "focus" : "break") + " preset"} accessibilityState={{ selected: minutes === p }} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.onPrimary : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View>
+        {sessionType === 'focus' && <View style={styles.customRow}><TextInput accessibilityLabel="Custom focus duration in minutes" value={customMinutes} onChangeText={setCustomMinutes} keyboardType="number-pad" maxLength={3} placeholder="Custom minutes (1–180)" placeholderTextColor={theme.muted} style={[styles.customInput, { color: theme.text, backgroundColor: theme.surfaceElevated, borderColor: theme.border }]} /><Pressable accessibilityRole="button" accessibilityLabel="Set custom focus duration" onPress={applyCustomMinutes} style={[styles.customButton, { backgroundColor: theme.surfaceAlt }]}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '800' }}>Set</Text></Pressable></View>}
       </> : <Text style={[styles.runningNote, { color: theme.muted }]}>The countdown uses elapsed time, so it catches up when you return to the app. A completion notification is scheduled when permission is granted.</Text>}
-      <Pressable disabled={restoring} onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.background} /><Text style={[styles.startText, { color: theme.background }]}>{restoring ? 'Restoring session…' : running ? 'Pause session' : 'Begin focusing'}</Text></Pressable>
-      {startedAt.current && <Pressable onPress={() => void endSession(false)}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
+      <Pressable accessibilityRole="button" accessibilityLabel={restoring ? "Restoring focus session" : running ? "Pause focus session" : sessionType === 'short-break' ? 'Start short break' : sessionType === 'long-break' ? 'Start long break' : 'Start focus session'} disabled={restoring} onPress={() => running ? pause() : void start()} style={[styles.start, { backgroundColor: theme.primary }]}><Ionicons name={running ? 'pause' : 'play'} size={19} color={theme.onPrimary} /><Text style={[styles.startText, { color: theme.onPrimary }]}>{restoring ? 'Restoring session…' : running ? 'Pause session' : sessionType === 'short-break' ? 'Start short break' : sessionType === 'long-break' ? 'Start long break' : 'Start focus session'}</Text></Pressable>
+      {startedAt.current && <Pressable accessibilityRole="button" accessibilityLabel="End focus session" onPress={() => confirmEndSession(false)} style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 }}><Text style={[styles.endText, { color: theme.muted }]}>End session</Text></Pressable>}
     </View>
   </SafeAreaView>;
 }
@@ -253,20 +261,20 @@ export default function FocusScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   top: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  close: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  close: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   topLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  main: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 30 },
-  ring: { width: 270, height: 270, borderRadius: 135, borderWidth: 5, alignItems: 'center', justifyContent: 'center', gap: 13 },
+  main: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 26 },
+  ring: { borderWidth: 5, alignItems: 'center', justifyContent: 'center', gap: 13 },
   status: { fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
   time: { fontSize: 58, fontWeight: '800', letterSpacing: -2.5 },
   mins: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
   modes: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'center' },
-  mode: { paddingVertical: 10, paddingHorizontal: 11, borderRadius: 12, borderWidth: 1 },
+  mode: { minHeight: 48, paddingVertical: 10, paddingHorizontal: 13, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   customRow: { width: '100%', flexDirection: 'row', gap: 8 },
   customInput: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12 },
-  customButton: { paddingHorizontal: 17, borderRadius: 12, justifyContent: 'center' },
+  customButton: { minHeight: 48, paddingHorizontal: 17, borderRadius: 12, justifyContent: 'center' },
   presets: { flexDirection: 'row', gap: 9, flexWrap: 'wrap', justifyContent: 'center' },
-  preset: { paddingVertical: 12, paddingHorizontal: 17, borderRadius: 14, borderWidth: 1 },
+  preset: { minHeight: 48, paddingVertical: 12, paddingHorizontal: 17, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   start: { width: '100%', paddingVertical: 17, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   startText: { fontSize: 15, fontWeight: '800' },
   runningNote: { fontSize: 12, textAlign: 'center', lineHeight: 18 },

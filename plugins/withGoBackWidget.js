@@ -113,6 +113,72 @@ class GoBackWidgetProvider : AppWidgetProvider() {
 }
 `;
 
+const singleProvider = `abstract class GoBackSingleActionWidgetProvider : AppWidgetProvider() {
+  protected abstract val route: String
+  protected abstract val title: String
+  protected abstract val subtitle: String
+
+  override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    appWidgetIds.forEach { widgetId ->
+      val views = RemoteViews(context.packageName, R.layout.go_back_single_action_widget)
+      views.setTextViewText(R.id.widget_action_title, title)
+      views.setTextViewText(R.id.widget_action_subtitle, subtitle)
+      val intent = Intent(Intent.ACTION_VIEW, Uri.parse("goback:///" + route), context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      }
+      val pendingIntent = PendingIntent.getActivity(context, 200 + route.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+      views.setOnClickPendingIntent(R.id.widget_action_button, pendingIntent)
+      manager.updateAppWidget(widgetId, views)
+    }
+  }
+}
+
+class GoBackFocusWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "focus"
+  override val title = "Focus session"
+  override val subtitle = "Make space for deep work"
+}
+class GoBackTasksWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "tasks"
+  override val title = "Your tasks"
+  override val subtitle = "Capture the next small step"
+}
+class GoBackNotesWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "notes"
+  override val title = "Quick notes"
+  override val subtitle = "Save an idea before it slips away"
+}
+class GoBackExamsWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "exams"
+  override val title = "Exam planner"
+  override val subtitle = "Keep the next date in sight"
+}
+class GoBackSyllabusWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "syllabus"
+  override val title = "Syllabus tracker"
+  override val subtitle = "Pick up where you left off"
+}
+class GoBackHabitsWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "habits"
+  override val title = "Daily habits"
+  override val subtitle = "Show up for yourself today"
+}
+class GoBackGoalsWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "goals"
+  override val title = "Goals"
+  override val subtitle = "Make progress visible"
+}
+class GoBackInsightsWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "usage"
+  override val title = "Usage insights"
+  override val subtitle = "Review your time and trends"
+}
+class GoBackBlockingWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "blocking"
+  override val title = "App blocking"
+  override val subtitle = "Manage your distraction rules"
+}`;
+
 const layout = `<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -194,6 +260,67 @@ const widgetInfo = `<?xml version="1.0" encoding="utf-8"?>
     android:widgetCategory="home_screen" />
 `;
 
+const singleActionLayout = `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/go_back_widget_bg">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GO BACK · QUICK ACTION"
+        android:textColor="#B8F36B"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.08" />
+    <TextView
+        android:id="@+id/widget_action_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:text="Your action"
+        android:textColor="#F5FAF2"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/widget_action_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:text="Open Go Back"
+        android:textColor="#C8D9CC"
+        android:textSize="12sp" />
+    <TextView
+        android:id="@+id/widget_action_button"
+        android:layout_width="wrap_content"
+        android:layout_height="38dp"
+        android:layout_marginTop="10dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:gravity="center"
+        android:background="@drawable/go_back_widget_action_bg"
+        android:text="Open"
+        android:textColor="#F5FAF2"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+</LinearLayout>
+`;
+
+const singleActionInfo = `<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="160dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/go_back_single_action_widget"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />
+`;
+
 function withGoBackWidget(config) {
   config = withAndroidManifest(config, config => {
     config.modResults.manifest['uses-permission'] = config.modResults.manifest['uses-permission'] ?? [];
@@ -219,6 +346,26 @@ function withGoBackWidget(config) {
         'meta-data': [{ $: { 'android:name': 'android.appwidget.provider', 'android:resource': '@xml/go_back_widget_info' } }],
       });
     }
+    const individualWidgets = [
+      ['.GoBackFocusWidgetProvider', 'Focus session'],
+      ['.GoBackTasksWidgetProvider', 'Tasks'],
+      ['.GoBackNotesWidgetProvider', 'Quick notes'],
+      ['.GoBackExamsWidgetProvider', 'Exam planner'],
+      ['.GoBackSyllabusWidgetProvider', 'Syllabus tracker'],
+      ['.GoBackHabitsWidgetProvider', 'Daily habits'],
+      ['.GoBackGoalsWidgetProvider', 'Goals'],
+      ['.GoBackInsightsWidgetProvider', 'Usage insights'],
+      ['.GoBackBlockingWidgetProvider', 'App blocking'],
+    ];
+    for (const [name, label] of individualWidgets) {
+      if (!application.receiver.some(receiver => receiver.$?.['android:name'] === name)) {
+        application.receiver.push({
+          $: { 'android:name': name, 'android:label': label, 'android:exported': 'true' },
+          'intent-filter': [{ action: [{ $: { 'android:name': 'android.appwidget.action.APPWIDGET_UPDATE' } }] }],
+          'meta-data': [{ $: { 'android:name': 'android.appwidget.provider', 'android:resource': '@xml/go_back_single_action_widget_info' } }],
+        });
+      }
+    }
     return config;
   });
 
@@ -230,7 +377,7 @@ function withGoBackWidget(config) {
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, value);
     };
-    write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider);
+    write(path.join(javaRoot, 'GoBackWidgetProvider.kt'), provider + singleProvider);
     write(path.join(javaRoot, 'GoBackUsageModule.kt'), usageModule);
     write(path.join(javaRoot, 'GoBackUsagePackage.kt'), usagePackage);
     write(path.join(javaRoot, 'GoBackBlockingModule.kt'), blockingModule);
@@ -246,6 +393,8 @@ function withGoBackWidget(config) {
     write(path.join(resRoot, 'xml', 'go_back_accessibility_service.xml'), accessibilityXml);
     write(path.join(resRoot, 'values', 'go_back_blocking_strings.xml'), '<?xml version="1.0" encoding="utf-8"?><resources><string name="go_back_accessibility_description">Go Back checks visible YouTube and Instagram screens to apply blocking rules configured on this device.</string></resources>');
     write(path.join(resRoot, 'layout', 'go_back_widget.xml'), layout);
+    write(path.join(resRoot, 'layout', 'go_back_single_action_widget.xml'), singleActionLayout);
+    write(path.join(resRoot, 'xml', 'go_back_single_action_widget_info.xml'), singleActionInfo);
     write(path.join(resRoot, 'values', 'go_back_widget_styles.xml'), styles);
     write(path.join(resRoot, 'drawable', 'go_back_widget_bg.xml'), widgetBackground);
     write(path.join(resRoot, 'drawable', 'go_back_widget_action_bg.xml'), actionBackground);

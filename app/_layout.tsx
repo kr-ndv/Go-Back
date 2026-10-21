@@ -46,11 +46,11 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style={theme.background === '#F5F6F0' ? 'dark' : 'light'} />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="focus" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="note-editor" options={{ presentation: 'modal' }} />
+      <StatusBar style={theme.mode === 'light' ? 'dark' : 'light'} />
+      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+        <Stack.Screen name="focus" options={{ presentation: 'modal', animation: 'none' }} />
+        <Stack.Screen name="note-editor" options={{ presentation: 'modal', animation: 'none' }} />
       </Stack>
       <ThemeDialogHost />
     </>
