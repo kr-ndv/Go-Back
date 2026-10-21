@@ -54,7 +54,14 @@ jobs:
 
       - name: Build standalone APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon || {
+            echo "Gradle build failed; clearing potentially incomplete Android SDK downloads and retrying once."
+            rm -rf "$ANDROID_HOME/.temp" "$ANDROID_HOME/ndk/27.1.12297006"
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+            ./gradlew assembleRelease --no-daemon
+          }
 
       - name: Prepare public release assets
         shell: bash
@@ -63,7 +70,9 @@ jobs:
           VERSION="1.0.0-beta.${GITHUB_RUN_NUMBER}"
           APK="release/Go-Back-${VERSION}.apk"
           cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+          cp "$APK" release/Go-Back.apk
           sha256sum "$APK" > "${APK}.sha256"
+          sha256sum release/Go-Back.apk > release/Go-Back.apk.sha256
           printf 'Version: %s\nBuild commit: %s\nPackage: com.goback.focus\nBuild: standalone Android APK, test-signed beta\n' "$VERSION" "$GITHUB_SHA" > release/BUILD-INFO.txt
 
       - name: Publish GitHub prerelease
@@ -83,4 +92,6 @@ jobs:
           files: |
             release/Go-Back-*.apk
             release/Go-Back-*.apk.sha256
+            release/Go-Back.apk
+            release/Go-Back.apk.sha256
             release/BUILD-INFO.txt
