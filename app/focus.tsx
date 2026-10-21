@@ -1,6 +1,6 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,9 @@ type ActiveFocusSession = { minutes: number; remaining: number; endAt: number | 
 
 export default function FocusScreen() {
   const theme = useAppTheme();
+  const { width, height } = useWindowDimensions();
+  const ringSize = Math.max(210, Math.min(270, width - 48, height * 0.36));
+  const compactLayout = height < 720;
   const [minutes, setMinutes] = useState(25);
   const [sessionType, setSessionType] = useState<SessionType>('focus');
   const [customMinutes, setCustomMinutes] = useState('');
@@ -242,8 +245,8 @@ export default function FocusScreen() {
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.top}><Pressable accessibilityRole="button" accessibilityLabel="Close focus session" onPress={close} style={[styles.close, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="close" size={22} color={theme.text} /></Pressable><Text style={[styles.topLabel, { color: theme.muted }]}>FOCUS SESSION</Text><View style={{ width: 42 }} /></View>
-    <View style={styles.main}>
-      <View style={[styles.ring, { borderColor: theme.primary }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
+    <View style={[styles.main, { gap: compactLayout ? 16 : 26, paddingHorizontal: width < 360 ? 18 : 26 }]}>
+      <View style={[styles.ring, { borderColor: theme.primary, width: ringSize, height: ringSize, borderRadius: ringSize / 2 }]}><Text style={[styles.status, { color: theme.muted }]}>{running ? 'STAY IN THE MOMENT' : 'ONE THING AT A TIME'}</Text><Text style={[styles.time, { color: theme.text, fontSize: Math.min(58, ringSize * 0.215) }]}>{format(remaining)}</Text><Text style={[styles.mins, { color: theme.muted }]}>{running ? 'YOU’RE DOING GREAT' : 'MINUTES OF INTENTION'}</Text></View>
       {!running ? <>
         <View style={styles.modes}>{([{ value: 'focus', label: 'Focus' }, { value: 'short-break', label: 'Short break' }, { value: 'long-break', label: 'Long break' }] as { value: SessionType; label: string }[]).map(mode => <Pressable key={mode.value} accessibilityRole="button" accessibilityLabel={mode.label + " session"} accessibilityState={{ selected: sessionType === mode.value, disabled: running || restoring }} onPress={() => changeSessionType(mode.value)} style={[styles.mode, { backgroundColor: sessionType === mode.value ? theme.surfaceAlt : theme.surface, borderColor: sessionType === mode.value ? theme.primary : theme.border }]}><Text style={{ color: sessionType === mode.value ? theme.primary : theme.text, fontWeight: '800', fontSize: 11 }}>{mode.label}</Text></Pressable>)}</View>
         <View style={styles.presets}>{(sessionType === 'focus' ? FOCUS_PRESETS : BREAK_PRESETS).map(p => <Pressable key={p} accessibilityRole="button" accessibilityLabel={p + " minute " + (sessionType === "focus" ? "focus" : "break") + " preset"} accessibilityState={{ selected: minutes === p }} onPress={() => choose(p)} style={[styles.preset, { backgroundColor: minutes === p ? theme.primary : theme.surface, borderColor: minutes === p ? theme.primary : theme.border }]}><Text style={{ color: minutes === p ? theme.onPrimary : theme.text, fontWeight: '800' }}>{p}m</Text></Pressable>)}</View>
@@ -260,8 +263,8 @@ const styles = StyleSheet.create({
   top: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   close: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   topLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  main: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 30 },
-  ring: { width: 270, height: 270, borderRadius: 135, borderWidth: 5, alignItems: 'center', justifyContent: 'center', gap: 13 },
+  main: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 26 },
+  ring: { borderWidth: 5, alignItems: 'center', justifyContent: 'center', gap: 13 },
   status: { fontSize: 9, fontWeight: '800', letterSpacing: 1.3 },
   time: { fontSize: 58, fontWeight: '800', letterSpacing: -2.5 },
   mins: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
