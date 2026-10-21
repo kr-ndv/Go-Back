@@ -1,70 +1,138 @@
 # Go Back
 
-**Go Back** is an Android-first, local-first focus and personal productivity app built with React Native, Expo, and TypeScript. The design direction is premium and calm: deep forest surfaces, fresh lime accents, rounded cards, and simple navigation.
+<p align="center">
+  <strong>A calmer way to get back on track.</strong><br />
+  A local-first focus and productivity app for Android, built with React Native, Expo, and TypeScript.
+</p>
 
-## Current status
+<p align="center">
+  <a href="https://github.com/kr-ndv/Go-Back/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kr-ndv/Go-Back/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
+  <a href="https://github.com/kr-ndv/Go-Back/actions/workflows/android-build.yml"><img alt="Android APK build" src="https://github.com/kr-ndv/Go-Back/actions/workflows/android-build.yml/badge.svg?branch=main" /></a>
+  <a href="https://github.com/kr-ndv/Go-Back/releases"><img alt="Latest beta release" src="https://img.shields.io/github/v/release/kr-ndv/Go-Back?include_prereleases&label=beta" /></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white" />
+  <img alt="Built with Expo" src="https://img.shields.io/badge/built%20with-Expo-000020?logo=expo&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" />
+</p>
 
-The initial application foundation is in progress. It includes:
-- Expo Router navigation and a Today dashboard
-- Local SQLite tables for tasks, notes, subjects, focus sessions, exams and settings
-- Task list with priorities and optional due dates
-- Personal notes editor with title/body search
-- Focus timer with preset/custom durations, focus and break modes, elapsed-time recovery, completion notifications, and session history
-- Exam countdown and timetable
-- Subject/chapter syllabus tracker with automatic progress
-- Daily habits with streak tracking and goals with progress controls
-- Android screen-time insights using UsageStatsManager with explicit Usage Access onboarding (requires a native Android build)
-- Experimental native Android blocking controls for YouTube/Instagram, Shorts/Reels detection, and selected YouTube channel names (requires Accessibility permission and real-device validation)
-- Android home-screen quick-actions widget (Focus, Tasks, Exams, Habits) generated through an Expo config plugin
-- Light/dark/system themes, accent colours, local profile, and JSON backup/restore
-- Android package ID: `com.goback.focus`
-- EAS build profiles for development, preview APK and production APK
+---
 
-**Not yet production-ready:** timer notifications, screen-time reporting and widget behavior need real-device validation; blocking rules are experimental and need real-device verification; encrypted backups and device verification remain outstanding. Automated date/ID utility tests are included. Backup files are currently plain JSON and should be kept private. No AI, cloud backend, ads, or analytics are configured.
+## About
 
-## Requirements
+Go Back brings everyday study and focus tools into one place, with a clean **Material 3 Expressive-inspired** interface, flexible color themes, and a privacy-first approach. It is designed to help you plan the day, build consistency, and return to what matters without needing an account or cloud sync.
+
+> **Project status:** Public beta. The latest UI refresh has been merged into `main`. The refreshed public APK is being rebuilt; check [Releases](https://github.com/kr-ndv/Go-Back/releases) for the currently published build.
+
+## What you can do
+
+| Area | What it offers |
+| --- | --- |
+| **Today dashboard** | A quick overview of your day and progress across your study and productivity tools |
+| **Tasks** | Organize work with priorities and optional due dates |
+| **Notes** | Write and search personal notes by title or content |
+| **Focus timer** | Preset or custom sessions, focus and break modes, session recovery, and history |
+| **Syllabus tracker** | Organize subjects and chapters and track completion progress |
+| **Exams** | Keep exam countdowns and timetable details close at hand |
+| **Habits & goals** | Track daily habits, streaks, and progress toward goals |
+| **Screen-time insights** | View Android usage statistics after granting Usage Access |
+| **Optional app-blocking tools** | Experimental YouTube/Instagram blocking and Shorts/Reels detection using Android Accessibility |
+| **Home-screen widget** | Quick actions for Focus, Tasks, Exams, and Habits |
+| **Personalization** | Light, dark, or system appearance; multiple accent palettes; local profile |
+| **Backup & restore** | Export and restore app data using JSON files |
+
+## Design
+
+- Material 3 Expressive-inspired visual language with rounded surfaces and clear hierarchy
+- 12 color palettes, including Forest Lime, Ocean Blue, Violet Pulse, Sunset Amber, Rose Quartz, and more
+- Light, dark, and system appearance modes
+- Responsive focus timer layout and accessible touch targets
+- Reduced-motion and semantic color considerations
+
+## Get the app
+
+**[Browse Go Back releases](https://github.com/kr-ndv/Go-Back/releases)** for published beta builds and their checksums.
+
+For a test build from GitHub Actions:
+
+1. Open the [Actions tab](https://github.com/kr-ndv/Go-Back/actions).
+2. Select **Android Standalone APK** or **Android APK Build**.
+3. Open a successful run and download its APK artifact.
+4. Verify the SHA-256 checksum when one is provided.
+
+The public beta APK is test-signed and intended for evaluation, not a production app-store release. Back up your local data before uninstalling or switching builds.
+
+## Run locally
+
+### Requirements
 
 - Node.js LTS
 - npm
-- Android Studio + Android SDK for local Android builds, or an EAS account for cloud builds
+- Android Studio and Android SDK for local Android builds
 
-## Getting started
+### Install and start
 
 ```bash
+git clone https://github.com/kr-ndv/Go-Back.git
+cd Go-Back
 npm install
 npx expo start
 ```
 
-Run on Android:
+To run on an Android device or emulator:
 
 ```bash
 npx expo run:android
 ```
 
-Type-check and tests:
+### Validate changes
 
 ```bash
 npm run typecheck
 npm test -- --runInBand
 ```
 
-Build an installable **debug APK** from GitHub Actions:
-1. Open the repository's **Actions** tab.
-2. Select **Android Debug APK**.
-3. Click **Run workflow** and wait for the job to finish.
-4. Download the `Go-Back-debug-apk` artifact from that run.
+The app uses Expo Router and SQLite. Native Android functionality is generated through Expo prebuild/config plugins; an Expo Go session does not provide all native capabilities.
 
-This debug APK is for device testing; it is **not** the signed production release. To build a preview/release APK with EAS, configure an Expo account and project, then run:
+## Privacy by design
 
-```bash
-npm install --global eas-cli
-eas build --platform android --profile preview
-```
+- Core app data is stored locally on the device using SQLite.
+- Screen-time insights use Android's UsageStatsManager after you explicitly grant Usage Access in Android settings.
+- Experimental blocking reads visible accessibility text on supported apps to apply local rules; this processing is intended to happen on-device.
+- No AI service, cloud backend, advertising SDK, or analytics service is currently configured.
 
-## Privacy approach
+**Backup note:** exported backups are plain JSON. Keep them private and store them somewhere secure.
 
-The app is designed to keep personal data on-device using SQLite. Screen-time reports use Android UsageStatsManager after you explicitly grant Usage Access in Android settings; usage data is displayed locally and is not uploaded. The experimental blocking service reads visible accessibility text on YouTube/Instagram only to apply local rules; detection may be imperfect and requires you to enable the Android Accessibility service yourself. Do not add external analytics, ad SDKs, AI APIs, or cloud sync without an explicit product decision and updated privacy documentation.
+## Known limitations
 
-## Project roadmap
+Go Back is still in beta, and some Android-specific behaviors vary by device and OS version:
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for implementation phases and known platform limitations.
+- Accessibility-based blocking and Shorts/Reels detection are experimental and can be imperfect.
+- Background timer notifications and screen-time reporting need continued real-device validation.
+- The home-screen widget and background behavior should be tested on the target device.
+- Backups are not encrypted, and device verification is not implemented.
+
+Grant Usage Access or Accessibility permission only if you choose to use the corresponding feature. You can use the core planning and focus features without enabling app blocking.
+
+## Roadmap
+
+See **[docs/ROADMAP.md](docs/ROADMAP.md)** for implementation phases and known platform limitations.
+
+## Contributing
+
+Issues and focused pull requests are welcome. Please include:
+
+- A clear description of the problem or proposed change
+- Steps to reproduce bugs
+- Device and Android version for device-specific issues
+- Screenshots or short recordings for UI changes, where useful
+
+Before opening a pull request, run the type-check and tests listed above.
+
+## License
+
+No license file is currently present in this repository. Unless a license is added, standard copyright restrictions apply; please open an issue before reusing or redistributing the code.
+
+---
+
+<p align="center">
+  <sub>Built to help you pause, refocus, and go back to what matters.</sub>
+</p>
