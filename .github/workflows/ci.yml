@@ -30,3 +30,16 @@ jobs:
         run: npm run typecheck
       - name: Run unit tests
         run: npm test -- --runInBand
+
+      - name: Set up Java for native Android compilation
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compile Android release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
