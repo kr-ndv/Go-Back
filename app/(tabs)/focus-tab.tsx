@@ -32,6 +32,14 @@ export default function FocusTab() {
       </View>
       <Ionicons name="chevron-forward" size={20} color={theme.muted} />
     </Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open focus schedule" onPress={() => router.push('/schedule')} style={[styles.historyCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+      <View style={[styles.historyIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="calendar-outline" size={22} color={theme.primary} /></View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={[styles.historyTitle, { color: theme.text }]}>Focus schedule</Text>
+        <Text style={[styles.historyBody, { color: theme.muted }]}>Plan repeating reminders for your weekly study routine.</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={theme.muted} />
+    </Pressable>
   </Screen>;
 }
 const styles = StyleSheet.create({
