@@ -30,6 +30,7 @@ Go Back brings everyday study and focus tools into one place, with a clean **Mat
 | **Tasks** | Organize work with priorities and optional due dates |
 | **Notes** | Write and search personal notes by title or content |
 | **Focus timer** | Countdown, stopwatch and guided Pomodoro modes; preset/custom durations, short/long breaks, session recovery, completion notifications, tags, notes and session history |
+| **Focus schedule** | Create repeating weekly reminders with day, local time and session duration; reminders never start a timer or block apps automatically |
 | **Syllabus tracker** | Organize subjects and chapters and track completion progress |
 | **Exams** | Keep exam countdowns and timetable details close at hand |
 | **Habits & goals** | Track daily habits, streaks, and progress toward goals |
@@ -37,7 +38,7 @@ Go Back brings everyday study and focus tools into one place, with a clean **Mat
 | **Optional app-blocking tools** | Experimental YouTube/Instagram blocking and Shorts/Reels detection using Android Accessibility |
 | **Home-screen widget** | Quick actions for Focus, Tasks, Exams, and Habits |
 | **Personalization** | Light, dark, or system appearance; multiple accent palettes; local profile |
-| **Backup & restore** | Export and restore app data using JSON files |
+| **Backup & restore** | Export and restore app data using versioned JSON backups; files are not encrypted |
 
 ## Screenshots
 
