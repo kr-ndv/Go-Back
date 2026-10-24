@@ -215,9 +215,9 @@ export default function FocusScreen() {
           if (modeRef.current === 'stopwatch') {
             const accumulated = Number.isFinite(session.elapsedSeconds) ? Math.max(0, Math.floor(session.elapsedSeconds ?? 0)) : 0;
             const runStartedAt = typeof session.stopwatchRunStartedAt === 'number' && Number.isFinite(session.stopwatchRunStartedAt) ? session.stopwatchRunStartedAt : null;
-            elapsedSecondsRef.current = stopwatchElapsedSeconds(accumulated, runStartedAt);
+            elapsedSecondsRef.current = accumulated;
             stopwatchRunStartedAtRef.current = runStartedAt;
-            setElapsedSeconds(elapsedSecondsRef.current);
+            setElapsedSeconds(stopwatchElapsedSeconds(accumulated, runStartedAt));
             setRunning(runStartedAt !== null);
           } else if (typeof session.endAt === 'number' && Number.isFinite(session.endAt)) {
             endAtRef.current = session.endAt;
@@ -251,7 +251,8 @@ export default function FocusScreen() {
     if (modeRef.current === 'stopwatch') {
       if (stopwatchRunStartedAtRef.current === null) return;
       const value = stopwatchElapsedSeconds(elapsedSecondsRef.current, stopwatchRunStartedAtRef.current);
-      elapsedSecondsRef.current = value;
+      // Keep the accumulator fixed while a run is active; otherwise each tick would
+      // add the same running interval again on top of the previous displayed total.
       setElapsedSeconds(value);
       return;
     }
@@ -331,7 +332,11 @@ export default function FocusScreen() {
   };
 
   const changeSessionType = (value: SessionType) => {
-    if (running || restoring || startedAt.current) return;
+    if (running || restoring) return;
+    if (startedAt.current) {
+      showThemedDialog('Finish the current session first', 'Save or end the paused session before switching between focus and break modes.');
+      return;
+    }
     sessionTypeRef.current = value;
     setSessionType(value);
     choose(value === 'focus' ? 25 : value === 'short-break' ? 5 : 15);
