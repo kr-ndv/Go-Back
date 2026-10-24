@@ -38,6 +38,15 @@ export async function getDatabase() {
       tag TEXT NOT NULL DEFAULT '',
       notes TEXT NOT NULL DEFAULT ''
     );
+    CREATE TABLE IF NOT EXISTS focus_schedules (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      days_json TEXT NOT NULL DEFAULT '[]',
+      start_time TEXT NOT NULL,
+      duration_minutes INTEGER NOT NULL DEFAULT 25,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS exams (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
