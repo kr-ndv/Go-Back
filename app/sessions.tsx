@@ -137,7 +137,7 @@ export default function SessionsScreen() {
           </View>
           <Text style={[styles.goalPercent, { color: theme.primary }]}>{Math.round(goalProgress * 100)}%</Text>
         </View>
-        <View style={[styles.goalTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.goalFill, { backgroundColor: theme.primary, width: (goalProgress * 100) + '%' }]} /></View>
+        <View style={[styles.goalTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.goalFill, { backgroundColor: theme.primary, width: ((goalProgress * 100) + '%') as `${number}%` }]} /></View>
         <View style={styles.goalActions}>
           <Text style={[styles.goalHint, { color: theme.muted }]}>Set a goal that feels achievable.</Text>
           <View style={styles.goalControls}>
