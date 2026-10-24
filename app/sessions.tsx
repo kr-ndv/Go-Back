@@ -79,7 +79,11 @@ export default function SessionsScreen() {
     const now = new Date();
     const todayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     return sessions
-      .filter(session => session.session_type === 'focus' && session.started_at.slice(0, 10) === todayKey)
+      .filter(session => {
+        const date = new Date(session.started_at);
+        const dateKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+        return session.session_type === 'focus' && Number.isFinite(date.getTime()) && dateKey === todayKey;
+      })
       .reduce((sum, session) => sum + session.duration_seconds, 0);
   }, [sessions]);
 
@@ -129,7 +133,7 @@ export default function SessionsScreen() {
           <View style={[styles.goalIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="flag-outline" size={22} color={theme.primary} /></View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={[styles.goalTitle, { color: theme.text }]}>Today's focus goal</Text>
-            <Text style={[styles.goalSubtitle, { color: theme.muted }]}>{formatFocusTime(todayFocusSeconds, todayFocusSeconds >= 3600)} of {dailyGoalMinutes} minutes</Text>
+            <Text style={[styles.goalSubtitle, { color: theme.muted }]}>{Math.floor(todayFocusSeconds / 60)} of {dailyGoalMinutes} minutes</Text>
           </View>
           <Text style={[styles.goalPercent, { color: theme.primary }]}>{Math.round(goalProgress * 100)}%</Text>
         </View>
