@@ -51,6 +51,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
         <Stack.Screen name="focus" options={{ presentation: 'modal', animation: 'none' }} />
         <Stack.Screen name="note-editor" options={{ presentation: 'modal', animation: 'none' }} />
+        <Stack.Screen name="sessions" options={{ animation: 'none' }} />
       </Stack>
       <ThemeDialogHost />
     </>
