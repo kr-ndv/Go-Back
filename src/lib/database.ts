@@ -33,7 +33,10 @@ export async function getDatabase() {
       started_at TEXT NOT NULL,
       duration_seconds INTEGER NOT NULL,
       completed INTEGER NOT NULL DEFAULT 0,
-      session_type TEXT NOT NULL DEFAULT 'focus'
+      session_type TEXT NOT NULL DEFAULT 'focus',
+      mode TEXT NOT NULL DEFAULT 'timer',
+      tag TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS exams (
       id TEXT PRIMARY KEY NOT NULL,
@@ -66,10 +69,22 @@ export async function getDatabase() {
       value TEXT NOT NULL
     );
   `);
+
+  // Additive migrations preserve records stored by already-installed beta builds.
   const focusColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(focus_sessions)');
   if (!focusColumns.some(column => column.name === 'session_type')) {
     await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN session_type TEXT NOT NULL DEFAULT 'focus'");
   }
+  if (!focusColumns.some(column => column.name === 'mode')) {
+    await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'timer'");
+  }
+  if (!focusColumns.some(column => column.name === 'tag')) {
+    await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN tag TEXT NOT NULL DEFAULT ''");
+  }
+  if (!focusColumns.some(column => column.name === 'notes')) {
+    await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+  }
+
   const taskColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(tasks)');
   if (!taskColumns.some(column => column.name === 'priority')) {
     await database.execAsync("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'normal'");
