@@ -8,7 +8,7 @@ const COLUMNS: Record<TableName, string[]> = {
   tasks: ['id', 'title', 'completed', 'created_at', 'priority', 'due_date'],
   notes: ['id', 'title', 'body', 'updated_at'],
   subjects: ['id', 'name', 'chapters_json', 'updated_at'],
-  focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed', 'session_type'],
+  focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed', 'session_type', 'mode', 'tag', 'notes'],
   exams: ['id', 'title', 'exam_date', 'details'],
   goals: ['id', 'title', 'target_date', 'progress', 'created_at'],
   habits: ['id', 'title', 'created_at', 'archived'],
@@ -18,7 +18,7 @@ const COLUMNS: Record<TableName, string[]> = {
 
 type Backup = {
   app: 'Go Back';
-  schemaVersion: 1;
+  schemaVersion: number;
   exportedAt: string;
   tables: Record<TableName, Record<string, unknown>[]>;
 };
@@ -29,20 +29,22 @@ export async function createBackupJson(): Promise<string> {
   for (const table of TABLES) {
     tables[table] = await db.getAllAsync<Record<string, unknown>>(`SELECT * FROM ${table}`);
   }
-  const backup: Backup = { app: 'Go Back', schemaVersion: 1, exportedAt: new Date().toISOString(), tables };
+  const backup: Backup = { app: 'Go Back', schemaVersion: 2, exportedAt: new Date().toISOString(), tables };
   return JSON.stringify(backup, null, 2);
 }
 
 function validateBackup(value: unknown): Backup {
   if (!value || typeof value !== 'object') throw new Error('The selected file is not a valid Go Back backup.');
   const backup = value as Partial<Backup>;
-  if (backup.app !== 'Go Back' || backup.schemaVersion !== 1 || !backup.tables || typeof backup.tables !== 'object') {
+  if (backup.app !== 'Go Back' || (backup.schemaVersion !== 1 && backup.schemaVersion !== 2) || !backup.tables || typeof backup.tables !== 'object') {
     throw new Error('This backup is not compatible with this version of Go Back.');
   }
   for (const table of TABLES) {
     if (!Array.isArray(backup.tables[table])) throw new Error(`Backup is missing the ${table} data section.`);
     if (backup.tables[table]!.length > 50000) throw new Error('This backup contains too many records to restore safely.');
   }
+  // Version 1 backups remain supported. Missing session metadata is supplied
+  // by SQLite defaults, so existing users do not lose their previous sessions.
   return backup as Backup;
 }
 
