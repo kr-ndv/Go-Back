@@ -29,11 +29,11 @@ Go Back brings everyday study and focus tools into one place, with a clean **Mat
 | **Today dashboard** | A quick overview of your day and progress across your study and productivity tools |
 | **Tasks** | Organize work with priorities and optional due dates |
 | **Notes** | Write and search personal notes by title or content |
-| **Focus timer** | Preset or custom sessions, focus and break modes, session recovery, and history |
+| **Focus timer** | Countdown, stopwatch and guided Pomodoro modes; preset/custom durations, short/long breaks, session recovery, completion notifications, tags, notes and session history |
 | **Syllabus tracker** | Organize subjects and chapters and track completion progress |
 | **Exams** | Keep exam countdowns and timetable details close at hand |
 | **Habits & goals** | Track daily habits, streaks, and progress toward goals |
-| **Screen-time insights** | View Android usage statistics after granting Usage Access |
+| **Screen-time insights** | View Android usage statistics after granting Usage Access; locally classify apps as productive, distracting or neutral |
 | **Optional app-blocking tools** | Experimental YouTube/Instagram blocking and Shorts/Reels detection using Android Accessibility |
 | **Home-screen widget** | Quick actions for Focus, Tasks, Exams, and Habits |
 | **Personalization** | Light, dark, or system appearance; multiple accent palettes; local profile |
@@ -128,6 +128,7 @@ The app uses Expo Router and SQLite. Native Android functionality is generated t
 - Core app data is stored locally on the device using SQLite.
 - Screen-time insights use Android's UsageStatsManager after you explicitly grant Usage Access in Android settings.
 - Experimental blocking reads visible accessibility text on supported apps to apply local rules; this processing is intended to happen on-device.
+- Screen-time app classifications and focus session tags/notes are stored locally in the app database.
 - No AI service, cloud backend, advertising SDK, or analytics service is currently configured.
 
 **Backup note:** exported backups are plain JSON. Keep them private and store them somewhere secure.
@@ -137,6 +138,7 @@ The app uses Expo Router and SQLite. Native Android functionality is generated t
 Go Back is still in beta, and some Android-specific behaviors vary by device and OS version:
 
 - Accessibility-based blocking and Shorts/Reels detection are experimental and can be imperfect.
+- Screen-time reports reflect Android UsageStats data; app categories are user-defined labels, not an automatic judgment of productivity.
 - Background timer notifications and screen-time reporting need continued real-device validation.
 - The home-screen widget and background behavior should be tested on the target device.
 - Backups are not encrypted, and device verification is not implemented.
