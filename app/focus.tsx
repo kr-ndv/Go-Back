@@ -311,15 +311,17 @@ export default function FocusScreen() {
     void setSetting('focus.active', null);
 
     if (value === 'pomodoro') {
-      const savedType = sessionTypeRef.current;
-      const phase = validSessionType(savedType) ? savedType : 'focus';
-      const duration = phase === 'long-break' ? 15 : phase === 'short-break' ? 5 : 25;
+      // Entering Pomodoro from another mode starts at a fresh focus round.
+      // The next phase is persisted after each completion and restored on relaunch.
+      const phase: SessionType = 'focus';
+      const duration = 25;
       sessionTypeRef.current = phase;
       setSessionType(phase);
       minutesRef.current = duration;
       setMinutes(duration);
       remainingRef.current = duration * 60;
       setRemaining(duration * 60);
+      void setSetting('focus.pomodoroNextType', 'focus');
     } else {
       sessionTypeRef.current = 'focus';
       setSessionType('focus');
