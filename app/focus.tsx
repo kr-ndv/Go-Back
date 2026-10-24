@@ -66,7 +66,6 @@ export default function FocusScreen() {
   useEffect(() => { minutesRef.current = minutes; }, [minutes]);
   useEffect(() => { sessionTypeRef.current = sessionType; }, [sessionType]);
   useEffect(() => { modeRef.current = focusMode; }, [focusMode]);
-  useEffect(() => { elapsedSecondsRef.current = elapsedSeconds; }, [elapsedSeconds]);
   useEffect(() => { tagRef.current = tag; }, [tag]);
   useEffect(() => { notesRef.current = sessionNotes; }, [sessionNotes]);
   useEffect(() => { pomodoroRoundsRef.current = pomodoroRounds; }, [pomodoroRounds]);
