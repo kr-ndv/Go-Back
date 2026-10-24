@@ -76,7 +76,7 @@ The public Google Play description and website advertise the following feature g
 | YouTube Study Mode | Current implementation has an allowed-channel setting and tries to stop playback outside the list; the feed remains available. | Different from Regain's advertised allowlisted-study experience that also controls homepage/Shorts. This needs a clear behavior spec and false-positive tests. |
 | Reels/Shorts | Experimental accessibility heuristics for YouTube Shorts and Instagram Reels. | Keep clearly marked experimental until measured; add regression fixtures/test matrix for app version, language, feed previews and navigation. |
 | Snapchat/Facebook content blocking | Not present in current Go Back blocking configuration. | Potential future expansion; do not add until core detection architecture is maintainable. |
-| Arbitrary app selection and daily app limits | Not present in current blocking UI/configuration. | Major gap. Separate the concept of a full-app block, an app time limit and a content-surface block in the UI/data model. |
+| Arbitrary app selection and daily app limits | The production-readiness branch adds searchable installed-launcher-app selection and native whole-app blocking rules. | Test blocking on physical devices. Daily app-use limits remain a separate gap and must use accurate, permission-aware time accounting. |
 | Website / browser blocking | No dedicated website blocker or browser allowlist mode found in current Go Back routes/config. | Large feature with different technical/policy risks. Plan separately after store-policy and architecture research. |
 | Strict blocking protections | No complete uninstall/floating-window/split-screen prevention feature set found. | Do not imitate invasive controls merely for parity. Evaluate Android constraints, user autonomy, recovery and store policy first. |
 | Screen-time reports | Native Android UsageStats bridge with 1/7/30-day views; the production-readiness branch adds locally saved productive/distracting/neutral app categories. Session history includes a seven-day focus summary and configurable daily focus goal. | Improve app details, richer trends and focus-versus-screen-time comparison; maintain explicit Android data limitations. |
@@ -111,9 +111,9 @@ Before new feature work:
 
 ### P1 — Make blocking useful and trustworthy
 
-1. Create one consistent target-selection model for full-app blocks, app limits and content-level rules.
+1. A selected-app list is now implemented for whole-app blocks; keep its settings separate from app-use limits and content-level rules.
 2. Improve YouTube/Instagram reliability and test false positives before adding more apps.
-3. Introduce daily app limits and scheduled blocks with clear start/end rules.
+3. Introduce daily app limits and scheduled blocks with clear start/end rules after choosing a dependable local usage-accounting and rescheduling model.
 4. Explore Snapchat/Facebook content surfaces only when target app labels and navigation behavior are testable.
 5. Consider Website/Browser Study Mode as a separate project; define supported browsers, offline behavior, bypass limitations and Android policy requirements first.
 6. Provide obvious permission explanations, visible active status, disable controls and a safe escape path. Do not describe accessibility heuristics as guaranteed enforcement.

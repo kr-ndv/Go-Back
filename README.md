@@ -35,7 +35,7 @@ Go Back brings everyday study and focus tools into one place, with a clean **Mat
 | **Exams** | Keep exam countdowns and timetable details close at hand |
 | **Habits & goals** | Track daily habits, streaks, and progress toward goals |
 | **Screen-time insights** | View Android usage statistics after granting Usage Access; locally classify apps as productive, distracting or neutral |
-| **Optional app-blocking tools** | Experimental YouTube/Instagram blocking and Shorts/Reels detection using Android Accessibility |
+| **App-blocking tools** | Select installed apps for whole-app blocking, plus experimental YouTube/Instagram channel and Shorts/Reels rules using Android Accessibility |
 | **Home-screen widget** | Quick actions for Focus, Tasks, Exams, and Habits |
 | **Personalization** | Light, dark, or system appearance; multiple accent palettes; local profile |
 | **Backup & restore** | Export and restore app data using versioned JSON backups; files are not encrypted |
