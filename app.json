@@ -36,7 +36,8 @@
           }
         }
       ],
-      "./plugins/withGoBackWidget"
+      "./plugins/withGoBackWidget",
+      "./plugins/withGoBackIcon"
     ],
     "experiments": {
       "typedRoutes": true
