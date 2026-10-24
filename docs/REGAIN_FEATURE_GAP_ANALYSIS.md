@@ -66,9 +66,9 @@ The public Google Play description and website advertise the following feature g
 | Feature area | Go Back status on current `main` | Gap / decision |
 | --- | --- | --- |
 | General student planner | Tasks, notes, exams, syllabus/chapter progress, habits and goals are implemented with local SQLite. | Keep. Treat this as a differentiator instead of replacing it with a clone of Regain. |
-| Focus countdown | Implemented with presets 15/25/45/60 minutes, custom duration, focus/short-break/long-break session types, persisted active-session recovery and completion notifications. | Test on real devices. No stopwatch or automatic Pomodoro-cycle flow was found in the current focus screen. |
+| Focus countdown | Implemented with presets/custom duration, short/long breaks, active-session recovery and completion notifications. Timer, stopwatch and guided Pomodoro modes are now on the production-readiness branch. | Test all modes on real devices; Pomodoro phases prepare the next break/focus phase without auto-starting it. |
 | Focus session history | Completed/partial sessions are stored in SQLite and today's completed minutes are surfaced on the dashboard. | Add a dedicated, useful session history and review experience; verify whether all saved sessions can be reached in the UI. |
-| Session tags and notes | Current `focus_sessions` schema stores ID, start time, duration, completion state and session type. | Add optional tags/notes (and optionally link to a subject/task) so reports can explain what a session was for. |
+| Session tags and notes | The production-readiness branch adds optional tags/notes to `focus_sessions`, plus additive SQLite migrations and backup schema v2 that still accepts v1 backups. | Add upgrade/backup regression tests and real-device verification. Linking sessions directly to a subject/task remains future work. |
 | Strict focus mode | No complete strict-session mode was found in the current focus screen. | High value, but design it with honest disclosures, reliable native behavior and a documented safe escape path. Do not promise “impossible to bypass” without extensive testing. |
 | Focus sounds/music | No in-session audio library/player was found in the current feature implementation. | Useful later. Start with small bundled, properly licensed sounds and explicit playback controls; avoid unnecessary network streaming. |
 | Session themes | App-wide appearance modes and 12 accent palettes exist. | Regain-style immersive per-session backgrounds are a separate enhancement, not an existing gap in app-wide theming. |
@@ -79,7 +79,7 @@ The public Google Play description and website advertise the following feature g
 | Arbitrary app selection and daily app limits | Not present in current blocking UI/configuration. | Major gap. Separate the concept of a full-app block, an app time limit and a content-surface block in the UI/data model. |
 | Website / browser blocking | No dedicated website blocker or browser allowlist mode found in current Go Back routes/config. | Large feature with different technical/policy risks. Plan separately after store-policy and architecture research. |
 | Strict blocking protections | No complete uninstall/floating-window/split-screen prevention feature set found. | Do not imitate invasive controls merely for parity. Evaluate Android constraints, user autonomy, recovery and store policy first. |
-| Screen-time reports | Native Android UsageStats bridge; user chooses 1, 7 or 30 days; app usage data is read locally and displayed. | Extend reports: day/week/month navigation, app details, productive/distracting categories, focus-versus-screen-time comparison, and clear data limitations. |
+| Screen-time reports | Native Android UsageStats bridge with 1/7/30-day views; the production-readiness branch adds locally saved productive/distracting/neutral app categories. Session history includes a seven-day focus summary and configurable daily focus goal. | Improve app details, richer trends and focus-versus-screen-time comparison; maintain explicit Android data limitations. |
 | Phone unlock counts | No unlock-count implementation found in current usage bridge. | Investigate whether a robust, privacy-preserving metric is available and reliable across supported Android versions. |
 | Focus schedule planner | Exam calendar exists, but no recurring focus-session schedule planner was found. | Add local weekly/daily scheduling before considering cloud/group features. |
 | Widgets | Native quick-action widgets open Focus, Tasks, Notes, Exams, Syllabus, Habits, Goals, Usage and Blocking screens. | Add data widgets later (daily focus goal, active timer/status, usage summary) and validate update behavior across launchers. |
@@ -141,6 +141,14 @@ Before new feature work:
 - Companion/coach features requiring personalized recommendations or remote services.
 
 These features require a backend and a privacy policy decision; they should not delay fixing bugs in the offline experience.
+
+## Explicit exclusions requested for Go Back
+- Focus music / audio libraries.
+- Group study rooms or multiplayer focus sessions.
+- Leaderboards.
+- The Rega motivational companion.
+
+These are intentionally out of scope and should not be reintroduced as roadmap suggestions unless the product owner explicitly changes the decision.
 
 ## 4. Product decisions to preserve
 
