@@ -188,7 +188,7 @@ export default function FocusScreen() {
           getSetting<SessionType>('focus.pomodoroNextType', 'focus'),
         ]);
         if (!active) return;
-        const restoredMode = validMode(session?.mode) ? session.mode : validMode(savedMode) ? savedMode : 'timer';
+        const restoredMode: FocusMode = session && validMode(session.mode) ? session.mode : validMode(savedMode) ? savedMode : 'timer';
         const rounds = Number.isInteger(savedRounds) && savedRounds >= 0 ? savedRounds : 0;
         modeRef.current = restoredMode;
         setFocusMode(restoredMode);
