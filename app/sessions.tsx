@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
-import { getDatabase } from '@/lib/database';
+import { getDatabase, getSetting, setSetting } from '@/lib/database';
 import { useAppTheme } from '@/state/theme';
 import { formatFocusTime, type FocusMode, type FocusSessionType } from '@/lib/focusLogic';
 
@@ -34,15 +34,21 @@ export default function SessionsScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState(120);
+  const [goalSaveError, setGoalSaveError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const db = await getDatabase();
-      const rows = await db.getAllAsync<SessionRow>(
-        'SELECT id, started_at, duration_seconds, completed, session_type, mode, tag, notes FROM focus_sessions ORDER BY started_at DESC LIMIT 200'
-      );
+      const [rows, savedGoal] = await Promise.all([
+        db.getAllAsync<SessionRow>(
+          'SELECT id, started_at, duration_seconds, completed, session_type, mode, tag, notes FROM focus_sessions ORDER BY started_at DESC LIMIT 200'
+        ),
+        getSetting<number>('focus.dailyGoalMinutes', 120),
+      ]);
+      setDailyGoalMinutes(Number.isInteger(savedGoal) && savedGoal >= 15 && savedGoal <= 480 ? savedGoal : 120);
       setSessions(rows.map(row => ({
         ...row,
         duration_seconds: Number.isFinite(row.duration_seconds) ? Math.max(0, row.duration_seconds) : 0,
@@ -68,6 +74,29 @@ export default function SessionsScreen() {
     if (filter === 'break') return session.session_type !== 'focus';
     return true;
   }), [sessions, filter]);
+
+  const todayFocusSeconds = useMemo(() => {
+    const now = new Date();
+    const todayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    return sessions
+      .filter(session => session.session_type === 'focus' && session.started_at.slice(0, 10) === todayKey)
+      .reduce((sum, session) => sum + session.duration_seconds, 0);
+  }, [sessions]);
+
+  const updateDailyGoal = async (delta: number) => {
+    const previous = dailyGoalMinutes;
+    const next = Math.max(15, Math.min(480, previous + delta));
+    setDailyGoalMinutes(next);
+    setGoalSaveError('');
+    try {
+      await setSetting('focus.dailyGoalMinutes', next);
+    } catch {
+      setDailyGoalMinutes(previous);
+      setGoalSaveError('The focus goal could not be saved. Please try again.');
+    }
+  };
+
+  const goalProgress = Math.min(1, todayFocusSeconds / (dailyGoalMinutes * 60));
 
   const summary = useMemo(() => {
     const now = new Date();
@@ -95,6 +124,26 @@ export default function SessionsScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel="Refresh session history" onPress={() => void load()} style={[styles.back, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="refresh" size={18} color={theme.text} /></Pressable>
     </View>
     <ScrollView contentContainerStyle={styles.content}>
+      <View style={[styles.goalCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+        <View style={styles.goalHeader}>
+          <View style={[styles.goalIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="flag-outline" size={22} color={theme.primary} /></View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.goalTitle, { color: theme.text }]}>Today's focus goal</Text>
+            <Text style={[styles.goalSubtitle, { color: theme.muted }]}>{formatFocusTime(todayFocusSeconds, todayFocusSeconds >= 3600)} of {dailyGoalMinutes} minutes</Text>
+          </View>
+          <Text style={[styles.goalPercent, { color: theme.primary }]}>{Math.round(goalProgress * 100)}%</Text>
+        </View>
+        <View style={[styles.goalTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.goalFill, { backgroundColor: theme.primary, width: (goalProgress * 100) + '%' }]} /></View>
+        <View style={styles.goalActions}>
+          <Text style={[styles.goalHint, { color: theme.muted }]}>Set a goal that feels achievable.</Text>
+          <View style={styles.goalControls}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Reduce daily focus goal by 15 minutes" disabled={dailyGoalMinutes <= 15} onPress={() => void updateDailyGoal(-15)} style={[styles.goalControl, { backgroundColor: theme.surfaceAlt, opacity: dailyGoalMinutes <= 15 ? 0.45 : 1 }]}><Ionicons name="remove" size={17} color={theme.text} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Increase daily focus goal by 15 minutes" disabled={dailyGoalMinutes >= 480} onPress={() => void updateDailyGoal(15)} style={[styles.goalControl, { backgroundColor: theme.surfaceAlt, opacity: dailyGoalMinutes >= 480 ? 0.45 : 1 }]}><Ionicons name="add" size={17} color={theme.text} /></Pressable>
+          </View>
+        </View>
+        {!!goalSaveError && <Text style={[styles.goalError, { color: theme.danger }]}>{goalSaveError}</Text>}
+      </View>
+
       <View style={[styles.hero, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <View style={[styles.heroIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="time-outline" size={24} color={theme.primary} /></View>
         <Text style={[styles.eyebrow, { color: theme.muted }]}>LAST 7 DAYS</Text>
@@ -151,6 +200,19 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 21, fontWeight: '900', letterSpacing: -0.5 },
   headerSubtitle: { fontSize: 11 },
   content: { padding: 18, paddingBottom: 30, gap: 14 },
+  goalCard: { borderWidth: 1, borderRadius: 24, padding: 16, gap: 12 },
+  goalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  goalIcon: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  goalTitle: { fontSize: 14, fontWeight: '900' },
+  goalSubtitle: { fontSize: 11 },
+  goalPercent: { fontSize: 21, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  goalTrack: { height: 9, borderRadius: 5, overflow: 'hidden' },
+  goalFill: { height: '100%', borderRadius: 5 },
+  goalActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  goalHint: { fontSize: 10, flex: 1 },
+  goalControls: { flexDirection: 'row', gap: 8 },
+  goalControl: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  goalError: { fontSize: 11 },
   hero: { borderWidth: 1, borderRadius: 28, padding: 20, alignItems: 'center', gap: 5 },
   heroIcon: { width: 48, height: 48, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
   eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.8 },
