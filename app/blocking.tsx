@@ -81,6 +81,8 @@ export default function BlockingScreen() {
   };
   const removeBlockedApp = (packageName: string) => setConfig(current => ({ ...current, blockedPackages: current.blockedPackages.filter(item => item !== packageName) }));
   const matchingApps = installedApps
+    // Instagram already has a dedicated whole-app switch in this screen.
+    .filter(app => app.packageName !== 'com.instagram.android')
     .filter(app => !config.blockedPackages.includes(app.packageName))
     .filter(app => {
       const query = appSearch.trim().toLocaleLowerCase();
