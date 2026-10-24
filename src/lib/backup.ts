@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { getDatabase } from '@/lib/database';
 
-const TABLES = ['tasks', 'notes', 'subjects', 'focus_sessions', 'exams', 'goals', 'habits', 'habit_logs', 'settings'] as const;
+const TABLES = ['tasks', 'notes', 'subjects', 'focus_sessions', 'focus_schedules', 'exams', 'goals', 'habits', 'habit_logs', 'settings'] as const;
 type TableName = typeof TABLES[number];
 
 const COLUMNS: Record<TableName, string[]> = {
@@ -9,6 +9,7 @@ const COLUMNS: Record<TableName, string[]> = {
   notes: ['id', 'title', 'body', 'updated_at'],
   subjects: ['id', 'name', 'chapters_json', 'updated_at'],
   focus_sessions: ['id', 'started_at', 'duration_seconds', 'completed', 'session_type', 'mode', 'tag', 'notes'],
+  focus_schedules: ['id', 'title', 'days_json', 'start_time', 'duration_minutes', 'enabled', 'created_at'],
   exams: ['id', 'title', 'exam_date', 'details'],
   goals: ['id', 'title', 'target_date', 'progress', 'created_at'],
   habits: ['id', 'title', 'created_at', 'archived'],
@@ -29,15 +30,21 @@ export async function createBackupJson(): Promise<string> {
   for (const table of TABLES) {
     tables[table] = await db.getAllAsync<Record<string, unknown>>(`SELECT * FROM ${table}`);
   }
-  const backup: Backup = { app: 'Go Back', schemaVersion: 2, exportedAt: new Date().toISOString(), tables };
+  const backup: Backup = { app: 'Go Back', schemaVersion: 3, exportedAt: new Date().toISOString(), tables };
   return JSON.stringify(backup, null, 2);
 }
 
 function validateBackup(value: unknown): Backup {
   if (!value || typeof value !== 'object') throw new Error('The selected file is not a valid Go Back backup.');
   const backup = value as Partial<Backup>;
-  if (backup.app !== 'Go Back' || (backup.schemaVersion !== 1 && backup.schemaVersion !== 2) || !backup.tables || typeof backup.tables !== 'object') {
+  if (backup.app !== 'Go Back' || (backup.schemaVersion !== 1 && backup.schemaVersion !== 2 && backup.schemaVersion !== 3) || !backup.tables || typeof backup.tables !== 'object') {
     throw new Error('This backup is not compatible with this version of Go Back.');
+  }
+  // Backups created before schema v3 did not contain scheduled focus sessions.
+  // Normalize the missing table to an empty list so older backups remain restorable.
+  const tableData = backup.tables as unknown as Record<string, unknown>;
+  if (backup.schemaVersion < 3 && !Array.isArray(tableData.focus_schedules)) {
+    tableData.focus_schedules = [];
   }
   for (const table of TABLES) {
     if (!Array.isArray(backup.tables[table])) throw new Error(`Backup is missing the ${table} data section.`);
@@ -61,7 +68,9 @@ function cleanRow(table: TableName, value: unknown): Record<string, string | num
   }
   const required = table === 'settings' ? ['key', 'value'] : table === 'tasks' ? ['id', 'title', 'created_at'] :
     table === 'notes' ? ['id', 'title', 'body', 'updated_at'] : table === 'subjects' ? ['id', 'name', 'chapters_json', 'updated_at'] :
-    table === 'focus_sessions' ? ['id', 'started_at', 'duration_seconds', 'completed'] : table === 'exams' ? ['id', 'title', 'exam_date', 'details'] :
+    table === 'focus_sessions' ? ['id', 'started_at', 'duration_seconds', 'completed'] :
+    table === 'focus_schedules' ? ['id', 'title', 'days_json', 'start_time', 'duration_minutes', 'enabled', 'created_at'] :
+    table === 'exams' ? ['id', 'title', 'exam_date', 'details'] :
     table === 'goals' ? ['id', 'title', 'progress', 'created_at'] : table === 'habits' ? ['id', 'title', 'created_at', 'archived'] : ['id', 'habit_id', 'log_date', 'completed'];
   if (required.some(key => !(key in clean))) throw new Error(`A record in ${table} is missing required fields.`);
   return clean;
