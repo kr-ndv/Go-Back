@@ -8,9 +8,11 @@
 - Theme selection and EAS APK build profiles
 
 ## Stage 2: Core productivity
-- Focus timer uses absolute end timestamps, app-resume recalculation, and completion notifications; validate behavior on real Android devices
+- Focus timer uses absolute end timestamps, app-resume recalculation, and completion notifications; countdown, stopwatch and guided Pomodoro modes are implemented with session recovery; validate behavior on real Android devices
 - Task priorities and due dates; local goals, daily habits, and streaks are implemented in the current prototype
 - Exam countdown, exam timetable, and student syllabus/chapter tracker with computed progress
+- Focus sessions support optional tags/notes, a recent session-history screen, a 7-day summary, and an adjustable daily focus goal.
+- Usage insights support locally saved productive/distracting/neutral categories per app.
 - Personal notes editor with debounced autosave and search across titles and contents is implemented; pinning and standalone note export remain planned
 - Reminder scheduling, haptics, font scaling, accent color and dashboard customization
 
@@ -23,7 +25,7 @@
 
 ## Stage 4: Quality and release
 - Unit and component tests, accessibility review, error handling and migration strategy
-- JSON backup/restore with schema and record validation is implemented; encryption remains outstanding
+- JSON backup/restore supports schema versions 1 and 2 and preserves focus mode/tag/note metadata; encryption remains outstanding
 - EAS or local Gradle release build, APK install test, SHA-256 checksum and release notes
 - CI checks and privacy/security review
 
@@ -31,6 +33,15 @@
 - AI features, ads, analytics, trackers, cloud sync and backend services
 - Live friend/accountability features and real multi-user rooms/leaderboards require a backend and must not be simulated as real
 - iOS Screen Time / Family Controls capabilities require Apple entitlements and platform-specific review
+
+
+## Explicit product exclusions
+- Do not add focus music/audio libraries.
+- Do not add group study rooms or live social study sessions.
+- Do not add leaderboards.
+- Do not add the Rega motivational companion.
+
+These exclusions are intentional scope decisions. Continue prioritizing local-first focus, reliable blocking, understandable insights, privacy, and Material 3 Expressive quality.
 
 ## Current prototype limitations
 The timer supports custom focus durations, short/long breaks, active-session persistence, elapsed-time recalculation when the app returns to the foreground and completion notifications when permitted; background behavior must be tested on real devices. Screen-time reporting uses Android UsageStatsManager behind explicit user-granted Usage Access. The quick-actions widget and experimental AccessibilityService blocking controls are implemented; live focus/exam widgets, scheduled blocking and strict mode remain outstanding. Shorts/Reels and channel matching depend on accessibility labels exposed by third-party apps and are not guaranteed to detect every screen. Do not market the prototype as production-ready until platform features are implemented and device-tested.
