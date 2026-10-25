@@ -1,6 +1,6 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { AppState, NativeModules, Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +60,7 @@ export default function FocusScreen() {
   const pomodoroRoundsRef = useRef(0);
   const endAtRef = useRef<number | null>(null);
   const notificationIdRef = useRef<string | null>(null);
+  const ongoingNotificationIdRef = useRef<string | null>(null);
   const finishingRef = useRef(false);
 
   useEffect(() => { remainingRef.current = remaining; }, [remaining]);
@@ -69,6 +70,12 @@ export default function FocusScreen() {
   useEffect(() => { tagRef.current = tag; }, [tag]);
   useEffect(() => { notesRef.current = sessionNotes; }, [sessionNotes]);
   useEffect(() => { pomodoroRoundsRef.current = pomodoroRounds; }, [pomodoroRounds]);
+  useEffect(() => {
+    try {
+      const blocking = NativeModules.GoBackBlocking;
+      if (Platform.OS === 'android' && typeof blocking?.setFocusActive === 'function') void blocking.setFocusActive(running);
+    } catch { /* The focus timer remains usable if the optional native bridge is unavailable. */ }
+  }, [running]);
 
   const persistActiveSession = () => {
     void setSetting('focus.active', {
@@ -90,16 +97,41 @@ export default function FocusScreen() {
     const id = notificationIdRef.current;
     notificationIdRef.current = null;
     try {
-      if (id) {
-        await Notifications.cancelScheduledNotificationAsync(id);
-        return;
-      }
+      if (id) await Notifications.cancelScheduledNotificationAsync(id);
+      const ongoingId = ongoingNotificationIdRef.current;
+      ongoingNotificationIdRef.current = null;
+      if (ongoingId) await Notifications.dismissNotificationAsync(ongoingId).catch(() => undefined);
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-      const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete' || item.content.title === 'Break complete');
-      await Promise.all(focusNotifications.map(item => Notifications.cancelScheduledNotificationAsync(item.identifier)));
+      const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete' || item.content.title === 'Break complete' || item.content.title === 'Focus timer running');
+      await Promise.all(focusNotifications.map(item => Notifications.cancelScheduledNotificationAsync(item.identifier).catch(() => undefined)));
     } catch {
       // Notification state may be unavailable on this device.
     }
+  };
+
+  const scheduleOngoingNotification = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('focus-alarms-v2', {
+          name: 'Focus timer', importance: Notifications.AndroidImportance.DEFAULT, vibrationPattern: [], lightColor: '#C7F485', sound: null,
+        });
+      }
+      let permission = await Notifications.getPermissionsAsync();
+      if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
+      if (!permission.granted) return;
+      const modeLabel = modeRef.current === 'stopwatch' ? 'Stopwatch' : sessionTypeRef.current === 'focus' ? 'Focus session' : 'Break';
+      ongoingNotificationIdRef.current = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Focus timer running',
+          body: modeRef.current === 'stopwatch' ? 'Your stopwatch is running. Open Go Back to check elapsed time.' : `${modeLabel} · ${minutesRef.current} minute session in progress.`,
+          sticky: true,
+          autoDismiss: false,
+          sound: false,
+          ...(Platform.OS === 'android' ? { channelId: 'focus-alarms-v2' } : {}),
+        },
+        trigger: null,
+      });
+    } catch { /* Timer state is still saved even if notifications are unavailable. */ }
   };
 
   const resetMetadata = () => {
@@ -367,6 +399,7 @@ export default function FocusScreen() {
       stopwatchRunStartedAtRef.current = Date.now();
       setRunning(true);
       persistActiveSession();
+      void scheduleOngoingNotification();
       return;
     }
 
@@ -394,6 +427,7 @@ export default function FocusScreen() {
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
       if (permission.granted && endAtRef.current) {
         await cancelNotification();
+        await scheduleOngoingNotification();
         notificationIdRef.current = await Notifications.scheduleNotificationAsync({
           content: {
             title: sessionTypeRef.current === 'focus' ? 'Focus session complete' : 'Break complete',
@@ -417,6 +451,7 @@ export default function FocusScreen() {
       setElapsedSeconds(total);
       stopwatchRunStartedAtRef.current = null;
       setRunning(false);
+      void cancelNotification();
       persistActiveSession();
       return;
     }
