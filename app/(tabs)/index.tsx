@@ -9,16 +9,17 @@ import { useAppTheme } from '@/state/theme';
 import { getDatabase, getSetting } from '@/lib/database';
 
 type DashboardStats = {
-  tasksDone: number; tasksTotal: number; notes: number; nextExam: string;
+  tasksDone: number; tasksTotal: number; notes: number; nextExam: string; nextExamDate: string;
   chaptersDone: number; chaptersTotal: number; habitsDone: number; habitsTotal: number;
   goalsDone: number; goalsTotal: number; focusMinutes: number;
 };
 const emptyStats: DashboardStats = {
-  tasksDone: 0, tasksTotal: 0, notes: 0, nextExam: 'No exams yet',
+  tasksDone: 0, tasksTotal: 0, notes: 0, nextExam: 'No upcoming exam', nextExamDate: '',
   chaptersDone: 0, chaptersTotal: 0, habitsDone: 0, habitsTotal: 0,
   goalsDone: 0, goalsTotal: 0, focusMinutes: 0,
 };
 const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const ratio = (done: number, total: number) => total > 0 ? Math.min(100, Math.round(done / total * 100)) : 0;
 
 export default function TodayScreen() {
   const theme = useAppTheme();
@@ -52,14 +53,13 @@ export default function TodayScreen() {
               chaptersTotal += chapters.length;
               chaptersDone += chapters.filter(chapter => chapter.done).length;
             }
-          } catch { /* Ignore malformed legacy chapter data in the overview. */ }
+          } catch { /* Ignore malformed legacy chapter data. */ }
         }
         if (active) {
           setStats({
             tasksDone: tasks?.done ?? 0, tasksTotal: tasks?.total ?? 0, notes: notes?.total ?? 0,
-            nextExam: exams ? exams.title : 'No upcoming exam',
-            chaptersDone, chaptersTotal,
-            habitsDone: habitLogs?.total ?? 0, habitsTotal: habits?.total ?? 0,
+            nextExam: exams?.title ?? 'No upcoming exam', nextExamDate: exams?.exam_date ?? '',
+            chaptersDone, chaptersTotal, habitsDone: habitLogs?.total ?? 0, habitsTotal: habits?.total ?? 0,
             goalsDone: goals?.done ?? 0, goalsTotal: goals?.total ?? 0,
             focusMinutes: Math.floor((focus?.seconds ?? 0) / 60),
           });
@@ -74,15 +74,22 @@ export default function TodayScreen() {
     return () => { active = false; };
   }, []));
 
-  const actions: { icon: keyof typeof Ionicons.glyphMap; label: string; metric: string; detail: string; route: string; tone?: 'secondary' }[] = [
-    { icon: 'checkbox-outline', label: 'Tasks', metric: `${stats.tasksDone}/${stats.tasksTotal}`, detail: 'completed', route: '/(tabs)/tasks' },
-    { icon: 'document-text-outline', label: 'Notes', metric: String(stats.notes), detail: stats.notes === 1 ? 'saved note' : 'saved notes', route: '/(tabs)/notes', tone: 'secondary' },
-    { icon: 'calendar-outline', label: 'Exams', metric: stats.nextExam, detail: 'next on your timetable', route: '/exams' },
-    { icon: 'book-outline', label: 'Syllabus', metric: `${stats.chaptersDone}/${stats.chaptersTotal}`, detail: 'chapters complete', route: '/syllabus', tone: 'secondary' },
+  const focusLabel = stats.focusMinutes >= 60
+    ? `${Math.floor(stats.focusMinutes / 60)}h ${stats.focusMinutes % 60}m`
+    : `${stats.focusMinutes} min`;
+  const examDateLabel = stats.nextExamDate
+    ? new Date(`${stats.nextExamDate}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    : 'Add an exam date';
+
+  const tools: { icon: keyof typeof Ionicons.glyphMap; label: string; metric: string; detail: string; route: string }[] = [
+    { icon: 'checkbox-outline', label: 'Tasks', metric: `${stats.tasksDone}/${stats.tasksTotal}`, detail: 'tasks completed', route: '/(tabs)/tasks' },
+    { icon: 'book-outline', label: 'Syllabus', metric: `${stats.chaptersDone}/${stats.chaptersTotal}`, detail: 'chapters complete', route: '/syllabus' },
+    { icon: 'calendar-outline', label: 'Exams', metric: examDateLabel, detail: stats.nextExam, route: '/exams' },
     { icon: 'leaf-outline', label: 'Habits', metric: `${stats.habitsDone}/${stats.habitsTotal}`, detail: 'done today', route: '/habits' },
-    { icon: 'flag-outline', label: 'Goals', metric: `${stats.goalsDone}/${stats.goalsTotal}`, detail: 'goals completed', route: '/goals', tone: 'secondary' },
-    { icon: 'analytics-outline', label: 'Insights', metric: 'View trends', detail: 'screen-time & usage', route: '/usage', tone: 'secondary' },
-    { icon: 'shield-checkmark-outline', label: 'Blocking', metric: 'Your rules', detail: 'apps & short videos', route: '/blocking' },
+    { icon: 'flag-outline', label: 'Goals', metric: `${stats.goalsDone}/${stats.goalsTotal}`, detail: 'goals completed', route: '/goals' },
+    { icon: 'document-text-outline', label: 'Notes', metric: String(stats.notes), detail: stats.notes === 1 ? 'saved note' : 'saved notes', route: '/(tabs)/notes' },
+    { icon: 'analytics-outline', label: 'Usage', metric: 'Usage data', detail: 'screen-time and app activity', route: '/usage' },
+    { icon: 'shield-checkmark-outline', label: 'App blocking', metric: 'Blocking rules', detail: 'apps and video limits', route: '/blocking' },
   ];
 
   return (
@@ -92,43 +99,73 @@ export default function TodayScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>YOUR SPACE</Text>
           <Text style={[styles.title, { color: theme.text }]}>Go Back<Text style={{ color: theme.primary }}>.</Text></Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Open local profile settings" onPress={() => router.push('/(tabs)/settings')} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>{profileImageUri ? <Image source={{ uri: profileImageUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityLabel="Your profile photo" /> : profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={22} color={theme.primary} />}</Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open profile settings" onPress={() => router.push('/(tabs)/settings')} style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+          {profileImageUri ? <Image source={{ uri: profileImageUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" accessibilityLabel="Your profile photo" /> : profileName.trim() ? <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '900' }}>{profileName.trim().charAt(0).toLocaleUpperCase()}</Text> : <Ionicons name="person-outline" size={22} color={theme.primary} />}
+        </Pressable>
       </View>
       <Text style={[styles.greeting, { color: theme.text }]}>{profileName.trim() ? `Welcome back, ${profileName.trim()}.` : 'Welcome back.'}</Text>
-      <Text style={[styles.sub, { color: theme.muted }]}>Your day, at a glance. No digging through screens.</Text>
+      <Text style={[styles.sub, { color: theme.muted }]}>A clear view of what you’ve done today.</Text>
 
       <MotionReveal delay={0}>
-        <Pressable onPress={() => router.push('/focus')} style={[styles.hero, { backgroundColor: theme.primary, borderRadius: theme.expressive ? 34 : 24 }]}>
-          <View style={styles.heroTop}>
-            <View style={[styles.liveDot, { backgroundColor: theme.onPrimary }]} />
-            <Text style={[styles.heroLabel, { color: theme.onPrimary }]}>MAKE SPACE TO FOCUS</Text>
-            <Ionicons name="arrow-forward-outline" size={20} color={theme.onPrimary} style={{ marginLeft: 'auto' }} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Open focus timer" onPress={() => router.push('/focus')} style={[styles.focusCard, { backgroundColor: theme.primary, borderRadius: theme.expressive ? 30 : 22 }]}>
+          <View style={styles.focusTop}>
+            <View style={[styles.focusIcon, { backgroundColor: theme.onPrimary }]}><Ionicons name="timer-outline" size={22} color={theme.primary} /></View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={[styles.focusLabel, { color: theme.onPrimary }]}>FOCUS TIME TODAY</Text>
+              <Text style={[styles.focusMetric, { color: theme.onPrimary }]}>{focusLabel}</Text>
+              <Text style={[styles.focusHint, { color: theme.onPrimary }]}>Completed sessions · saved history</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle-outline" size={28} color={theme.onPrimary} />
           </View>
-          <Text style={[styles.heroTitle, { color: theme.onPrimary }]}>Find your{'\n'}focus.</Text>
-          <View style={styles.heroBottom}>
-            <Text style={[styles.heroHint, { color: theme.onPrimary }]}>Start a focused session</Text>
-            <View style={[styles.play, { backgroundColor: theme.onPrimary }]}><Ionicons name="play" size={17} color={theme.primary} /></View>
+          <View style={[styles.focusDivider, { backgroundColor: theme.onPrimary }]} />
+          <View style={styles.focusBottom}>
+            <Text style={[styles.focusBottomText, { color: theme.onPrimary }]}>Make room for one more session</Text>
+            <View style={[styles.startButton, { backgroundColor: theme.onPrimary }]}><Ionicons name="play" size={14} color={theme.primary} /><Text style={[styles.startText, { color: theme.primary }]}>Start focus</Text></View>
           </View>
         </Pressable>
       </MotionReveal>
 
       <View style={styles.sectionHead}>
-        <View><Text style={[styles.sectionTitle, { color: theme.text }]}>At a glance</Text><Text style={[styles.sectionSubtitle, { color: theme.muted }]}>Live summaries from all your tools</Text></View>
-        <View style={[styles.sectionBadge, { backgroundColor: theme.primaryContainer }]}><Ionicons name="grid-outline" size={16} color={theme.primary} /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Today’s progress</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>Based on your saved tasks and syllabus</Text>
+        </View>
       </View>
-      <View style={styles.dashboard}>
-        {actions.map((action, index) => <MotionReveal key={action.label} delay={Math.min(index * 20, 120)} style={styles.dashboardReveal}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`Open ${action.label}: ${action.metric}`} onPress={() => router.push(action.route as never)} style={[styles.actionCard, { backgroundColor: index % 2 === 0 ? theme.surfaceElevated : theme.surfaceAlt, borderRadius: theme.expressive ? 24 : 18 }]}>
-            <View style={[styles.actionIcon, { backgroundColor: action.tone === 'secondary' ? theme.secondaryContainer : theme.primaryContainer }]}><Ionicons name={action.icon} size={20} color={action.tone === 'secondary' ? theme.secondary : theme.primary} /></View>
-            <Text style={[styles.actionLabel, { color: theme.text }]}>{action.label}</Text>
-            <Text numberOfLines={1} style={[styles.actionMetric, { color: theme.primary }]}>{action.metric}</Text>
-            <Text numberOfLines={2} style={[styles.actionDetail, { color: theme.muted }]}>{action.detail}</Text>
-            {action.label === 'Tasks' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.tasksTotal ? Math.min(100, stats.tasksDone / stats.tasksTotal * 100) : 0}%` as `${number}%` }]} /></View>}
-            {action.label === 'Syllabus' && <View style={[styles.miniTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: `${stats.chaptersTotal ? stats.chaptersDone / stats.chaptersTotal * 100 : 0}%` as `${number}%` }]} /></View>}
-            {action.label === 'Habits' && <View style={[styles.miniTrack, { backgroundColor: theme.border }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: (stats.habitsTotal ? Math.min(100, stats.habitsDone / stats.habitsTotal * 100) : 0) + '%' as any }]} /></View>}
-            {action.label === 'Goals' && <View style={[styles.miniTrack, { backgroundColor: theme.border }]}><View style={[styles.miniFill, { backgroundColor: theme.primary, width: (stats.goalsTotal ? stats.goalsDone / stats.goalsTotal * 100 : 0) + '%' as any }]} /></View>}
+      <View style={styles.progressGrid}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Tasks ${stats.tasksDone} of ${stats.tasksTotal} completed`} onPress={() => router.push('/(tabs)/tasks')} style={[styles.progressCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={styles.progressHeading}><Ionicons name="checkbox-outline" size={17} color={theme.primary} /><Text style={[styles.progressLabel, { color: theme.muted }]}>TASKS</Text></View>
+          <Text style={[styles.progressValue, { color: theme.text }]}>{stats.tasksDone}<Text style={[styles.progressTotal, { color: theme.muted }]}> / {stats.tasksTotal}</Text></Text>
+          <View style={[styles.track, { backgroundColor: theme.border }]}><View style={[styles.fill, { backgroundColor: theme.primary, width: `${ratio(stats.tasksDone, stats.tasksTotal)}%` }]} /></View>
+          <Text style={[styles.progressFoot, { color: theme.muted }]}>{ratio(stats.tasksDone, stats.tasksTotal)}% complete</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Syllabus ${stats.chaptersDone} of ${stats.chaptersTotal} chapters completed`} onPress={() => router.push('/syllabus')} style={[styles.progressCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+          <View style={styles.progressHeading}><Ionicons name="book-outline" size={17} color={theme.secondary} /><Text style={[styles.progressLabel, { color: theme.muted }]}>SYLLABUS</Text></View>
+          <Text style={[styles.progressValue, { color: theme.text }]}>{stats.chaptersDone}<Text style={[styles.progressTotal, { color: theme.muted }]}> / {stats.chaptersTotal}</Text></Text>
+          <View style={[styles.track, { backgroundColor: theme.border }]}><View style={[styles.fill, { backgroundColor: theme.secondary, width: `${ratio(stats.chaptersDone, stats.chaptersTotal)}%` }]} /></View>
+          <Text style={[styles.progressFoot, { color: theme.muted }]}>{ratio(stats.chaptersDone, stats.chaptersTotal)}% complete</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.sectionHead}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Your tools</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>More details and controls below</Text>
+        </View>
+      </View>
+      <View style={[styles.toolList, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+        {tools.map((tool, index) => (
+          <Pressable key={tool.label} accessibilityRole="button" accessibilityLabel={`Open ${tool.label}: ${tool.metric}`} onPress={() => router.push(tool.route as never)} style={[styles.toolRow, { borderBottomColor: theme.border, borderBottomWidth: index === tools.length - 1 ? 0 : StyleSheet.hairlineWidth }]}>
+            <View style={[styles.toolIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name={tool.icon} size={19} color={theme.primary} /></View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={[styles.toolTitle, { color: theme.text }]}>{tool.label}</Text>
+              <Text numberOfLines={1} style={[styles.toolDetail, { color: theme.muted }]}>{tool.detail}</Text>
+            </View>
+            <View style={styles.toolRight}>
+              <Text numberOfLines={1} style={[styles.toolMetric, { color: theme.text }]}>{tool.metric}</Text>
+              <Ionicons name="chevron-forward" size={15} color={theme.muted} />
+            </View>
           </Pressable>
-        </MotionReveal>)}
+        ))}
       </View>
       <Text style={[styles.footer, { color: theme.muted }]}>YOUR TIME. YOUR TERMS.</Text>
     </Screen>
@@ -140,28 +177,37 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 10, letterSpacing: 2.2, fontWeight: '800', marginBottom: 4 },
   title: { fontSize: 32, fontWeight: '900', letterSpacing: -1.3 },
   avatar: { width: 44, height: 44, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1 },
-  greeting: { fontSize: 26, fontWeight: '800', letterSpacing: -0.8, marginTop: 8 },
-  sub: { fontSize: 13, lineHeight: 19, marginTop: -12 },
-  hero: { padding: 24, minHeight: 214, justifyContent: 'space-between', overflow: 'hidden' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  liveDot: { width: 7, height: 7, borderRadius: 4 },
-  heroLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1.6, opacity: 0.9 },
-  heroTitle: { fontSize: 39, lineHeight: 42, fontWeight: '900', letterSpacing: -1.6, marginVertical: 13 },
-  heroBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroHint: { fontSize: 13, fontWeight: '700', opacity: 0.92 },
-  play: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  greeting: { fontSize: 25, fontWeight: '800', letterSpacing: -0.7, marginTop: 7 },
+  sub: { fontSize: 13, lineHeight: 19, marginTop: -11 },
+  focusCard: { padding: 18, gap: 14, overflow: 'hidden' },
+  focusTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  focusIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  focusLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.4, opacity: 0.9 },
+  focusMetric: { fontSize: 29, fontWeight: '900', letterSpacing: -0.7 },
+  focusHint: { fontSize: 10, opacity: 0.85 },
+  focusDivider: { height: 1, opacity: 0.2 },
+  focusBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  focusBottomText: { fontSize: 11, fontWeight: '700', opacity: 0.9, flex: 1 },
+  startButton: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  startText: { fontSize: 11, fontWeight: '900' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 3 },
-  sectionTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.6 },
+  sectionTitle: { fontSize: 19, fontWeight: '900', letterSpacing: -0.4 },
   sectionSubtitle: { fontSize: 11, marginTop: 3 },
-  sectionBadge: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  dashboard: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  dashboardReveal: { width: '48%', flexGrow: 1, flexBasis: '45%' },
-  actionCard: { minHeight: 150, padding: 14, overflow: 'hidden' },
-  actionIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 11 },
-  actionLabel: { fontSize: 13, fontWeight: '800' },
-  actionMetric: { fontSize: 19, fontWeight: '900', letterSpacing: -0.4, marginTop: 6 },
-  actionDetail: { fontSize: 11, lineHeight: 15, marginTop: 3, paddingRight: 4 },
-  miniTrack: { height: 4, borderRadius: 3, overflow: 'hidden', marginTop: 10 },
-  miniFill: { height: '100%', borderRadius: 3 },
-  footer: { textAlign: 'center', fontSize: 9, letterSpacing: 2, fontWeight: '800', marginTop: 5 },
+  progressGrid: { flexDirection: 'row', gap: 10 },
+  progressCard: { flex: 1, minWidth: 0, borderWidth: 1, borderRadius: 20, padding: 14, gap: 9 },
+  progressHeading: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  progressLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1 },
+  progressValue: { fontSize: 25, fontWeight: '900', letterSpacing: -0.7 },
+  progressTotal: { fontSize: 14, fontWeight: '700' },
+  track: { height: 5, borderRadius: 3, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 3 },
+  progressFoot: { fontSize: 10, fontWeight: '700' },
+  toolList: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 12 },
+  toolRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  toolIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  toolTitle: { fontSize: 12, fontWeight: '900' },
+  toolDetail: { fontSize: 10, lineHeight: 14 },
+  toolRight: { maxWidth: 120, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  toolMetric: { maxWidth: 100, fontSize: 11, fontWeight: '800', textAlign: 'right' },
+  footer: { textAlign: 'center', fontSize: 9, letterSpacing: 2, fontWeight: '800', marginTop: 3 },
 });
