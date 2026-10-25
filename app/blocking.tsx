@@ -142,7 +142,18 @@ export default function BlockingScreen() {
 
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
       <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Toggle title="Limit YouTube to allowed channels" detail="Opening YouTube and browsing its feed stays allowed. Only active playback from a channel outside this list is stopped." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
+        <View style={[styles.toggleRow, { borderBottomColor: theme.border, opacity: 0.72 }]}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 }}>
+              <Text style={[styles.toggleTitle, { color: theme.text }]}>Limit YouTube to allowed channels</Text>
+              <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border }}>
+                <Text style={{ color: theme.muted, fontSize: 10, fontWeight: '900' }}>STILL TESTING</Text>
+              </View>
+            </View>
+            <Text style={[styles.detail, { color: theme.muted }]}>Temporarily unavailable while we investigate device-specific mini-player behavior. This option will return after testing.</Text>
+          </View>
+          <Switch value={false} disabled onValueChange={() => undefined} trackColor={{ false: theme.border, true: theme.primary }} />
+        </View>
         <Toggle title="Only block during focus" detail="Apply all saved app and video rules only while a focus timer or stopwatch is actively running." value={config.blockOnlyDuringFocus} onValueChange={v => update('blockOnlyDuringFocus', v)} />
       </View>
 
