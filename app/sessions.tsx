@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,9 @@ type SessionRow = {
   notes: string;
 };
 type Filter = 'all' | 'focus' | 'break';
+type SummaryRange = 'today' | '7' | '30' | 'custom';
+const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+const dateInputToKey = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
 
 const safeDate = (value: string) => {
   const date = new Date(value);
@@ -36,6 +39,10 @@ export default function SessionsScreen() {
   const [error, setError] = useState('');
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(120);
   const [goalSaveError, setGoalSaveError] = useState('');
+  const [summaryRange, setSummaryRange] = useState<SummaryRange>('7');
+  const [customStart, setCustomStart] = useState(dateKey(new Date(Date.now() - 9 * 86400000)));
+  const [customEnd, setCustomEnd] = useState(dateKey(new Date()));
+  const [rangeStats, setRangeStats] = useState({ focusSeconds: 0, completed: 0, total: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,21 +109,30 @@ export default function SessionsScreen() {
 
   const goalProgress = Math.min(1, todayFocusSeconds / (dailyGoalMinutes * 60));
 
-  const summary = useMemo(() => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
-    const recent = sessions.filter(session => {
-      const date = new Date(session.started_at);
-      return Number.isFinite(date.getTime()) && date >= weekStart && session.session_type === 'focus';
-    });
-    return {
-      focusSeconds: recent.reduce((sum, session) => sum + session.duration_seconds, 0),
-      completed: recent.filter(session => session.completed === 1).length,
-      total: recent.length,
-    };
-  }, [sessions]);
+  const rangeKeys = useMemo(() => {
+    const end = summaryRange === 'custom' ? dateInputToKey(customEnd) : dateKey(new Date());
+    const startDate = summaryRange === 'today' ? new Date() : summaryRange === '7' ? new Date(Date.now() - 6 * 86400000) : summaryRange === '30' ? new Date(Date.now() - 29 * 86400000) : new Date((dateInputToKey(customStart) || end || dateKey(new Date())) + 'T00:00:00');
+    return { start: summaryRange === 'custom' ? dateInputToKey(customStart) : dateKey(startDate), end };
+  }, [summaryRange, customStart, customEnd]);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const db = await getDatabase();
+        const validRange = !!rangeKeys.start && !!rangeKeys.end && rangeKeys.start <= rangeKeys.end;
+        if (!validRange) { setError('Choose a valid custom date range.'); return; }
+        const row = await db.getFirstAsync<{ focusSeconds: number; completed: number; total: number }>(
+          'SELECT COALESCE(SUM(duration_seconds),0) as focusSeconds, COALESCE(SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END),0) as completed, COUNT(*) as total FROM focus_sessions WHERE session_type = ? AND date(started_at) >= date(?) AND date(started_at) <= date(?)',
+          'focus', rangeKeys.start, rangeKeys.end
+        );
+        if (active) { setRangeStats({ focusSeconds: row?.focusSeconds ?? 0, completed: row?.completed ?? 0, total: row?.total ?? 0 }); setError(''); }
+      } catch { if (active) setError('Could not calculate focus time for this period.'); }
+    })();
+    return () => { active = false; };
+  }, [rangeKeys.start, rangeKeys.end]));
+
+
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
     <View style={styles.header}>
@@ -150,12 +166,14 @@ export default function SessionsScreen() {
 
       <View style={[styles.hero, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <View style={[styles.heroIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="time-outline" size={24} color={theme.primary} /></View>
-        <Text style={[styles.eyebrow, { color: theme.muted }]}>LAST 7 DAYS</Text>
-        <Text style={[styles.heroTime, { color: theme.text }]}>{formatFocusTime(summary.focusSeconds, summary.focusSeconds >= 3600)}</Text>
+        <Text style={[styles.eyebrow, { color: theme.muted }]}>{summaryRange === 'today' ? 'TODAY' : summaryRange === '7' ? 'LAST 7 DAYS' : summaryRange === '30' ? 'LAST 30 DAYS' : 'CUSTOM RANGE'}</Text>
+        <Text style={[styles.heroTime, { color: theme.text }]}>{formatFocusTime(rangeStats.focusSeconds, rangeStats.focusSeconds >= 3600)}</Text>
         <Text style={[styles.heroCaption, { color: theme.muted }]}>Focus time recorded</Text>
+        <View style={styles.periods}>{([{ value: 'today', label: 'Today' }, { value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: 'custom', label: 'Custom' }] as { value: SummaryRange; label: string }[]).map(item => <Pressable key={item.value} accessibilityRole="button" accessibilityState={{ selected: summaryRange === item.value }} onPress={() => setSummaryRange(item.value)} style={[styles.period, { backgroundColor: summaryRange === item.value ? theme.primary : theme.surface, borderColor: summaryRange === item.value ? theme.primary : theme.border }]}><Text style={{ color: summaryRange === item.value ? theme.onPrimary : theme.text, fontWeight: '800', fontSize: 11 }}>{item.label}</Text></Pressable>)}</View>
+        {summaryRange === 'custom' && <View style={{ width: '100%', gap: 8, marginTop: 8 }}><Text style={[styles.rangeHelp, { color: theme.muted }]}>Enter dates as YYYY-MM-DD (for example, 2026-10-15 to 2026-10-25).</Text><View style={styles.customDates}><TextInput accessibilityLabel="Custom range start date" value={customStart} onChangeText={setCustomStart} placeholder="Start YYYY-MM-DD" placeholderTextColor={theme.muted} style={[styles.dateInput,{ color:theme.text,backgroundColor:theme.surface,borderColor:theme.border }]} /><TextInput accessibilityLabel="Custom range end date" value={customEnd} onChangeText={setCustomEnd} placeholder="End YYYY-MM-DD" placeholderTextColor={theme.muted} style={[styles.dateInput,{ color:theme.text,backgroundColor:theme.surface,borderColor:theme.border }]} /></View></View>}
         <View style={styles.summaryRow}>
-          <View style={[styles.summaryChip, { backgroundColor: theme.surface }]}><Text style={[styles.summaryValue, { color: theme.text }]}>{summary.completed}</Text><Text style={[styles.summaryLabel, { color: theme.muted }]}>Completed</Text></View>
-          <View style={[styles.summaryChip, { backgroundColor: theme.surface }]}><Text style={[styles.summaryValue, { color: theme.text }]}>{summary.total}</Text><Text style={[styles.summaryLabel, { color: theme.muted }]}>Focus sessions</Text></View>
+          <View style={[styles.summaryChip, { backgroundColor: theme.surface }]}><Text style={[styles.summaryValue, { color: theme.text }]}>{rangeStats.completed}</Text><Text style={[styles.summaryLabel, { color: theme.muted }]}>Completed</Text></View>
+          <View style={[styles.summaryChip, { backgroundColor: theme.surface }]}><Text style={[styles.summaryValue, { color: theme.text }]}>{rangeStats.total}</Text><Text style={[styles.summaryLabel, { color: theme.muted }]}>Focus sessions</Text></View>
         </View>
       </View>
 
@@ -222,6 +240,11 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.8 },
   heroTime: { fontSize: 34, fontWeight: '900', letterSpacing: -1.2, fontVariant: ['tabular-nums'], marginTop: 4 },
   heroCaption: { fontSize: 12 },
+  periods: { width: '100%', flexDirection: 'row', gap: 6, marginTop: 12 },
+  period: { flex: 1, minHeight: 36, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 4 },
+  rangeHelp: { fontSize: 10, lineHeight: 15 },
+  customDates: { flexDirection: 'row', gap: 8 },
+  dateInput: { flex: 1, minWidth: 0, minHeight: 42, borderWidth: 1, borderRadius: 12, paddingHorizontal: 8, fontSize: 11 },
   summaryRow: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 13 },
   summaryChip: { flex: 1, minHeight: 65, borderRadius: 18, alignItems: 'center', justifyContent: 'center', gap: 2 },
   summaryValue: { fontSize: 21, fontWeight: '900', fontVariant: ['tabular-nums'] },
