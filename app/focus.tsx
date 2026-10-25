@@ -47,6 +47,7 @@ export default function FocusScreen() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [pomodoroRounds, setPomodoroRounds] = useState(0);
   const [running, setRunning] = useState(false);
+  const lastNotificationUpdateRef = useRef(0);
   const [restoring, setRestoring] = useState(true);
   const startedAt = useRef<string | null>(null);
   const remainingRef = useRef(25 * 60);
@@ -120,10 +121,11 @@ export default function FocusScreen() {
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
       if (!permission.granted) return;
       const modeLabel = modeRef.current === 'stopwatch' ? 'Stopwatch' : sessionTypeRef.current === 'focus' ? 'Focus session' : 'Break';
+      const timerText = modeRef.current === 'stopwatch' ? formatFocusTime(stopwatchElapsedSeconds(elapsedSecondsRef.current, stopwatchRunStartedAtRef.current), true) + ' elapsed' : formatFocusTime(remainingRef.current, true) + ' remaining';
       ongoingNotificationIdRef.current = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Focus timer running',
-          body: modeRef.current === 'stopwatch' ? 'Your stopwatch is running. Open Go Back to check elapsed time.' : `${modeLabel} · ${minutesRef.current} minute session in progress.`,
+          body: `${timerText} · ${modeLabel.toLowerCase()}`,
           sticky: true,
           autoDismiss: false,
           sound: false,
@@ -131,6 +133,7 @@ export default function FocusScreen() {
         },
         trigger: null,
       });
+      lastNotificationUpdateRef.current = Date.now();
     } catch { /* Timer state is still saved even if notifications are unavailable. */ }
   };
 
