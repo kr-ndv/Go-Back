@@ -12,6 +12,7 @@ type BlockingConfig = {
   blockInstagram: boolean;
   blockShorts: boolean;
   blockReels: boolean;
+  blockOnlyDuringFocus: boolean;
   allowedChannels: string[];
   blockedPackages: string[];
 };
@@ -24,7 +25,7 @@ type BlockingBridge = {
   setConfig: (json: string) => Promise<boolean>;
 };
 const bridge = NativeModules.GoBackBlocking as BlockingBridge | undefined;
-const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, allowedChannels: [], blockedPackages: [] };
+const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, blockOnlyDuringFocus: false, allowedChannels: [], blockedPackages: [] };
 
 export default function BlockingScreen() {
   const theme = useAppTheme();
@@ -70,7 +71,7 @@ export default function BlockingScreen() {
   }, [refresh]);
 
   const hasUnsavedChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
-  const update = (key: 'blockYoutube' | 'blockInstagram' | 'blockShorts' | 'blockReels', value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const update = (key: 'blockYoutube' | 'blockInstagram' | 'blockShorts' | 'blockReels' | 'blockOnlyDuringFocus', value: boolean) => setConfig(current => ({ ...current, [key]: value }));
   const addBlockedApp = (app: LaunchableApp) => {
     if (config.blockedPackages.includes(app.packageName)) return;
     if (config.blockedPackages.length >= 100) {
@@ -81,14 +82,12 @@ export default function BlockingScreen() {
   };
   const removeBlockedApp = (packageName: string) => setConfig(current => ({ ...current, blockedPackages: current.blockedPackages.filter(item => item !== packageName) }));
   const matchingApps = installedApps
-    // Instagram already has a dedicated whole-app switch in this screen.
+    // Instagram has a dedicated switch above; every other launchable app gets its own switch below.
     .filter(app => app.packageName !== 'com.instagram.android')
-    .filter(app => !config.blockedPackages.includes(app.packageName))
     .filter(app => {
       const query = appSearch.trim().toLocaleLowerCase();
-      return query.length > 0 && (app.appName.toLocaleLowerCase().includes(query) || app.packageName.toLocaleLowerCase().includes(query));
-    })
-    .slice(0, 12);
+      return !query || app.appName.toLocaleLowerCase().includes(query) || app.packageName.toLocaleLowerCase().includes(query);
+    });
   const nameForPackage = (packageName: string) => installedApps.find(app => app.packageName === packageName)?.appName ?? packageName;
   const addChannel = () => {
     const clean = channelText.trim().replace(/\s+/g, ' ');
@@ -147,26 +146,23 @@ export default function BlockingScreen() {
       <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Toggle title="Limit YouTube to allowed channels" detail="Opening YouTube and browsing its feed stays allowed. Only active playback from a channel outside this list is stopped." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
         <Toggle title="Block Instagram" detail="Return to the home screen when Instagram opens." value={config.blockInstagram} onValueChange={v => update('blockInstagram', v)} />
+        <Toggle title="Only block during focus" detail="Apply all saved app and video rules only while a focus timer or stopwatch is actively running." value={config.blockOnlyDuringFocus} onValueChange={v => update('blockOnlyDuringFocus', v)} />
       </View>
 
       <Text style={[styles.section, { color: theme.text }]}>Choose other apps</Text>
       <View style={[styles.card, styles.appPickerCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Text style={[styles.detail, { color: theme.muted }]}>Select installed apps to send back to the home screen when they open. These rules apply only after you save them and enable Go Back's Accessibility service.</Text>
-        <TextInput accessibilityLabel="Search installed apps" value={appSearch} onChangeText={setAppSearch} placeholder="Search installed apps…" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.appSearch, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
-        <Text style={[styles.appSectionLabel, { color: theme.text }]}>Selected to block · {config.blockedPackages.length}/100</Text>
-        {config.blockedPackages.length > 0 ? <View style={styles.selectedApps}>{config.blockedPackages.map(packageName => <View key={packageName} style={[styles.selectedAppChip, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text numberOfLines={1} style={[styles.selectedAppName, { color: theme.text }]}>{nameForPackage(packageName)}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={'Remove ' + nameForPackage(packageName) + ' from blocked apps'} hitSlop={6} onPress={() => removeBlockedApp(packageName)}><Ionicons name="close-circle" size={17} color={theme.muted} /></Pressable>
-        </View>)}</View> : <Text style={[styles.appEmpty, { color: theme.muted }]}>No additional apps selected yet.</Text>}
-        {appSearch.trim().length > 0 && <View style={styles.appResults}>
-          {matchingApps.length > 0 ? matchingApps.map(app => <Pressable key={app.packageName} accessibilityRole="button" accessibilityLabel={'Add ' + app.appName + ' to blocked apps'} onPress={() => addBlockedApp(app)} style={[styles.appResultRow, { borderColor: theme.border }]}>
-            <View style={[styles.appResultGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="phone-portrait-outline" size={18} color={theme.primary} /></View>
+        <Text style={[styles.detail, { color: theme.muted }]}>Every launchable app on this phone is listed below. Turn on a switch to block it. Changes take effect after saving and enabling Go Back's Accessibility service.</Text>
+        <TextInput accessibilityLabel="Search installed apps" value={appSearch} onChangeText={setAppSearch} placeholder="Search all installed apps…" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.appSearch, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
+        <Text style={[styles.appSectionLabel, { color: theme.text }]}>{matchingApps.length} apps · {config.blockedPackages.length} selected to block</Text>
+        {matchingApps.length > 0 ? <View style={styles.appResults}>{matchingApps.map(app => {
+          const blocked = config.blockedPackages.includes(app.packageName);
+          return <View key={app.packageName} style={[styles.appResultRow, { borderColor: theme.border }]}>
+            <View style={[styles.appResultGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="phone-portrait-outline" size={18} color={blocked ? theme.primary : theme.muted} /></View>
             <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={[styles.appResultName, { color: theme.text }]}>{app.appName}</Text><Text numberOfLines={1} style={[styles.appPackage, { color: theme.muted }]}>{app.packageName}</Text></View>
-            <Ionicons name="add-circle-outline" size={22} color={theme.primary} />
-          </Pressable>) : <Text style={[styles.appEmpty, { color: theme.muted }]}>No matching apps. Only apps with a launcher icon appear here.</Text>}
-          {matchingApps.length === 12 && <Text style={[styles.appPackage, { color: theme.muted }]}>Showing the first 12 matches. Refine your search to find another app.</Text>}
-        </View>}
-        {!bridge?.getLaunchableApps && <Text style={[styles.appEmpty, { color: theme.muted }]}>Build and install the latest Go Back APK to choose apps. Older native builds only support the original YouTube/Instagram rules.</Text>}
+            <Switch accessibilityLabel={'Block ' + app.appName} accessibilityState={{ checked: blocked }} value={blocked} onValueChange={value => value ? addBlockedApp(app) : removeBlockedApp(app.packageName)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={blocked ? theme.onPrimary : '#E8EAE5'} />
+          </View>;
+        })}</View> : <Text style={[styles.appEmpty, { color: theme.muted }]}>{bridge?.getLaunchableApps ? 'No matching apps. Clear the search to see all launchable apps.' : 'Install the latest Go Back APK to load the apps on this phone.'}</Text>}
+        {!bridge?.getLaunchableApps && <Text style={[styles.appEmpty, { color: theme.muted }]}>The installed-app list requires a native Android build, not Expo Go.</Text>}
       </View>
 
       <Text style={[styles.section, { color: theme.text }]}>Short-form video</Text>
