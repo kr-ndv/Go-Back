@@ -153,8 +153,6 @@ export default function SettingsScreen() {
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
         <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
-        <Text style={[styles.hint, { color: theme.muted }]}>Local Go Back ID · not connected to social features yet</Text>
-        <Pressable onPress={() => void Share.share({ message: profileId })}><Text style={[styles.profileId, { color: theme.primary }]}>{profileId || 'Creating your ID…'}  ·  Share</Text></Pressable>
       </View>
     </View>
     <Text style={[styles.section, { color: theme.text }]}>Backup & restore</Text>
