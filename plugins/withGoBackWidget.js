@@ -30,19 +30,20 @@ class GoBackBlockingService : AccessibilityService() {
       if (blockedPackages.optString(i) == pkg) { sendHome(); return }
     }
     if (pkg != YOUTUBE && pkg != INSTAGRAM) return
-    if (pkg == INSTAGRAM && config.optBoolean("blockInstagram", false)) { sendHome(); return }
+    
     val root = rootInActiveWindow ?: return
     if (pkg == YOUTUBE) {
       if (config.optBoolean("blockShorts", false) && hasSelectedLabel(root, "shorts")) { sendBack(); return }
       if (config.optBoolean("blockYoutube", false) && isVideoPlaying(root)) {
         val allowed = config.optJSONArray("allowedChannels") ?: JSONArray()
-        if (!matchesChannel(root, allowed)) { sendBack(); return }
+        if (!matchesChannel(root, allowed)) { closeVideoAndMiniPlayer(); return }
       }
     }
     if (pkg == INSTAGRAM && config.optBoolean("blockReels", false) && hasSelectedLabel(root, "reels")) sendBack()
   }
   private fun sendHome() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1200) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_HOME) }
   private fun sendBack() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK) }
+  private fun closeVideoAndMiniPlayer() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK); handler.postDelayed({ if (rootInActiveWindow?.packageName?.toString() == YOUTUBE) performGlobalAction(GLOBAL_ACTION_BACK) }, 350) }
   private fun hasSelectedLabel(node: AccessibilityNodeInfo, label: String): Boolean {
     val text = ((node.text?.toString() ?: "") + " " + (node.contentDescription?.toString() ?: "")).lowercase(Locale.ROOT)
     if (text.contains(label) && (node.isSelected || node.isChecked || node.isAccessibilityFocused)) return true
