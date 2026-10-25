@@ -18,6 +18,7 @@ import org.json.JSONObject
 import java.util.Locale
 
 class GoBackBlockingService : AccessibilityService() {
+  private val handler = android.os.Handler(android.os.Looper.getMainLooper())
   private var lastActionAt = 0L
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
     if (event == null) return
@@ -43,6 +44,7 @@ class GoBackBlockingService : AccessibilityService() {
   }
   private fun sendHome() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1200) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_HOME) }
   private fun sendBack() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK) }
+  private fun closeVideoAndMiniPlayer() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK); handler.postDelayed({ if (rootInActiveWindow?.packageName?.toString() == YOUTUBE) performGlobalAction(GLOBAL_ACTION_BACK) }, 350) }
   private fun closeVideoAndMiniPlayer() { val now = System.currentTimeMillis(); if (now - lastActionAt < 1500) return; lastActionAt = now; performGlobalAction(GLOBAL_ACTION_BACK); handler.postDelayed({ if (rootInActiveWindow?.packageName?.toString() == YOUTUBE) performGlobalAction(GLOBAL_ACTION_BACK) }, 350) }
   private fun hasSelectedLabel(node: AccessibilityNodeInfo, label: String): Boolean {
     val text = ((node.text?.toString() ?: "") + " " + (node.contentDescription?.toString() ?: "")).lowercase(Locale.ROOT)
