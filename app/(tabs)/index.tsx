@@ -2,11 +2,16 @@ import { router, useFocusEffect } from 'expo-router';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { MotionReveal } from '@/components/MotionReveal';
 import { useCallback, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { AppState, Image, NativeModules, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
 import { getDatabase, getSetting } from '@/lib/database';
+
+type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
+type UsageBridge = { hasUsageAccess: () => Promise<boolean>; getUsageStats: (days: number) => Promise<UsageStat[]> };
+const usageBridge = NativeModules.GoBackUsage as UsageBridge | undefined;
+const formatUsage = (ms: number) => { const minutes = Math.floor(ms / 60000); const hours = Math.floor(minutes / 60); return hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`; };
 
 type DashboardStats = {
   tasksDone: number; tasksTotal: number; notes: number; nextExam: string; nextExamDate: string;
@@ -26,6 +31,7 @@ export default function TodayScreen() {
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [profileName, setProfileName] = useState('');
   const [profileImageUri, setProfileImageUri] = useState('');
+  const [usageToday, setUsageToday] = useState('Allow access');
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -71,7 +77,19 @@ export default function TodayScreen() {
       }
     };
     void load();
-    return () => { active = false; };
+    const loadUsage = async () => {
+      if (!usageBridge) { if (active) setUsageToday('Native build required'); return; }
+      try {
+        const allowed = await usageBridge.hasUsageAccess();
+        if (!allowed) { if (active) setUsageToday('Allow Usage Access'); return; }
+        const rows = await usageBridge.getUsageStats(1);
+        const total = rows.reduce((sum, item) => sum + Math.max(0, item.foregroundTimeMs || 0), 0);
+        if (active) setUsageToday(formatUsage(total) + ' today');
+      } catch { if (active) setUsageToday('Tap to refresh'); }
+    };
+    void loadUsage();
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') void loadUsage(); });
+    return () => { active = false; sub.remove(); };
   }, []));
 
   const focusLabel = stats.focusMinutes >= 60
@@ -88,7 +106,7 @@ export default function TodayScreen() {
     { icon: 'leaf-outline', label: 'Habits', metric: `${stats.habitsDone}/${stats.habitsTotal}`, detail: 'done today', route: '/habits' },
     { icon: 'flag-outline', label: 'Goals', metric: `${stats.goalsDone}/${stats.goalsTotal}`, detail: 'goals completed', route: '/goals' },
     { icon: 'document-text-outline', label: 'Notes', metric: String(stats.notes), detail: stats.notes === 1 ? 'saved note' : 'saved notes', route: '/(tabs)/notes' },
-    { icon: 'analytics-outline', label: 'Usage', metric: 'Usage data', detail: 'screen-time and app activity', route: '/usage' },
+    { icon: 'analytics-outline', label: 'Usage', metric: usageToday, detail: 'phone usage · today', route: '/usage' },
     { icon: 'shield-checkmark-outline', label: 'App blocking', metric: 'Blocking rules', detail: 'apps and video limits', route: '/blocking' },
   ];
 
