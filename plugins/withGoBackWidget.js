@@ -51,10 +51,10 @@ class GoBackBlockingService : AccessibilityService() {
   }
   private fun matchesChannel(node: AccessibilityNodeInfo, channels: JSONArray): Boolean {
     if (channels.length() == 0) return false
-    val visibleText = " " + collectText(node).lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}@]+"), " ").trim() + " "
+    val visibleText = " " + collectText(node).lowercase(Locale.ROOT).replace(Regex("[^\\\\p{L}\\\\p{N}@]+"), " ").trim() + " "
     for (i in 0 until channels.length()) {
       val raw = channels.optString(i).trim().removePrefix("@").lowercase(Locale.ROOT)
-      val name = raw.replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+      val name = raw.replace(Regex("[^\\\\p{L}\\\\p{N}]+"), " ").trim()
       if (name.length >= 3 && visibleText.contains(" $name ")) return true
       if (raw.length >= 3 && visibleText.contains(" @$raw ")) return true
     }
