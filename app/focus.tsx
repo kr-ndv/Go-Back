@@ -299,7 +299,7 @@ export default function FocusScreen() {
 
   useEffect(() => {
     if (!running) return;
-    const interval = setInterval(tick, 500);
+    const interval = setInterval(() => { tick(); if (Date.now() - lastNotificationUpdateRef.current >= 15000) void refreshOngoingNotification(); }, 500);
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') tick();
     });
