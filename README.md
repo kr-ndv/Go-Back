@@ -54,32 +54,32 @@ Go Back is currently distributed as a **beta pre-release**. Download the APK and
 
 ## Screenshots
 
-The gallery below shows the app's Forest Lime theme and core screens. Images are stored in [docs/screenshots](docs/screenshots).
+The gallery below shows the app's Forest Lime theme and core screens. Images are stored in [docs/screenshots](docs/screenshots); see the [screenshot index](docs/screenshots/README.md) for the full, labelled list.
 
 <table>
   <tr>
-    <td align="center" width="50%"><strong>Home dashboard</strong><br /><img src="docs/screenshots/01-dashboard.jpg" alt="Go Back Home dashboard showing focus time, progress and tools" width="280" /></td>
-    <td align="center" width="50%"><strong>Tasks</strong><br /><img src="docs/screenshots/02-tasks.jpg" alt="Go Back tasks screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Personal notes</strong><br /><img src="docs/screenshots/01-personal-notes.png" alt="Go Back personal notes screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Focus mode</strong><br /><img src="docs/screenshots/02-focus-mode.jpg" alt="Go Back focus timer screen showing a 25-minute session" width="280" /></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><strong>Focus</strong><br /><img src="docs/screenshots/03-focus.jpg" alt="Go Back focus timer screen" width="280" /></td>
-    <td align="center" width="50%"><strong>Personal notes</strong><br /><img src="docs/screenshots/04-notes.jpg" alt="Go Back personal notes screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Tasks</strong><br /><img src="docs/screenshots/03-tasks.jpg" alt="Go Back tasks screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Home dashboard</strong><br /><img src="docs/screenshots/04-home-dashboard.jpg" alt="Go Back Home dashboard showing focus time, progress and tools" width="280" /></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><strong>Settings & themes</strong><br /><img src="docs/screenshots/05-settings-themes.jpg" alt="Go Back settings and color palette choices" width="280" /></td>
-    <td align="center" width="50%"><strong>Exam planner</strong><br /><img src="docs/screenshots/06-exams.jpg" alt="Go Back exam planner screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Screen-time insights</strong><br /><img src="docs/screenshots/05-screen-time-insights.png" alt="Go Back screen-time insights with app categories" width="280" /></td>
+    <td align="center" width="50%"><strong>Goals</strong><br /><img src="docs/screenshots/06-goals.jpg" alt="Go Back goals screen" width="280" /></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><strong>Syllabus tracker</strong><br /><img src="docs/screenshots/07-syllabus.jpg" alt="Go Back syllabus tracker screen" width="280" /></td>
-    <td align="center" width="50%"><strong>Daily habits</strong><br /><img src="docs/screenshots/08-habits.jpg" alt="Go Back daily habits screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Daily habits</strong><br /><img src="docs/screenshots/07-daily-habits.jpg" alt="Go Back daily habits screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Exam planner</strong><br /><img src="docs/screenshots/08-exam-planner.jpg" alt="Go Back exam planner screen" width="280" /></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><strong>Goals</strong><br /><img src="docs/screenshots/09-goals.jpg" alt="Go Back goals screen" width="280" /></td>
-    <td align="center" width="50%"><strong>Screen-time insights</strong><br /><img src="docs/screenshots/10-screen-time.jpg" alt="Go Back screen-time insights with app categories" width="280" /></td>
+    <td align="center" width="50%"><strong>Syllabus tracker</strong><br /><img src="docs/screenshots/09-syllabus-tracker.jpg" alt="Go Back syllabus tracker screen" width="280" /></td>
+    <td align="center" width="50%"><strong>Focus schedule</strong><br /><img src="docs/screenshots/10-focus-schedule.jpg" alt="Go Back focus schedule screen" width="280" /></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><strong>App blocking</strong><br /><img src="docs/screenshots/11-app-blocking.jpg" alt="Go Back app blocking settings" width="280" /></td>
-    <td align="center"><em>More screenshots and updates will be added as device verification progresses.</em></td>
+    <td align="center" width="50%"><strong>Session history</strong><br /><img src="docs/screenshots/11-session-history.jpg" alt="Go Back session history screen with focus sessions" width="280" /></td>
+    <td align="center" width="50%"><strong>Settings & personalization</strong><br /><img src="docs/screenshots/12-settings.jpg" alt="Go Back settings including themes, backup, privacy, and about" width="280" /></td>
   </tr>
 </table>
 
