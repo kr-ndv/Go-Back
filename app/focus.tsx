@@ -137,6 +137,14 @@ export default function FocusScreen() {
     } catch { /* Timer state is still saved even if notifications are unavailable. */ }
   };
 
+  const refreshOngoingNotification = async () => {
+    if (!running || Date.now() - lastNotificationUpdateRef.current < 15000) return;
+    const previousId = ongoingNotificationIdRef.current;
+    ongoingNotificationIdRef.current = null;
+    if (previousId) await Notifications.dismissNotificationAsync(previousId).catch(() => undefined);
+    await scheduleOngoingNotification();
+  };
+
   const resetMetadata = () => {
     tagRef.current = '';
     notesRef.current = '';
