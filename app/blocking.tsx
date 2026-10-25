@@ -9,7 +9,6 @@ import { useAppTheme } from '@/state/theme';
 
 type BlockingConfig = {
   blockYoutube: boolean;
-  blockInstagram: boolean;
   blockShorts: boolean;
   blockReels: boolean;
   blockOnlyDuringFocus: boolean;
@@ -25,7 +24,7 @@ type BlockingBridge = {
   setConfig: (json: string) => Promise<boolean>;
 };
 const bridge = NativeModules.GoBackBlocking as BlockingBridge | undefined;
-const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, blockOnlyDuringFocus: false, allowedChannels: [], blockedPackages: [] };
+const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockShorts: false, blockReels: false, blockOnlyDuringFocus: false, allowedChannels: [], blockedPackages: [] };
 
 export default function BlockingScreen() {
   const theme = useAppTheme();
@@ -71,7 +70,7 @@ export default function BlockingScreen() {
   }, [refresh]);
 
   const hasUnsavedChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
-  const update = (key: 'blockYoutube' | 'blockInstagram' | 'blockShorts' | 'blockReels' | 'blockOnlyDuringFocus', value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const update = (key: 'blockYoutube' | 'blockShorts' | 'blockReels' | 'blockOnlyDuringFocus', value: boolean) => setConfig(current => ({ ...current, [key]: value }));
   const addBlockedApp = (app: LaunchableApp) => {
     if (config.blockedPackages.includes(app.packageName)) return;
     if (config.blockedPackages.length >= 100) {
@@ -83,7 +82,6 @@ export default function BlockingScreen() {
   const removeBlockedApp = (packageName: string) => setConfig(current => ({ ...current, blockedPackages: current.blockedPackages.filter(item => item !== packageName) }));
   const matchingApps = installedApps
     // Instagram has a dedicated switch above; every other launchable app gets its own switch below.
-    .filter(app => app.packageName !== 'com.instagram.android')
     .filter(app => {
       const query = appSearch.trim().toLocaleLowerCase();
       return !query || app.appName.toLocaleLowerCase().includes(query) || app.packageName.toLocaleLowerCase().includes(query);
@@ -145,7 +143,6 @@ export default function BlockingScreen() {
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
       <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <Toggle title="Limit YouTube to allowed channels" detail="Opening YouTube and browsing its feed stays allowed. Only active playback from a channel outside this list is stopped." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
-        <Toggle title="Block Instagram" detail="Return to the home screen when Instagram opens." value={config.blockInstagram} onValueChange={v => update('blockInstagram', v)} />
         <Toggle title="Only block during focus" detail="Apply all saved app and video rules only while a focus timer or stopwatch is actively running." value={config.blockOnlyDuringFocus} onValueChange={v => update('blockOnlyDuringFocus', v)} />
       </View>
 
@@ -154,14 +151,14 @@ export default function BlockingScreen() {
         <Text style={[styles.detail, { color: theme.muted }]}>Every launchable app on this phone is listed below. Turn on a switch to block it. Changes take effect after saving and enabling Go Back's Accessibility service.</Text>
         <TextInput accessibilityLabel="Search installed apps" value={appSearch} onChangeText={setAppSearch} placeholder="Search all installed apps…" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.appSearch, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
         <Text style={[styles.appSectionLabel, { color: theme.text }]}>{matchingApps.length} apps · {config.blockedPackages.length} selected to block</Text>
-        {matchingApps.length > 0 ? <View style={styles.appResults}>{matchingApps.map(app => {
+        {matchingApps.length > 0 ? <ScrollView style={styles.appResultsScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">{matchingApps.map(app => {
           const blocked = config.blockedPackages.includes(app.packageName);
           return <View key={app.packageName} style={[styles.appResultRow, { borderColor: theme.border }]}>
             <View style={[styles.appResultGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="phone-portrait-outline" size={18} color={blocked ? theme.primary : theme.muted} /></View>
             <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={[styles.appResultName, { color: theme.text }]}>{app.appName}</Text><Text numberOfLines={1} style={[styles.appPackage, { color: theme.muted }]}>{app.packageName}</Text></View>
             <Switch accessibilityLabel={'Block ' + app.appName} accessibilityState={{ checked: blocked }} value={blocked} onValueChange={value => value ? addBlockedApp(app) : removeBlockedApp(app.packageName)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={blocked ? theme.onPrimary : '#E8EAE5'} />
           </View>;
-        })}</View> : <Text style={[styles.appEmpty, { color: theme.muted }]}>{bridge?.getLaunchableApps ? 'No matching apps. Clear the search to see all launchable apps.' : 'Install the latest Go Back APK to load the apps on this phone.'}</Text>}
+        })}</ScrollView> : <Text style={[styles.appEmpty, { color: theme.muted }]}>{bridge?.getLaunchableApps ? 'No matching apps. Clear the search to see all launchable apps.' : 'Install the latest Go Back APK to load the apps on this phone.'}</Text>}
         {!bridge?.getLaunchableApps && <Text style={[styles.appEmpty, { color: theme.muted }]}>The installed-app list requires a native Android build, not Expo Go.</Text>}
       </View>
 
@@ -223,7 +220,7 @@ const styles = StyleSheet.create({
   selectedAppChip: { maxWidth: '100%', minHeight: 39, flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 13, paddingLeft: 10, paddingRight: 8, paddingVertical: 7 },
   selectedAppName: { maxWidth: 190, fontSize: 11, fontWeight: '800' },
   appEmpty: { fontSize: 11, lineHeight: 16 },
-  appResults: { gap: 2 },
+  appResultsScroll: { maxHeight: 360, flexGrow: 0 },
   appResultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 59, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 8 },
   appResultGlyph: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   appResultName: { fontSize: 12, fontWeight: '800' },
