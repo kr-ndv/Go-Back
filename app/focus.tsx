@@ -96,11 +96,11 @@ export default function FocusScreen() {
   const cancelNotification = async () => {
     const id = notificationIdRef.current;
     notificationIdRef.current = null;
+    if (id) await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
+    const ongoingId = ongoingNotificationIdRef.current;
+    ongoingNotificationIdRef.current = null;
+    if (ongoingId) await Notifications.dismissNotificationAsync(ongoingId).catch(() => undefined);
     try {
-      if (id) await Notifications.cancelScheduledNotificationAsync(id);
-      const ongoingId = ongoingNotificationIdRef.current;
-      ongoingNotificationIdRef.current = null;
-      if (ongoingId) await Notifications.dismissNotificationAsync(ongoingId).catch(() => undefined);
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       const focusNotifications = scheduled.filter(item => item.content.title === 'Focus session complete' || item.content.title === 'Break complete' || item.content.title === 'Focus timer running');
       await Promise.all(focusNotifications.map(item => Notifications.cancelScheduledNotificationAsync(item.identifier).catch(() => undefined)));
