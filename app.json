@@ -13,7 +13,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#07130F"
+        "backgroundColor": "#081B14"
       },
       "permissions": [
         "POST_NOTIFICATIONS",
@@ -28,15 +28,16 @@
         "expo-splash-screen",
         {
           "image": "./assets/icon.png",
-          "imageWidth": 120,
+          "imageWidth": 128,
           "resizeMode": "contain",
-          "backgroundColor": "#07130F",
+          "backgroundColor": "#081B14",
           "dark": {
-            "backgroundColor": "#07130F"
+            "backgroundColor": "#081B14"
           }
         }
       ],
-      "./plugins/withGoBackWidget"
+      "./plugins/withGoBackWidget",
+      "./plugins/withGoBackIcon"
     ],
     "experiments": {
       "typedRoutes": true

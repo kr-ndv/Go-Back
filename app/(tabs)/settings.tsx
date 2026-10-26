@@ -1,6 +1,6 @@
 import { showThemedDialog } from '@/state/dialog';
 import { useEffect, useState } from 'react';
-import { Image, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -153,8 +153,6 @@ export default function SettingsScreen() {
         <Text style={[styles.choiceTitle, { color: theme.text }]}>Display name</Text>
         <TextInput value={profileName} onChangeText={setProfileName} placeholder="Your name (optional)" placeholderTextColor={theme.muted} style={[styles.profileInput, { color: theme.text, borderColor: theme.border }]} />
         <Pressable onPress={() => void saveProfile()} style={[styles.profileButton, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '800', fontSize: 12 }}>Save profile</Text></Pressable>
-        <Text style={[styles.hint, { color: theme.muted }]}>Local Go Back ID · not connected to social features yet</Text>
-        <Pressable onPress={() => void Share.share({ message: profileId })}><Text style={[styles.profileId, { color: theme.primary }]}>{profileId || 'Creating your ID…'}  ·  Share</Text></Pressable>
       </View>
     </View>
     <Text style={[styles.section, { color: theme.text }]}>Backup & restore</Text>
@@ -177,6 +175,7 @@ export default function SettingsScreen() {
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="shield-checkmark-outline" size={23} color={theme.primary} /><View style={{ flex: 1, gap: 5 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Your data stays on your device</Text><Text style={[styles.hint, { color: theme.muted, lineHeight: 18 }]}>This starter uses local SQLite storage. No AI, ads, analytics, or cloud account is configured.</Text></View></View>
     <Text style={[styles.section, { color: theme.text }]}>About</Text>
     <View style={[styles.info, { backgroundColor: theme.surface, borderColor: theme.border }]}><Image source={require('../../assets/icon.png')} style={styles.logo} resizeMode="cover" accessibilityLabel="Go Back app icon" /><View style={{ flex: 1 }}><Text style={[styles.choiceTitle, { color: theme.text }]}>Go Back</Text><Text style={[styles.hint, { color: theme.muted }]}>Version 1.0.0 · Local-first focus companion</Text></View></View>
+    <Pressable accessibilityRole="link" accessibilityLabel="Open KriSh's GitHub profile" onPress={() => void Linking.openURL('https://github.com/kr-ndv')} style={[styles.credit, { backgroundColor: theme.surface, borderColor: theme.border }]}><View style={[styles.creditIcon,{ backgroundColor:theme.surfaceAlt }]}><Ionicons name="heart" size={18} color={theme.primary} /></View><View style={{ flex: 1, gap: 3 }}><Text style={[styles.choiceTitle,{ color:theme.text }]}>Made with Love By – KriSh</Text><Text style={[styles.hint,{ color:theme.muted }]}>Open GitHub profile</Text></View><Ionicons name="open-outline" size={18} color={theme.primary} /></Pressable>
   </Screen>;
 }
 const styles = StyleSheet.create({
@@ -210,4 +209,6 @@ const styles = StyleSheet.create({
   hint: { fontSize: 11 },
   info: { borderWidth: 1, borderRadius: 19, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 13 },
   logo: { width: 42, height: 42, borderRadius: 14, overflow: 'hidden' },
+  credit: { borderWidth: 1, borderRadius: 19, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  creditIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
 });

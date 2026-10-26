@@ -5,8 +5,11 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/state/theme';
+import { getSetting, setSetting } from '@/lib/database';
 
 type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
+type UsageCategory = 'productive' | 'distracting' | 'neutral';
+const CATEGORIES: { value: UsageCategory; label: string }[] = [{ value: 'productive', label: 'Productive' }, { value: 'distracting', label: 'Distracting' }, { value: 'neutral', label: 'Neutral' }];
 type UsageBridge = {
   hasUsageAccess: () => Promise<boolean>;
   openUsageAccessSettings: () => Promise<boolean>;
@@ -28,6 +31,8 @@ export default function UsageScreen() {
   const [stats, setStats] = useState<UsageStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<Record<string, UsageCategory>>({});
+  const [categorySaveError, setCategorySaveError] = useState('');
 
   const refresh = useCallback(async () => {
     if (!usage) {
@@ -41,7 +46,18 @@ export default function UsageScreen() {
       const granted = await usage.hasUsageAccess();
       setHasAccess(granted);
       if (!granted) { setStats([]); setLoading(false); return; }
-      setStats(await usage.getUsageStats(days));
+      const [rows, savedCategories] = await Promise.all([
+        usage.getUsageStats(days),
+        getSetting<Record<string, UsageCategory>>('usage.categories', {}),
+      ]);
+      setStats(rows);
+      const validCategories: Record<string, UsageCategory> = {};
+      if (savedCategories && typeof savedCategories === 'object') {
+        for (const [packageName, category] of Object.entries(savedCategories)) {
+          if (category === 'productive' || category === 'distracting' || category === 'neutral') validCategories[packageName] = category;
+        }
+      }
+      setCategories(validCategories);
     } catch {
       setError('Could not read screen-time data. Check the Android Usage Access setting and try again.');
     } finally {
@@ -57,6 +73,23 @@ export default function UsageScreen() {
 
   const total = stats.reduce((sum, item) => sum + item.foregroundTimeMs, 0);
   const max = Math.max(1, ...stats.map(item => item.foregroundTimeMs));
+  const categoryTotals = stats.reduce((sum, item) => {
+    const category = categories[item.packageName] ?? 'neutral';
+    sum[category] += item.foregroundTimeMs;
+    return sum;
+  }, { productive: 0, distracting: 0, neutral: 0 });
+  const assignCategory = async (packageName: string, category: UsageCategory) => {
+    const previous = categories;
+    const next = { ...previous, [packageName]: category };
+    setCategories(next);
+    setCategorySaveError('');
+    try {
+      await setSetting('usage.categories', next);
+    } catch {
+      setCategories(previous);
+      setCategorySaveError('App categories could not be saved. Please try again.');
+    }
+  };
   const grantAccess = async () => {
     if (!usage) { setError('Install a Go Back Android development or debug build to use this feature.'); return; }
     try { await usage.openUsageAccessSettings(); }
@@ -74,11 +107,25 @@ export default function UsageScreen() {
       {!usage && !loading ? <View style={[styles.permissionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.iconBubble, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="construct-outline" size={25} color={theme.primary} /></View><Text style={[styles.cardTitle, { color: theme.text }]}>Native Android build required</Text><Text style={[styles.body, { color: theme.muted }]}>Screen-time insights use an Android native module and cannot run inside Expo Go. Install the Go Back debug APK from the repository’s Actions tab first.</Text></View> : !hasAccess && !loading ? <View style={[styles.permissionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.iconBubble, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="phone-portrait-outline" size={25} color={theme.primary} /></View><Text style={[styles.cardTitle, { color: theme.text }]}>Allow Usage Access</Text><Text style={[styles.body, { color: theme.muted }]}>Android requires you to grant this special permission yourself. Go Back uses it only to show app usage on this device.</Text><Pressable onPress={() => void grantAccess()} style={[styles.grant, { backgroundColor: theme.primary }]}><Text style={{ color: theme.onPrimary, fontWeight: '800' }}>Open Android settings</Text><Ionicons name="open-outline" size={16} color={theme.background} /></Pressable></View> :
         loading ? <View style={styles.loading}><ActivityIndicator color={theme.primary} /><Text style={[styles.body, { color: theme.muted }]}>Reading usage on this device…</Text></View> :
         <><View style={[styles.totalCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Text style={[styles.totalLabel, { color: theme.muted }]}>{days === 1 ? 'TOTAL TODAY' : 'TOTAL OVER ' + days + ' DAYS'}</Text><Text style={[styles.totalValue, { color: theme.text }]}>{formatDuration(total)}</Text><Text style={[styles.body, { color: theme.muted }]}>{stats.length} apps with recorded foreground time</Text></View>
+          <View style={styles.categorySummaryRow}>
+            {([{ value: 'productive', label: 'Productive', color: theme.primary }, { value: 'distracting', label: 'Distracting', color: theme.danger }, { value: 'neutral', label: 'Neutral', color: theme.muted }] as { value: UsageCategory; label: string; color: string }[]).map(item =>
+              <View key={item.value} style={[styles.categorySummary, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                <View style={[styles.categoryMark, { backgroundColor: item.color }]} />
+                <Text style={[styles.categorySummaryLabel, { color: theme.muted }]}>{item.label}</Text>
+                <Text style={[styles.categorySummaryValue, { color: theme.text }]}>{formatDuration(categoryTotals[item.value])}</Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.section, { color: theme.text }]}>Most-used apps</Text>
+          <Text style={[styles.categoryHelp, { color: theme.muted }]}>Classify apps to make these reports more personal. Your labels stay on this device.</Text>
           {stats.length === 0 ? <View style={[styles.permissionCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><Ionicons name="analytics-outline" size={27} color={theme.primary} /><Text style={[styles.cardTitle, { color: theme.text }]}>No usage data yet</Text><Text style={[styles.body, { color: theme.muted }]}>Try again later; Android may need time to collect usage events.</Text></View> :
-            stats.slice(0, 15).map(item => <View key={item.packageName} style={[styles.appRow, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.appGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="apps-outline" size={18} color={theme.primary} /></View><View style={{ flex: 1, gap: 8 }}><View style={styles.appHead}><Text numberOfLines={1} style={[styles.appName, { color: theme.text }]}>{item.appName}</Text><Text style={[styles.appTime, { color: theme.muted }]}>{formatDuration(item.foregroundTimeMs)}</Text></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.bar, { width: (Math.max(2, item.foregroundTimeMs / max * 100) + '%') as `${number}%`, backgroundColor: theme.primary }]} /></View></View></View>)}
+            stats.slice(0, 15).map(item => <View key={item.packageName} style={[styles.appRow, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}><View style={[styles.appGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="apps-outline" size={18} color={theme.primary} /></View><View style={{ flex: 1, gap: 8 }}><View style={styles.appHead}><Text numberOfLines={1} style={[styles.appName, { color: theme.text }]}>{item.appName}</Text><Text style={[styles.appTime, { color: theme.muted }]}>{formatDuration(item.foregroundTimeMs)}</Text></View><View style={[styles.track, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.bar, { width: (Math.max(2, item.foregroundTimeMs / max * 100) + '%') as `${number}%`, backgroundColor: theme.primary }]} /></View><View style={styles.categoryOptions}>{CATEGORIES.map(option => {
+            const selected = (categories[item.packageName] ?? 'neutral') === option.value;
+            return <Pressable key={option.value} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={'Classify ' + item.appName + ' as ' + option.label} onPress={() => void assignCategory(item.packageName, option.value)} style={[styles.categoryOption, { backgroundColor: selected ? theme.primary : theme.surfaceAlt, borderColor: selected ? theme.primary : theme.border }]}><Text style={{ color: selected ? theme.onPrimary : theme.muted, fontSize: 9, fontWeight: '800' }}>{option.label}</Text></Pressable>;
+          })}</View></View></View>)}
         </>}
       {!!error && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
+      {!!categorySaveError && <Text style={[styles.error, { color: theme.danger }]}>{categorySaveError}</Text>}
       <Text style={[styles.footnote, { color: theme.muted }]}>Android controls which usage data is available. Values are approximate foreground time and may differ from Digital Wellbeing.</Text>
     </ScrollView>
   </SafeAreaView>;
@@ -95,7 +142,16 @@ const styles = StyleSheet.create({
   grant: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 15 },
   loading: { padding: 35, alignItems: 'center', gap: 13 }, totalCard: { padding: 22, borderWidth: 1, borderRadius: 23, gap: 8 },
   totalLabel: { fontSize: 10, letterSpacing: 1.5, fontWeight: '800' }, totalValue: { fontSize: 36, fontWeight: '900', letterSpacing: -1.2 },
-  section: { fontSize: 18, fontWeight: '800', marginTop: 5 }, appRow: { flexDirection: 'row', gap: 12, alignItems: 'center', borderWidth: 1, borderRadius: 17, padding: 13 },
+  section: { fontSize: 18, fontWeight: '800', marginTop: 5 },
+  categorySummaryRow: { flexDirection: 'row', gap: 8 },
+  categorySummary: { flex: 1, borderWidth: 1, borderRadius: 17, padding: 10, gap: 5, minWidth: 0 },
+  categoryMark: { width: 8, height: 8, borderRadius: 4 },
+  categorySummaryLabel: { fontSize: 10, fontWeight: '700' },
+  categorySummaryValue: { fontSize: 13, fontWeight: '900' },
+  categoryHelp: { fontSize: 11, lineHeight: 16, marginTop: -6 },
+  categoryOptions: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
+  categoryOption: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, minHeight: 28, alignItems: 'center', justifyContent: 'center' },
+  appRow: { flexDirection: 'row', gap: 12, alignItems: 'center', borderWidth: 1, borderRadius: 17, padding: 13 },
   appGlyph: { width: 39, height: 39, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, appHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   appName: { flex: 1, fontSize: 13, fontWeight: '700' }, appTime: { fontSize: 12, fontWeight: '700' }, track: { height: 5, borderRadius: 5, overflow: 'hidden' }, bar: { height: 5, borderRadius: 5 },
   error: { fontSize: 12, lineHeight: 18 }, footnote: { fontSize: 10, lineHeight: 16, marginTop: 4 },

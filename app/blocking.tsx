@@ -9,25 +9,30 @@ import { useAppTheme } from '@/state/theme';
 
 type BlockingConfig = {
   blockYoutube: boolean;
-  blockInstagram: boolean;
   blockShorts: boolean;
   blockReels: boolean;
+  blockOnlyDuringFocus: boolean;
   allowedChannels: string[];
+  blockedPackages: string[];
 };
+type LaunchableApp = { packageName: string; appName: string };
 type BlockingBridge = {
   isAccessibilityEnabled: () => Promise<boolean>;
   openAccessibilitySettings: () => Promise<boolean>;
   getConfig: () => Promise<BlockingConfig>;
+  getLaunchableApps?: () => Promise<LaunchableApp[]>;
   setConfig: (json: string) => Promise<boolean>;
 };
 const bridge = NativeModules.GoBackBlocking as BlockingBridge | undefined;
-const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockInstagram: false, blockShorts: false, blockReels: false, allowedChannels: [] };
+const DEFAULT_CONFIG: BlockingConfig = { blockYoutube: false, blockShorts: false, blockReels: false, blockOnlyDuringFocus: false, allowedChannels: [], blockedPackages: [] };
 
 export default function BlockingScreen() {
   const theme = useAppTheme();
   const [config, setConfig] = useState<BlockingConfig>(DEFAULT_CONFIG);
   const [savedConfig, setSavedConfig] = useState<BlockingConfig>(DEFAULT_CONFIG);
   const [channelText, setChannelText] = useState('');
+  const [appSearch, setAppSearch] = useState('');
+  const [installedApps, setInstalledApps] = useState<LaunchableApp[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,9 +41,20 @@ export default function BlockingScreen() {
   const refresh = useCallback(async () => {
     if (!bridge) { setLoading(false); return; }
     try {
-      const [saved, accessibilityEnabled] = await Promise.all([bridge.getConfig(), bridge.isAccessibilityEnabled()]);
-      setConfig(saved);
-      setSavedConfig(saved);
+      const [saved, accessibilityEnabled, appRows] = await Promise.all([
+        bridge.getConfig(),
+        bridge.isAccessibilityEnabled(),
+        bridge.getLaunchableApps ? bridge.getLaunchableApps().catch(() => []) : Promise.resolve([] as LaunchableApp[]),
+      ]);
+      const normalized: BlockingConfig = {
+        ...DEFAULT_CONFIG,
+        ...saved,
+        allowedChannels: Array.isArray(saved.allowedChannels) ? saved.allowedChannels.slice(0, 50) : [],
+        blockedPackages: Array.isArray(saved.blockedPackages) ? [...new Set(saved.blockedPackages.filter(value => typeof value === 'string'))].slice(0, 100) : [],
+      };
+      setConfig(normalized);
+      setSavedConfig(normalized);
+      setInstalledApps(Array.isArray(appRows) ? appRows.filter(row => row && typeof row.packageName === 'string' && typeof row.appName === 'string') : []);
       setChannelText('');
       setEnabled(accessibilityEnabled);
       setError('');
@@ -54,7 +70,23 @@ export default function BlockingScreen() {
   }, [refresh]);
 
   const hasUnsavedChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
-  const update = (key: keyof Omit<BlockingConfig, 'allowedChannels'>, value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const update = (key: 'blockYoutube' | 'blockShorts' | 'blockReels' | 'blockOnlyDuringFocus', value: boolean) => setConfig(current => ({ ...current, [key]: value }));
+  const addBlockedApp = (app: LaunchableApp) => {
+    if (config.blockedPackages.includes(app.packageName)) return;
+    if (config.blockedPackages.length >= 100) {
+      showThemedDialog('App list is full', 'You can select up to 100 apps for whole-app blocking.');
+      return;
+    }
+    setConfig(current => ({ ...current, blockedPackages: [...current.blockedPackages, app.packageName] }));
+  };
+  const removeBlockedApp = (packageName: string) => setConfig(current => ({ ...current, blockedPackages: current.blockedPackages.filter(item => item !== packageName) }));
+  const matchingApps = installedApps
+    // Instagram has a dedicated switch above; every other launchable app gets its own switch below.
+    .filter(app => {
+      const query = appSearch.trim().toLocaleLowerCase();
+      return !query || app.appName.toLocaleLowerCase().includes(query) || app.packageName.toLocaleLowerCase().includes(query);
+    });
+  const nameForPackage = (packageName: string) => installedApps.find(app => app.packageName === packageName)?.appName ?? packageName;
   const addChannel = () => {
     const clean = channelText.trim().replace(/\s+/g, ' ');
     if (!clean) { showThemedDialog('Add a YouTube channel', 'Enter a channel name or @handle, then tap Add channel.'); return; }
@@ -71,7 +103,7 @@ export default function BlockingScreen() {
     if (!bridge) { setError('Install a Go Back native Android build to configure blocking.'); return; }
     setSaving(true); setError('');
     try {
-      const next = { ...config, allowedChannels: config.allowedChannels.slice(0, 50) };
+      const next = { ...config, allowedChannels: config.allowedChannels.slice(0, 50), blockedPackages: [...new Set(config.blockedPackages)].filter(packageName => packageName.includes('.') && packageName !== 'com.goback.focus').slice(0, 100) };
       const saved = await bridge.setConfig(JSON.stringify(next));
       if (!saved) throw new Error('Native blocking service did not confirm the save');
       setConfig(next);
@@ -110,8 +142,35 @@ export default function BlockingScreen() {
 
       <Text style={[styles.section, { color: theme.text }]}>Whole-app blocking</Text>
       <View style={[styles.card, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-        <Toggle title="Limit YouTube to allowed channels" detail="Opening YouTube and browsing its feed stays allowed. Only active playback from a channel outside this list is stopped." value={config.blockYoutube} onValueChange={v => update('blockYoutube', v)} />
-        <Toggle title="Block Instagram" detail="Return to the home screen when Instagram opens." value={config.blockInstagram} onValueChange={v => update('blockInstagram', v)} />
+        <View style={[styles.toggleRow, { borderBottomColor: theme.border, opacity: 0.72 }]}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 }}>
+              <Text style={[styles.toggleTitle, { color: theme.text }]}>Limit YouTube to allowed channels</Text>
+              <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: theme.surfaceAlt, borderWidth: 1, borderColor: theme.border }}>
+                <Text style={{ color: theme.muted, fontSize: 10, fontWeight: '900' }}>STILL TESTING</Text>
+              </View>
+            </View>
+            <Text style={[styles.detail, { color: theme.muted }]}>Temporarily unavailable while we investigate device-specific mini-player behavior. This option will return after testing.</Text>
+          </View>
+          <Switch value={false} disabled onValueChange={() => undefined} trackColor={{ false: theme.border, true: theme.primary }} />
+        </View>
+        <Toggle title="Only block during focus" detail="Apply all saved app and video rules only while a focus timer or stopwatch is actively running." value={config.blockOnlyDuringFocus} onValueChange={v => update('blockOnlyDuringFocus', v)} />
+      </View>
+
+      <Text style={[styles.section, { color: theme.text }]}>Choose other apps</Text>
+      <View style={[styles.card, styles.appPickerCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+        <Text style={[styles.detail, { color: theme.muted }]}>Every launchable app on this phone is listed below. Turn on a switch to block it. Changes take effect after saving and enabling Go Back's Accessibility service.</Text>
+        <TextInput accessibilityLabel="Search installed apps" value={appSearch} onChangeText={setAppSearch} placeholder="Search all installed apps…" placeholderTextColor={theme.muted} autoCapitalize="none" style={[styles.appSearch, { color: theme.text, backgroundColor: theme.surfaceAlt, borderColor: theme.border }]} />
+        <Text style={[styles.appSectionLabel, { color: theme.text }]}>{matchingApps.length} apps · {config.blockedPackages.length} selected to block</Text>
+        {matchingApps.length > 0 ? <ScrollView style={styles.appResultsScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">{matchingApps.map(app => {
+          const blocked = config.blockedPackages.includes(app.packageName);
+          return <View key={app.packageName} style={[styles.appResultRow, { borderColor: theme.border }]}>
+            <View style={[styles.appResultGlyph, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="phone-portrait-outline" size={18} color={blocked ? theme.primary : theme.muted} /></View>
+            <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={[styles.appResultName, { color: theme.text }]}>{app.appName}</Text><Text numberOfLines={1} style={[styles.appPackage, { color: theme.muted }]}>{app.packageName}</Text></View>
+            <Switch accessibilityLabel={'Block ' + app.appName} accessibilityState={{ checked: blocked }} value={blocked} onValueChange={value => value ? addBlockedApp(app) : removeBlockedApp(app.packageName)} trackColor={{ false: theme.border, true: theme.primary }} thumbColor={blocked ? theme.onPrimary : '#E8EAE5'} />
+          </View>;
+        })}</ScrollView> : <Text style={[styles.appEmpty, { color: theme.muted }]}>{bridge?.getLaunchableApps ? 'No matching apps. Clear the search to see all launchable apps.' : 'Install the latest Go Back APK to load the apps on this phone.'}</Text>}
+        {!bridge?.getLaunchableApps && <Text style={[styles.appEmpty, { color: theme.muted }]}>The installed-app list requires a native Android build, not Expo Go.</Text>}
       </View>
 
       <Text style={[styles.section, { color: theme.text }]}>Short-form video</Text>
@@ -140,7 +199,7 @@ export default function BlockingScreen() {
       <Pressable onPress={() => void save()} disabled={saving || loading || !bridge} style={[styles.primaryButton, { backgroundColor: theme.primary, opacity: saving || loading || !bridge ? 0.55 : 1 }]}>{saving ? <ActivityIndicator color={theme.onPrimary} /> : <Ionicons name="shield-checkmark-outline" size={18} color={theme.onPrimary} />}<Text style={[styles.primaryText, { color: theme.onPrimary }]}>{saving ? 'Saving…' : hasUnsavedChanges ? 'Save blocking rules · Changes pending' : 'Blocking rules saved'}</Text></Pressable>
       <Pressable onPress={() => void openSettings()} disabled={!bridge} style={[styles.secondaryButton, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, opacity: bridge ? 1 : 0.55 }]}><Ionicons name="settings-outline" size={18} color={theme.primary} /><Text style={[styles.secondaryText, { color: theme.text }]}>Open Android Accessibility settings</Text></Pressable>
 
-      <View style={[styles.caution, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="information-circle-outline" size={19} color={theme.primary} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>Important: Android requires you to enable this service yourself. Detection depends on what YouTube and Instagram expose to accessibility; app updates, language, ads, or recommendations can affect Shorts/Reels and channel matching. Test each rule before relying on it. Go Back does not read passwords or send screen content to a server.</Text></View>
+      <View style={[styles.caution, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="information-circle-outline" size={19} color={theme.primary} /><Text style={[styles.detail, { color: theme.muted, flex: 1 }]}>Important: Android requires you to enable this service yourself. Selected-app blocking reacts to Android Accessibility events and may have a brief delay; Shorts/Reels and channel matching rely on third-party app labels and are less reliable. Test every rule and keep a safe way to disable blocking. Go Back does not send screen content to a server.</Text></View>
       {!!error && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
     </ScrollView>
   </SafeAreaView>;
@@ -165,6 +224,18 @@ const styles = StyleSheet.create({
   statusTitle: { fontSize: 13, fontWeight: '800' },
   notice: { flexDirection: 'row', gap: 12, padding: 16, borderWidth: 1, borderRadius: 18 },
   noticeTitle: { fontSize: 14, fontWeight: '800' },
+  appPickerCard: { paddingVertical: 14, gap: 12 },
+  appSearch: { minHeight: 46, borderWidth: 1, borderRadius: 15, paddingHorizontal: 13, fontSize: 13 },
+  appSectionLabel: { fontSize: 12, fontWeight: '900' },
+  selectedApps: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  selectedAppChip: { maxWidth: '100%', minHeight: 39, flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 13, paddingLeft: 10, paddingRight: 8, paddingVertical: 7 },
+  selectedAppName: { maxWidth: 190, fontSize: 11, fontWeight: '800' },
+  appEmpty: { fontSize: 11, lineHeight: 16 },
+  appResultsScroll: { maxHeight: 360, flexGrow: 0 },
+  appResultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 59, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 8 },
+  appResultGlyph: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  appResultName: { fontSize: 12, fontWeight: '800' },
+  appPackage: { fontSize: 9, lineHeight: 13 },
   allowlistIntro: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   youtubeGlyph: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   channelEntryRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
