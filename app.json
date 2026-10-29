@@ -46,6 +46,7 @@
         }
       ],
       "./plugins/withGoBackWidget",
+      "./plugins/withGoBackNativeReliability",
       "./plugins/withGoBackIcon"
     ],
     "experiments": {
