@@ -27,9 +27,9 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/sounds/focus-bell.wav",
-            "./assets/sounds/focus-chime.wav",
-            "./assets/sounds/focus-digital.wav"
+            "./assets/sounds/focus_bell.wav",
+            "./assets/sounds/focus_chime.wav",
+            "./assets/sounds/focus_digital.wav"
           ]
         }
       ],
