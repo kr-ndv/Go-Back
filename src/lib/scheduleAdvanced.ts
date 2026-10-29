@@ -1,3 +1,5 @@
+import { isValidISODate } from '@/lib/date';
+
 export type AdvancedSchedule = {
   id: string;
   title: string;
@@ -28,7 +30,7 @@ export function sanitizeSkipDates(value: string | undefined): string[] {
   try {
     const parsed = JSON.parse(value) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return [...new Set(parsed.filter(item => typeof item === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item)))].slice(0, 120).sort();
+    return [...new Set(parsed.filter(item => typeof item === 'string' && isValidISODate(item)))].slice(0, 120).sort();
   } catch { return []; }
 }
 
