@@ -19,14 +19,14 @@ function patchBlockingService(source) {
   let next = fixKotlinRegexes(source);
   next = replaceRequired(
     next,
-    '    val focusActive = prefs.getBoolean("focus_active", false)',
-    '    val focusActive = effectiveFocusActive(prefs)',
+    'val focusActive = prefs.getBoolean("focus_active", false)',
+    'val focusActive = effectiveFocusActive(prefs)',
     'focus-active read',
   );
   next = replaceRequired(
     next,
-    '  private fun packageIn(pkg: String, json: String): Boolean {',
-    `  private fun effectiveFocusActive(prefs: android.content.SharedPreferences): Boolean {
+    'private fun packageIn(pkg: String, json: String): Boolean {',
+    `private fun effectiveFocusActive(prefs: android.content.SharedPreferences): Boolean {
     if (!prefs.getBoolean("focus_active", false)) return false
     val state = try { JSONObject(prefs.getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
     if (!state.optBoolean("active", false)) {
@@ -52,17 +52,16 @@ function patchBlockingService(source) {
 
 function patchMaintenance(source) {
   let next = fixKotlinRegexes(source);
-  next = replaceRequired(next, '        .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)\n', '', 'maintenance network requirement');
-  next = replaceRequired(next, '        .setPeriodic(6L * 60L * 60L * 1000L)', '        .setPeriodic(30L * 60L * 1000L)', 'maintenance period');
+  next = replaceRequired(next, '.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)', '', 'maintenance network requirement');
+  next = replaceRequired(next, '.setPeriodic(6L * 60L * 60L * 1000L)', '.setPeriodic(30L * 60L * 1000L)', 'maintenance period');
   next = replaceRequired(
     next,
-    '      if (!prefs.getBoolean("updates_enabled", true)) return\n      try {',
-    `      if (!prefs.getBoolean("updates_enabled", true)) return
+    'if (!prefs.getBoolean("updates_enabled", true)) return',
+    `if (!prefs.getBoolean("updates_enabled", true)) return
       val now = System.currentTimeMillis()
       val lastCheck = prefs.getLong("last_release_check_at", 0L)
       if (now - lastCheck < 6L * 60L * 60L * 1000L) return
-      prefs.edit().putLong("last_release_check_at", now).apply()
-      try {`,
+      prefs.edit().putLong("last_release_check_at", now).apply()`,
     'release-check throttle',
   );
   return next;
@@ -71,8 +70,8 @@ function patchMaintenance(source) {
 function patchTile(source) {
   return replaceRequired(
     source,
-    '    val active = getSharedPreferences("go_back_blocking", 0).getBoolean("focus_active", false)',
-    `    val prefs = getSharedPreferences("go_back_blocking", 0)
+    'val active = getSharedPreferences("go_back_blocking", 0).getBoolean("focus_active", false)',
+    `val prefs = getSharedPreferences("go_back_blocking", 0)
     val state = try { org.json.JSONObject(prefs.getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { org.json.JSONObject() }
     val mode = state.optString("mode", "timer")
     val endAt = state.optLong("endAt", 0L)
@@ -83,17 +82,23 @@ function patchTile(source) {
 }
 
 function patchWidget(source) {
-  return replaceRequired(
+  let next = replaceRequired(
     source,
-    '    val state = try { JSONObject(context.getSharedPreferences("go_back_blocking", 0).getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }\n    val active = state.optBoolean("active", false)',
-    `    val prefs = context.getSharedPreferences("go_back_blocking", 0)
-    val state = try { JSONObject(prefs.getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
-    val mode = state.optString("mode", "timer")
-    val endAt = state.optLong("endAt", 0L)
-    val active = state.optBoolean("active", false) && (mode == "stopwatch" || (endAt > 0L && endAt > System.currentTimeMillis()))
-    if (!active && prefs.getBoolean("focus_active", false)) prefs.edit().putBoolean("focus_active", false).remove("session_blocked_packages").apply()`,
-    'focus widget state',
+    'val state = try { JSONObject(context.getSharedPreferences("go_back_blocking", 0).getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }',
+    `val prefs = context.getSharedPreferences("go_back_blocking", 0)
+    val state = try { JSONObject(prefs.getString("focus_state", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }`,
+    'focus widget preferences',
   );
+  next = replaceRequired(
+    next,
+    'val active = state.optBoolean("active", false)',
+    `val modeForState = state.optString("mode", "timer")
+    val endAtForState = state.optLong("endAt", 0L)
+    val active = state.optBoolean("active", false) && (modeForState == "stopwatch" || (endAtForState > 0L && endAtForState > System.currentTimeMillis()))
+    if (!active && prefs.getBoolean("focus_active", false)) prefs.edit().putBoolean("focus_active", false).remove("session_blocked_packages").apply()`,
+    'focus widget active state',
+  );
+  return next;
 }
 
 function withGoBackNativeReliability(config) {
