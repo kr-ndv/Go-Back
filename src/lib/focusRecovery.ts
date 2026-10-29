@@ -45,7 +45,8 @@ const cleanPackages = (value: unknown) => Array.isArray(value) ? [...new Set(val
 export function normalizeRecoverableFocusSession(value: unknown, now = Date.now()): RecoveredFocusSession | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Partial<RecoverableFocusSession>;
-  if (!Number.isInteger(raw.minutes) || Number(raw.minutes) < 1 || Number(raw.minutes) > 180) return null;
+  const minutes = typeof raw.minutes === 'number' && Number.isInteger(raw.minutes) ? raw.minutes : null;
+  if (minutes === null || minutes < 1 || minutes > 180) return null;
   if (typeof raw.startedAt !== 'string' || !Number.isFinite(new Date(raw.startedAt).getTime())) return null;
   const mode: FocusMode = validMode(raw.mode) ? raw.mode : 'timer';
   const sessionType: FocusSessionType = validType(raw.sessionType) ? raw.sessionType : 'focus';
@@ -53,15 +54,32 @@ export function normalizeRecoverableFocusSession(value: unknown, now = Date.now(
   const elapsedSeconds = Number.isFinite(raw.elapsedSeconds) ? Math.max(0, Math.floor(raw.elapsedSeconds ?? 0)) : 0;
   const runStarted = typeof raw.stopwatchRunStartedAt === 'number' && Number.isFinite(raw.stopwatchRunStartedAt) && raw.stopwatchRunStartedAt <= now ? raw.stopwatchRunStartedAt : null;
   const endAt = typeof raw.endAt === 'number' && Number.isFinite(raw.endAt) ? raw.endAt : null;
-  const remaining = mode === 'stopwatch' ? 0 : endAt !== null ? Math.max(0, Math.ceil((endAt - now) / 1000)) : Number.isFinite(raw.remaining) ? Math.max(0, Math.floor(raw.remaining ?? 0)) : raw.minutes * 60;
+  const remaining = mode === 'stopwatch'
+    ? 0
+    : endAt !== null
+      ? Math.max(0, Math.ceil((endAt - now) / 1000))
+      : Number.isFinite(raw.remaining)
+        ? Math.max(0, Math.floor(raw.remaining ?? 0))
+        : minutes * 60;
   const expired = mode !== 'stopwatch' && endAt !== null && endAt <= now;
   return {
-    sessionId, minutes: raw.minutes, remaining, endAt, startedAt: raw.startedAt, sessionType, mode, elapsedSeconds,
+    sessionId,
+    minutes,
+    remaining,
+    endAt,
+    startedAt: raw.startedAt,
+    sessionType,
+    mode,
+    elapsedSeconds,
     stopwatchRunStartedAt: runStarted,
     pomodoroRounds: Number.isInteger(raw.pomodoroRounds) && Number(raw.pomodoroRounds) >= 0 ? Math.min(999, Number(raw.pomodoroRounds)) : 0,
-    tag: typeof raw.tag === 'string' ? raw.tag.slice(0, 40) : '', notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 300) : '',
-    presetId: typeof raw.presetId === 'string' ? raw.presetId.slice(0, 200) : '', presetName: typeof raw.presetName === 'string' ? raw.presetName.slice(0, 60) : '', blockedPackages: cleanPackages(raw.blockedPackages),
-    running: mode === 'stopwatch' ? runStarted !== null : endAt !== null && !expired, expired,
+    tag: typeof raw.tag === 'string' ? raw.tag.slice(0, 40) : '',
+    notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 300) : '',
+    presetId: typeof raw.presetId === 'string' ? raw.presetId.slice(0, 200) : '',
+    presetName: typeof raw.presetName === 'string' ? raw.presetName.slice(0, 60) : '',
+    blockedPackages: cleanPackages(raw.blockedPackages),
+    running: mode === 'stopwatch' ? runStarted !== null : endAt !== null && !expired,
+    expired,
   };
 }
 
