@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { useAppTheme } from '@/state/theme';
 import { getDatabase } from '@/lib/database';
+import { isValidISODate } from '@/lib/date';
 import { detectedTimeZone, sanitizeSkipDates, type AdvancedSchedule } from '@/lib/scheduleAdvanced';
 import { rescheduleAdvancedFocusNotifications } from '@/lib/scheduleNotifications';
 import { showThemedDialog } from '@/state/dialog';
@@ -34,7 +35,7 @@ export default function AdvancedScheduleScreen(){
 
   const addSkip=async(schedule:ScheduleRow)=>{
     const input=(skipInputs[schedule.id]??'').trim();
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(input)||!Number.isFinite(new Date(`${input}T12:00:00`).getTime())){showThemedDialog('Check the skip date','Use a real date in YYYY-MM-DD format.');return;}
+    if(!isValidISODate(input)){showThemedDialog('Check the skip date','Use a real date in YYYY-MM-DD format.');return;}
     const next=[...new Set([...sanitizeSkipDates(schedule.skip_dates_json),input])].sort();
     setSkipInputs(current=>({...current,[schedule.id]:''})); await update(schedule,{skip_dates_json:JSON.stringify(next)});
   };
