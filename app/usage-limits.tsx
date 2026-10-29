@@ -7,8 +7,9 @@ import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { useAppTheme } from '@/state/theme';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
-import { evaluateAndNotifyUsageLimits, type UsageLimit } from '@/lib/usageLimits';
+import type { UsageLimit } from '@/lib/usageLimits';
 import { syncUsageLimitsToNative } from '@/lib/usageNativeSync';
+import { runForegroundMaintenance } from '@/lib/maintenance';
 import { showThemedDialog } from '@/state/dialog';
 
 type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
@@ -63,12 +64,16 @@ export default function UsageLimitsScreen() {
         'INSERT INTO usage_limits (id, package_name, app_name, limit_minutes, warning_percent, enabled, created_at) VALUES (?, ?, ?, ?, ?, 1, ?) ON CONFLICT(package_name) DO UPDATE SET app_name=excluded.app_name, limit_minutes=excluded.limit_minutes, warning_percent=excluded.warning_percent, enabled=1',
         findLimit(stat.packageName)?.id ?? createLocalId('limit'), stat.packageName, stat.appName.slice(0,120), limitMinutes, warn, new Date().toISOString()
       );
-      setEditingPackage(''); await load(); await evaluateAndNotifyUsageLimits();
+      setEditingPackage('');
+      await load();
+      await runForegroundMaintenance();
     } catch { showThemedDialog('Limit not saved', 'Go Back could not save this app limit.'); }
   };
 
   const remove = async (packageName: string) => {
-    const db = await getDatabase(); await db.runAsync('DELETE FROM usage_limits WHERE package_name = ?', packageName); await load();
+    const db = await getDatabase();
+    await db.runAsync('DELETE FROM usage_limits WHERE package_name = ?', packageName);
+    await load();
   };
 
   const openAccess = async () => { try { await usage?.openUsageAccessSettings(); } catch { setStatus('Open Android Settings → Special app access → Usage access.'); } };
