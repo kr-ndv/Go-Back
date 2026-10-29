@@ -23,7 +23,16 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/focus-bell.wav",
+            "./assets/sounds/focus-chime.wav",
+            "./assets/sounds/focus-digital.wav"
+          ]
+        }
+      ],
       [
         "expo-splash-screen",
         {
