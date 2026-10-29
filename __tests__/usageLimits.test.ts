@@ -1,4 +1,4 @@
-import { evaluateUsageLimits } from '@/lib/usageLimits';
+import { evaluateUsageLimits } from '@/lib/usageLimitLogic';
 
 describe('usage limits', () => {
   const limit = { id: '1', package_name: 'app.test', app_name: 'Test', limit_minutes: 60, warning_percent: 80, enabled: 1 };
