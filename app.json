@@ -45,8 +45,8 @@
           }
         }
       ],
-      "./plugins/withGoBackWidget",
       "./plugins/withGoBackNativeReliability",
+      "./plugins/withGoBackWidget",
       "./plugins/withGoBackIcon"
     ],
     "experiments": {
