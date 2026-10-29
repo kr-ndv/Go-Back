@@ -1,4 +1,4 @@
-import { compareStableVersions, isOfficialReleaseUrl, selectLatestStableRelease } from '@/lib/releaseChecker';
+import { compareStableVersions, isOfficialReleaseUrl, selectLatestStableRelease } from '@/lib/releaseLogic';
 
 describe('release checker', () => {
   test('compares stable versions', () => {
