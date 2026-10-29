@@ -45,6 +45,27 @@ export async function getDatabase() {
       start_time TEXT NOT NULL,
       duration_minutes INTEGER NOT NULL DEFAULT 25,
       enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      reminder_minutes INTEGER NOT NULL DEFAULT 0,
+      skip_dates_json TEXT NOT NULL DEFAULT '[]',
+      routine_type TEXT NOT NULL DEFAULT 'custom',
+      timezone TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS focus_presets (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      mode TEXT NOT NULL DEFAULT 'timer',
+      duration_minutes INTEGER NOT NULL DEFAULT 25,
+      blocked_packages_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS usage_limits (
+      id TEXT PRIMARY KEY NOT NULL,
+      package_name TEXT NOT NULL UNIQUE,
+      app_name TEXT NOT NULL,
+      limit_minutes INTEGER NOT NULL,
+      warning_percent INTEGER NOT NULL DEFAULT 80,
+      enabled INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS exams (
@@ -92,6 +113,20 @@ export async function getDatabase() {
   }
   if (!focusColumns.some(column => column.name === 'notes')) {
     await database.execAsync("ALTER TABLE focus_sessions ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+  }
+
+  const scheduleColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(focus_schedules)');
+  if (!scheduleColumns.some(column => column.name === 'reminder_minutes')) {
+    await database.execAsync('ALTER TABLE focus_schedules ADD COLUMN reminder_minutes INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!scheduleColumns.some(column => column.name === 'skip_dates_json')) {
+    await database.execAsync("ALTER TABLE focus_schedules ADD COLUMN skip_dates_json TEXT NOT NULL DEFAULT '[]'");
+  }
+  if (!scheduleColumns.some(column => column.name === 'routine_type')) {
+    await database.execAsync("ALTER TABLE focus_schedules ADD COLUMN routine_type TEXT NOT NULL DEFAULT 'custom'");
+  }
+  if (!scheduleColumns.some(column => column.name === 'timezone')) {
+    await database.execAsync("ALTER TABLE focus_schedules ADD COLUMN timezone TEXT NOT NULL DEFAULT ''");
   }
 
   const taskColumns = await database.getAllAsync<{ name: string }>('PRAGMA table_info(tasks)');
