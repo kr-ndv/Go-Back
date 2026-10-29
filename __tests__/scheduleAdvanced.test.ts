@@ -6,8 +6,8 @@ describe('advanced scheduling', () => {
     expect(routineDays('weekend')).toEqual([0, 6]);
   });
 
-  test('deduplicates valid skip dates', () => {
-    expect(sanitizeSkipDates('["2026-10-30","bad","2026-10-30"]')).toEqual(['2026-10-30']);
+  test('deduplicates real skip dates and rejects impossible dates', () => {
+    expect(sanitizeSkipDates('["2026-10-30","bad","2026-02-31","2026-10-30"]')).toEqual(['2026-10-30']);
   });
 
   test('skips excluded dates and applies pre-reminder', () => {
