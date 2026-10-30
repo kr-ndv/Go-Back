@@ -12,7 +12,7 @@ import { useAppTheme } from '@/state/theme';
 import { formatFocusTime, nextPomodoroPhase, stopwatchElapsedSeconds, type FocusMode, type FocusSessionType } from '@/lib/focusLogic';
 import { FOCUS_STATUS_CHANNEL_ID, ensureFocusAlertChannel, ensureFocusStatusChannel, getSelectedFocusAlarm } from '@/lib/focusNotifications';
 import { normalizeRecoverableFocusSession, type RecoverableFocusSession } from '@/lib/focusRecovery';
-import { setNativeSessionBlockedPackages, syncNativeFocusState } from '@/lib/nativeBridge';
+import { hasNativeFocusNotificationBridge, setNativeSessionBlockedPackages, syncNativeFocusState } from '@/lib/nativeBridge';
 
 const FOCUS_PRESETS = [15, 25, 45, 60];
 type SessionType = FocusSessionType;
@@ -77,6 +77,8 @@ export default function FocusScreen() {
     elapsedSeconds: elapsedSecondsRef.current,
     stopwatchRunStartedAt: stopwatchRunStartedAtRef.current,
     durationSeconds: minutesRef.current * 60,
+    remainingSeconds: remainingRef.current,
+    paused: !active && Boolean(startedAt.current),
     sessionType: sessionTypeRef.current,
     title: nativeTitle(),
   });
@@ -118,7 +120,7 @@ export default function FocusScreen() {
 
   const scheduleOngoingNotification = async () => {
     try {
-      if (Platform.OS === 'android') {
+      if (Platform.OS === 'android' && hasNativeFocusNotificationBridge()) {
         syncNativeState(true);
         return;
       }
@@ -140,7 +142,7 @@ export default function FocusScreen() {
 
   const refreshOngoingNotification = async () => {
     if (!running || Date.now() - lastNotificationUpdateRef.current < 15000) return;
-    if (Platform.OS === 'android') {
+    if (Platform.OS === 'android' && hasNativeFocusNotificationBridge()) {
       syncNativeState(true);
       lastNotificationUpdateRef.current = Date.now();
       return;
@@ -199,7 +201,7 @@ export default function FocusScreen() {
           sessionIdRef.current=restored.sessionId; modeRef.current=restored.mode; sessionTypeRef.current=restored.sessionType; minutesRef.current=restored.minutes; remainingRef.current=restored.remaining; endAtRef.current=restored.endAt; elapsedSecondsRef.current=restored.elapsedSeconds; stopwatchRunStartedAtRef.current=restored.stopwatchRunStartedAt; startedAt.current=restored.startedAt; tagRef.current=restored.tag; notesRef.current=restored.notes; presetIdRef.current=restored.presetId; presetNameRef.current=restored.presetName; blockedPackagesRef.current=restored.blockedPackages;
           setFocusMode(restored.mode); setSessionType(restored.sessionType); setMinutes(restored.minutes); setRemaining(restored.remaining); setElapsedSeconds(stopwatchElapsedSeconds(restored.elapsedSeconds,restored.stopwatchRunStartedAt)); setTag(restored.tag); setSessionNotes(restored.notes); setPresetName(restored.presetName); await setNativeSessionBlockedPackages(restored.blockedPackages);
           if(restored.expired){ setRunning(false); await finish(true); }
-          else setRunning(restored.running);
+          else { setRunning(restored.running); syncNativeState(restored.running); if (restored.running) void scheduleOngoingNotification(); }
         } else if(pending && validMode(pending.mode) && typeof pending.name==='string'){
           const blocked=cleanPackages(pending.blockedPackages); const duration=Number.isInteger(pending.durationMinutes)&&pending.durationMinutes>=1&&pending.durationMinutes<=180?pending.durationMinutes:25;
           modeRef.current=pending.mode; setFocusMode(pending.mode); sessionTypeRef.current='focus'; setSessionType('focus'); minutesRef.current=pending.mode==='stopwatch'?25:duration; setMinutes(minutesRef.current); remainingRef.current=minutesRef.current*60; setRemaining(remainingRef.current); presetIdRef.current=String(pending.id??'').slice(0,200); presetNameRef.current=pending.name.slice(0,60); setPresetName(presetNameRef.current); blockedPackagesRef.current=blocked; await setNativeSessionBlockedPackages(blocked); await setSetting('focus.mode',pending.mode); await setSetting('focus.pendingPreset',null);
@@ -219,7 +221,7 @@ export default function FocusScreen() {
   };
   useEffect(()=>{if(!running)return;const interval=setInterval(()=>{tick();if(Date.now()-lastNotificationUpdateRef.current>=15000)void refreshOngoingNotification();},500);const sub=AppState.addEventListener('change',state=>{if(state==='active')tick();});return()=>{clearInterval(interval);sub.remove();};},[running,focusMode]);
 
-  const resetPreparedSession=()=>{sessionIdRef.current=null;startedAt.current=null;endAtRef.current=null;stopwatchRunStartedAtRef.current=null;void cancelNotification();void setSetting('focus.active',null);void clearPreset();};
+  const resetPreparedSession=()=>{sessionIdRef.current=null;startedAt.current=null;endAtRef.current=null;stopwatchRunStartedAtRef.current=null;syncNativeState(false);void cancelNotification();void setSetting('focus.active',null);void clearPreset();};
   const applyDuration=(value:number)=>{minutesRef.current=value;setMinutes(value);remainingRef.current=value*60;setRemaining(value*60);resetPreparedSession();};
   const choose=(value:number)=>{if(startedAt.current){showThemedDialog('Replace current session?','The paused session has not been saved yet. Replace it and discard its progress?',[{text:'Keep session',style:'cancel'},{text:'Replace session',style:'destructive',onPress:()=>applyDuration(value)}]);return;}applyDuration(value);};
   const changeMode=(value:FocusMode)=>{if(running||restoring||value===modeRef.current)return;if(startedAt.current){showThemedDialog('Finish the current session first','Save or end the paused session before changing timer modes.');return;}modeRef.current=value;setFocusMode(value);void setSetting('focus.mode',value);elapsedSecondsRef.current=0;setElapsedSeconds(0);resetPreparedSession();sessionTypeRef.current='focus';setSessionType('focus');const duration=value==='pomodoro'?25:25;minutesRef.current=duration;setMinutes(duration);remainingRef.current=duration*60;setRemaining(duration*60);if(value==='pomodoro')void setSetting('focus.pomodoroNextType','focus');};
