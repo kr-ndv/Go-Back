@@ -417,6 +417,24 @@ These changes are part of the same branch and should land before the broader fea
 - keep foreground `shouldShowBanner` / `shouldShowList`
 - respect the user's Android channel/DND settings
 
+### Live Timer / Pomodoro / Stopwatch notification progress
+
+The current implementation still relies on an Expo notification whose body is refreshed about every 15 seconds by dismissing and recreating the ongoing notification. That gives a periodic text readout, not a continuously advancing notification progress surface.
+
+Implement this as a native Android enhancement while retaining the Expo fallback on platforms without the native bridge:
+
+- Keep one stable ongoing notification ID and update it in place; do not dismiss/recreate it for routine progress updates.
+- Timer and each Pomodoro phase: show a native countdown chronometer where supported plus a determinate progress bar (elapsed / total). Include the phase label: Focus, Short Break, or Long Break.
+- Stopwatch: show a native elapsed-time chronometer based on the persisted run-start timestamp; do not invent a finite completion percentage for an open-ended stopwatch.
+- Paused session: freeze the displayed time and progress and clearly label it as paused.
+- Use the persisted `endAt` / accumulated stopwatch seconds + run-start timestamp as the source of truth. JS intervals must not be required to keep the clock moving while the app is backgrounded.
+- Update determinate progress at a battery-conscious cadence; let Android's chronometer animate the displayed time between updates. Avoid a one-second notification repost loop.
+- Keep the existing completion alarm, silent ongoing-status channel, notification permission behavior, notification tap deep link, session recovery, and native focus-blocking state synchronized.
+- Ensure Pomodoro phase changes update the same notification without stale labels or a gap in status.
+
+**Acceptance tests:** Timer, Focus, Short Break, Long Break, Stopwatch, pause/resume, app backgrounding, process death/relaunch, phase transition, timer completion, notification permission denied, and duplicate-notification cleanup. Validate on physical Android devices across supported API levels. A green CI run alone is not sufficient for the native chronometer/progress behavior.
+
+
 ---
 
 # Staged commit order
@@ -448,10 +466,11 @@ These changes are part of the same branch and should land before the broader fea
 16. YouTube allowlist reliability changes while keeping UI disabled
 
 ## Stage F — verification/documentation
-17. unit tests and CI fixes
-18. update `FUTURE_ROADMAP.md` implementation statuses
-19. update real-device test matrix
-20. open a draft PR; do not merge to `main`
+17. implement and test native live notification progress for Timer/Pomodoro/Stopwatch
+18. unit tests and CI fixes
+19. update `FUTURE_ROADMAP.md` implementation statuses
+20. update real-device test matrix
+21. open a draft PR; do not merge to `main`
 
 # Required verification before merge
 
@@ -462,6 +481,7 @@ Automated:
 
 Physical Android device:
 - timer/stopwatch/Pomodoro recovery
+- live notification chronometer/progress for Timer, all Pomodoro phases and Stopwatch
 - heads-up notification and custom alarm sounds
 - notification denied/DND cases
 - Usage Access removed/restored
