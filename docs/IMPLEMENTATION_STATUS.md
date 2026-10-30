@@ -15,7 +15,7 @@ This file tracks implementation progress while the pull request is under validat
 - [x] Focus streaks and personal focus-goal analytics
 - [x] Advanced focus scheduling with routine presets, pre-reminders and skip dates
 - [x] Selectable timer alarm and separate heads-up completion notification channels
-- [ ] Native live notification progress/chronometer for Timer, Pomodoro phases and Stopwatch
+- [x] Native live notification progress/chronometer for Timer, Pomodoro phases and Stopwatch (code committed; CI and physical-device validation pending)
 - [ ] CI/typecheck/unit tests/native Android compile
 - [ ] Physical-device validation
 
