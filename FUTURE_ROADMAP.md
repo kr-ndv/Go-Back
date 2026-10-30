@@ -1,9 +1,9 @@
 # Go Back — Future Feature Roadmap
 
 **Status:** Planning only  
-**Last updated:** 2026-10-25  
+**Last updated:** 2026-10-30  
 **Applies to:** Go Back Android app  
-**Current development branch:** `release/production-readiness`
+**Current development branch:** `feature/live-focus-notification-progress`
 
 This document is the persistent source of context for future Go Back planning. It records features discussed and agreed as candidates for future work so that development can resume even if earlier chat history is unavailable.
 
@@ -75,7 +75,26 @@ Requirements:
 
 **Acceptance criteria:** Tests cover process death, restart, permission revocation, duplicate events, and interrupted persistence without duplicate or negative durations.
 
-### 4. Backup and restore
+### 4. Live notification progress for Timer, Pomodoro, and Stopwatch
+
+**Status:** Approved to investigate and implement on `feature/live-focus-notification-progress`; not yet implemented.
+
+Upgrade the existing persistent focus notification from a periodically refreshed text-only readout into a useful live status surface for every focus mode. The current implementation refreshes the notification approximately every 15 seconds; it does not expose a true progress indicator.
+
+Requirements:
+- **Timer:** show remaining time and a progress indicator that reflects elapsed/remaining duration.
+- **Pomodoro:** show the current phase (Focus, Short Break, or Long Break), remaining time, and progress for that phase; update correctly when a phase completes and the next phase is prepared.
+- **Stopwatch:** show continuously increasing elapsed time and an appropriate elapsed-time indicator.
+- Keep the notification stable and ongoing while the session is running; update the existing notification rather than dismissing/recreating it on every refresh where the platform permits.
+- Use the persisted session timestamps as the source of truth. The displayed progress must recover accurately after app backgrounding, process recreation, and device restart; do not depend on a JavaScript interval remaining alive.
+- Prefer native Android notification capabilities (for example, chronometer/countdown and progress support) where Expo Notifications cannot express the required behavior. Avoid an aggressive one-second schedule of notification reposts; balance freshness with Android battery and notification-update limits.
+- Preserve the existing completion alarm, session persistence, app-blocking synchronization, notification permission handling, and tap-to-open behavior.
+- Handle paused sessions clearly and do not display a moving progress indicator while paused.
+- Keep the existing notification concise, accessible, and consistent with Go Back's visual identity. Do not add unrelated notification actions or redesign the Focus screen as part of this work.
+
+**Acceptance criteria:** Timer, all Pomodoro phases, and Stopwatch each display the correct live time/progress; pause/resume and completion transitions stay synchronized; notification state is restored after app process death/relaunch; no duplicate ongoing notifications or completion alarms are created; battery-conscious behavior is verified; TypeScript/Jest/Android build checks pass; and the behavior is tested on physical Android devices across supported Android versions.
+
+### 5. Backup and restore
 
 **Status:** Proposed.
 
@@ -94,29 +113,29 @@ Requirements:
 
 ## P2 — Later candidates
 
-### 5. Weekly and monthly insights
+### 6. Weekly and monthly insights
 
 Extend existing usage and session history with clear trends, most productive days, distracting-app patterns, and comparisons with previous periods. Use actual recorded data, explain incomplete permissions/data, and avoid presenting estimates as exact measurements.
 
-### 6. Focus modes and presets
+### 7. Focus modes and presets
 
 Let users save reusable configurations such as Study, Deep Work, Reading, and Sleep, including duration and selected blocked apps. Presets should reuse existing capabilities and avoid duplicating settings or changing current defaults unexpectedly.
 
-### 7. Daily screen-time limit alerts
+### 8. Daily screen-time limit alerts
 
 Let users configure daily usage limits for selected apps and receive warnings when approaching or exceeding them. Keep this separate from the existing behavior where apps are blocked only during focus sessions. Clearly communicate Android Usage Access limitations and avoid promising enforcement that the OS cannot guarantee.
 
-### 8. Home-screen widget and Quick Settings tile
+### 9. Home-screen widget and Quick Settings tile
 
 Explore Android widget/Quick Settings integration for starting a focus session, viewing remaining time, or opening the app quickly. Ensure controls remain synchronized with the actual session and do not create duplicate timers or bypass intended session rules.
 
 ## P3 — Optional candidates
 
-### 9. Focus streaks and personal goals
+### 10. Focus streaks and personal goals
 
 Allow a user to set a realistic daily focus goal and see consistency/milestones. Keep the experience supportive: avoid shaming, punitive mechanics, or treating missed days as failure.
 
-### 10. Advanced focus scheduling
+### 11. Advanced focus scheduling
 
 Build on the existing focus schedule with weekday/weekend routines, skip dates, and reminders before sessions. Preserve current schedules and ensure daylight-saving/time-zone changes do not trigger unintended sessions.
 
@@ -137,9 +156,10 @@ These improvements should be considered during relevant maintenance work and do 
 
 1. Finish production-readiness checks and regression testing for the current feature-frozen release.
 2. Continue reliability work, including session recovery and permission handling.
-3. Investigate and validate YouTube allowed-channel limiting; keep it disabled until explicitly approved.
-4. Implement the GitHub stable-release checker/update notification.
-5. Evaluate backup/restore and then prioritize insights, presets, limits, widgets, goals, and scheduling based on value and complexity.
+3. Implement live notification progress for Timer, Pomodoro, and Stopwatch on the approved feature branch.
+4. Investigate and validate YouTube allowed-channel limiting; keep it disabled until explicitly approved.
+5. Implement the GitHub stable-release checker/update notification.
+6. Evaluate backup/restore and then prioritize insights, presets, limits, widgets, goals, and scheduling based on value and complexity.
 
 This is a proposed order, not a commitment to ship every item.
 
