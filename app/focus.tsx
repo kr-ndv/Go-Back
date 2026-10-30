@@ -76,6 +76,8 @@ export default function FocusScreen() {
     endAt: endAtRef.current,
     elapsedSeconds: elapsedSecondsRef.current,
     stopwatchRunStartedAt: stopwatchRunStartedAtRef.current,
+    durationSeconds: minutesRef.current * 60,
+    sessionType: sessionTypeRef.current,
     title: nativeTitle(),
   });
 
@@ -116,6 +118,10 @@ export default function FocusScreen() {
 
   const scheduleOngoingNotification = async () => {
     try {
+      if (Platform.OS === 'android') {
+        syncNativeState(true);
+        return;
+      }
       await ensureFocusStatusChannel();
       let permission = await Notifications.getPermissionsAsync();
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
@@ -134,6 +140,11 @@ export default function FocusScreen() {
 
   const refreshOngoingNotification = async () => {
     if (!running || Date.now() - lastNotificationUpdateRef.current < 15000) return;
+    if (Platform.OS === 'android') {
+      syncNativeState(true);
+      lastNotificationUpdateRef.current = Date.now();
+      return;
+    }
     const previousId = ongoingNotificationIdRef.current; ongoingNotificationIdRef.current = null;
     if (previousId) await Notifications.dismissNotificationAsync(previousId).catch(() => undefined);
     await scheduleOngoingNotification();
