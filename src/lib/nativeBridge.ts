@@ -6,6 +6,8 @@ export type FocusNativeSnapshot = {
   endAt?: number | null;
   elapsedSeconds?: number;
   stopwatchRunStartedAt?: number | null;
+  durationSeconds?: number;
+  sessionType?: 'focus' | 'short-break' | 'long-break';
   title?: string;
 };
 
