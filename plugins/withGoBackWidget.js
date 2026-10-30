@@ -228,12 +228,14 @@ class GoBackBlockingModule(private val appContext: ReactApplicationContext) : Re
     if (parsed.has("endAt") && !parsed.isNull("endAt")) clean.put("endAt", parsed.optLong("endAt", 0L))
     clean.put("elapsedSeconds", parsed.optInt("elapsedSeconds", 0).coerceAtLeast(0))
     clean.put("durationSeconds", parsed.optInt("durationSeconds", 0).coerceAtLeast(0))
+    clean.put("remainingSeconds", parsed.optInt("remainingSeconds", 0).coerceAtLeast(0))
     clean.put("sessionType", parsed.optString("sessionType", "focus").take(20))
+    clean.put("paused", parsed.optBoolean("paused", false))
     if (parsed.has("stopwatchRunStartedAt") && !parsed.isNull("stopwatchRunStartedAt")) clean.put("stopwatchRunStartedAt", parsed.optLong("stopwatchRunStartedAt", 0L))
     clean.put("title", parsed.optString("title", "Focus session").take(80))
     val prefs = appContext.getSharedPreferences("go_back_blocking", 0)
     prefs.edit().putBoolean("focus_active", clean.optBoolean("active", false)).putString("focus_state", clean.toString()).apply()
-    if (clean.optBoolean("active", false)) showFocusNotification(clean) else cancelFocusNotification()
+    if (clean.optBoolean("active", false) || clean.optBoolean("paused", false)) showFocusNotification(clean) else cancelFocusNotification()
     GoBackFocusWidgetProvider.refresh(appContext)
     TileService.requestListeningState(appContext, ComponentName(appContext, GoBackFocusTileService::class.java))
   }
@@ -264,28 +266,39 @@ class GoBackBlockingModule(private val appContext: ReactApplicationContext) : Re
     val isStopwatch = mode == "stopwatch"
     val endAt = state.optLong("endAt", 0L)
     val durationMs = state.optLong("durationSeconds", 0L) * 1000L
-    val remainingMs = (endAt - now).coerceAtLeast(0L)
+    val paused = state.optBoolean("paused", false)
+    val remainingMs = if (paused) state.optLong("remainingSeconds", 0L) * 1000L else (endAt - now).coerceAtLeast(0L)
     val elapsedMs = if (isStopwatch) {
-      state.optLong("elapsedSeconds", 0L) * 1000L + (now - state.optLong("stopwatchRunStartedAt", now)).coerceAtLeast(0L)
+      state.optLong("elapsedSeconds", 0L) * 1000L + if (paused) 0L else (now - state.optLong("stopwatchRunStartedAt", now)).coerceAtLeast(0L)
     } else (durationMs - remainingMs).coerceIn(0L, durationMs.coerceAtLeast(0L))
     val phase = when (state.optString("sessionType", "focus")) {
       "short-break" -> "Short break"
       "long-break" -> "Long break"
       else -> if (mode == "pomodoro") "Pomodoro focus" else "Focus session"
     }
+    fun clock(seconds: Long): String {
+      val total = (seconds / 1000L).coerceAtLeast(0L)
+      return String.format(java.util.Locale.getDefault(), "%02d:%02d", total / 60L, total % 60L)
+    }
+    val detail = when {
+      paused && isStopwatch -> "Stopwatch · Paused · ${clock(elapsedMs)} elapsed"
+      paused -> "$phase · Paused · ${clock(remainingMs)} remaining"
+      isStopwatch -> "Stopwatch · elapsed time"
+      else -> "$phase · time remaining"
+    }
     val builder = NotificationCompat.Builder(appContext, channelId)
       .setSmallIcon(android.R.drawable.ic_media_play)
       .setContentTitle(state.optString("title", phase).ifBlank { phase })
-      .setContentText(if (isStopwatch) "Stopwatch · elapsed time" else "$phase · time remaining")
+      .setContentText(detail)
       .setCategory(NotificationCompat.CATEGORY_PROGRESS)
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
       .setShowWhen(true)
-      .setUsesChronometer(true)
-      .setWhen(if (isStopwatch) now - elapsedMs else now + remainingMs)
+      .setUsesChronometer(!paused)
+      .setWhen(if (paused) now else if (isStopwatch) now - elapsedMs else now + remainingMs)
       .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-    if (Build.VERSION.SDK_INT >= 24 && !isStopwatch) builder.setChronometerCountDown(true)
+    if (Build.VERSION.SDK_INT >= 24 && !isStopwatch && !paused) builder.setChronometerCountDown(true)
     if (!isStopwatch && durationMs > 0L) {
       val progress = ((elapsedMs * 100L) / durationMs).toInt().coerceIn(0, 100)
       builder.setProgress(100, progress, false)
