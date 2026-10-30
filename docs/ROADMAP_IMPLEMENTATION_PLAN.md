@@ -419,16 +419,16 @@ These changes are part of the same branch and should land before the broader fea
 
 ### Live Timer / Pomodoro / Stopwatch notification progress
 
-The current implementation still relies on an Expo notification whose body is refreshed about every 15 seconds by dismissing and recreating the ongoing notification. That gives a periodic text readout, not a continuously advancing notification progress surface.
+Implemented on `contrib/timer-alerts-and-roadmap`: Android now uses a stable native notification ID with a native chronometer for running sessions and an in-place determinate progress update at the existing battery-conscious 15-second cadence. Paused sessions retain a frozen notification with a paused label. The Expo ongoing-notification implementation remains the fallback when the native Android bridge is unavailable.
 
 Implement this as a native Android enhancement while retaining the Expo fallback on platforms without the native bridge:
 
 - Keep one stable ongoing notification ID and update it in place; do not dismiss/recreate it for routine progress updates.
 - Timer and each Pomodoro phase: show a native countdown chronometer where supported plus a determinate progress bar (elapsed / total). Include the phase label: Focus, Short Break, or Long Break.
 - Stopwatch: show a native elapsed-time chronometer based on the persisted run-start timestamp; do not invent a finite completion percentage for an open-ended stopwatch.
-- Paused session: freeze the displayed time and progress and clearly label it as paused.
+- Paused session: freeze the displayed time and progress and clearly label it as paused. The native implementation now preserves a paused notification while the session remains recoverable.
 - Use the persisted `endAt` / accumulated stopwatch seconds + run-start timestamp as the source of truth. JS intervals must not be required to keep the clock moving while the app is backgrounded.
-- Update determinate progress at a battery-conscious cadence; let Android's chronometer animate the displayed time between updates. Avoid a one-second notification repost loop.
+- Update determinate progress at a battery-conscious cadence; let Android's chronometer animate the displayed time between updates. Avoid a one-second notification repost loop. The implementation reuses the same notification ID and refreshes the progress value in place.
 - Keep the existing completion alarm, silent ongoing-status channel, notification permission behavior, notification tap deep link, session recovery, and native focus-blocking state synchronized.
 - Ensure Pomodoro phase changes update the same notification without stale labels or a gap in status.
 
