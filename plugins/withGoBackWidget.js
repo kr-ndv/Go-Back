@@ -281,8 +281,8 @@ class GoBackBlockingModule(private val appContext: ReactApplicationContext) : Re
       return String.format(java.util.Locale.getDefault(), "%02d:%02d", total / 60L, total % 60L)
     }
     val detail = when {
-      paused && isStopwatch -> "Stopwatch · Paused · ${clock(elapsedMs)} elapsed"
-      paused -> "$phase · Paused · ${clock(remainingMs)} remaining"
+      paused && isStopwatch -> "Stopwatch · Paused · \${clock(elapsedMs)} elapsed"
+      paused -> "$phase · Paused · \${clock(remainingMs)} remaining"
       isStopwatch -> "Stopwatch · elapsed time"
       else -> "$phase · time remaining"
     }
