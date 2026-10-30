@@ -120,14 +120,15 @@ export default function FocusScreen() {
 
   const scheduleOngoingNotification = async () => {
     try {
-      if (Platform.OS === 'android' && hasNativeFocusNotificationBridge()) {
-        syncNativeState(true);
-        return;
-      }
-      await ensureFocusStatusChannel();
       let permission = await Notifications.getPermissionsAsync();
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
       if (!permission.granted) return;
+      if (Platform.OS === 'android' && hasNativeFocusNotificationBridge()) {
+        syncNativeState(true);
+        lastNotificationUpdateRef.current = Date.now();
+        return;
+      }
+      await ensureFocusStatusChannel();
       const modeLabel = modeRef.current === 'stopwatch' ? 'Stopwatch' : sessionTypeRef.current === 'focus' ? 'Focus session' : 'Break';
       const timerText = modeRef.current === 'stopwatch'
         ? formatFocusTime(stopwatchElapsedSeconds(elapsedSecondsRef.current, stopwatchRunStartedAtRef.current), true) + ' elapsed'
