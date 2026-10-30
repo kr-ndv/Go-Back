@@ -135,6 +135,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.Icon
 import android.os.Build
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.pm.PackageManager
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import android.provider.Settings
 import android.service.quicksettings.TileService
 import android.view.accessibility.AccessibilityManager
@@ -220,12 +227,75 @@ class GoBackBlockingModule(private val appContext: ReactApplicationContext) : Re
     clean.put("active", parsed.optBoolean("active", false)); clean.put("mode", parsed.optString("mode", "timer").take(20))
     if (parsed.has("endAt") && !parsed.isNull("endAt")) clean.put("endAt", parsed.optLong("endAt", 0L))
     clean.put("elapsedSeconds", parsed.optInt("elapsedSeconds", 0).coerceAtLeast(0))
+    clean.put("durationSeconds", parsed.optInt("durationSeconds", 0).coerceAtLeast(0))
+    clean.put("sessionType", parsed.optString("sessionType", "focus").take(20))
     if (parsed.has("stopwatchRunStartedAt") && !parsed.isNull("stopwatchRunStartedAt")) clean.put("stopwatchRunStartedAt", parsed.optLong("stopwatchRunStartedAt", 0L))
     clean.put("title", parsed.optString("title", "Focus session").take(80))
     val prefs = appContext.getSharedPreferences("go_back_blocking", 0)
     prefs.edit().putBoolean("focus_active", clean.optBoolean("active", false)).putString("focus_state", clean.toString()).apply()
+    if (clean.optBoolean("active", false)) showFocusNotification(clean) else cancelFocusNotification()
     GoBackFocusWidgetProvider.refresh(appContext)
     TileService.requestListeningState(appContext, ComponentName(appContext, GoBackFocusTileService::class.java))
+  }
+
+  private fun showFocusNotification(state: JSONObject) {
+    if (Build.VERSION.SDK_INT >= 33 && appContext.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+    val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val channelId = "go-back-focus-status-v2"
+    if (Build.VERSION.SDK_INT >= 26) {
+      val channel = NotificationChannel(channelId, "Focus timer status", NotificationManager.IMPORTANCE_LOW).apply {
+        description = "Silent live status for an active focus session"
+        setSound(null, null)
+        enableVibration(false)
+        setShowBadge(false)
+      }
+      manager.createNotificationChannel(channel)
+    }
+    val launch = appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)?.apply {
+      action = Intent.ACTION_VIEW
+      data = android.net.Uri.parse("goback:///focus")
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+    val contentIntent = launch?.let {
+      PendingIntent.getActivity(appContext, 8401, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+    val now = System.currentTimeMillis()
+    val mode = state.optString("mode", "timer")
+    val isStopwatch = mode == "stopwatch"
+    val endAt = state.optLong("endAt", 0L)
+    val durationMs = state.optLong("durationSeconds", 0L) * 1000L
+    val remainingMs = (endAt - now).coerceAtLeast(0L)
+    val elapsedMs = if (isStopwatch) {
+      state.optLong("elapsedSeconds", 0L) * 1000L + (now - state.optLong("stopwatchRunStartedAt", now)).coerceAtLeast(0L)
+    } else (durationMs - remainingMs).coerceIn(0L, durationMs.coerceAtLeast(0L))
+    val phase = when (state.optString("sessionType", "focus")) {
+      "short-break" -> "Short break"
+      "long-break" -> "Long break"
+      else -> if (mode == "pomodoro") "Pomodoro focus" else "Focus session"
+    }
+    val builder = NotificationCompat.Builder(appContext, channelId)
+      .setSmallIcon(android.R.drawable.ic_media_play)
+      .setContentTitle(state.optString("title", phase).ifBlank { phase })
+      .setContentText(if (isStopwatch) "Stopwatch · elapsed time" else "$phase · time remaining")
+      .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+      .setPriority(NotificationCompat.PRIORITY_LOW)
+      .setOngoing(true)
+      .setOnlyAlertOnce(true)
+      .setShowWhen(true)
+      .setUsesChronometer(true)
+      .setWhen(if (isStopwatch) now - elapsedMs else now + remainingMs)
+      .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+    if (Build.VERSION.SDK_INT >= 24 && !isStopwatch) builder.setChronometerCountDown(true)
+    if (!isStopwatch && durationMs > 0L) {
+      val progress = ((elapsedMs * 100L) / durationMs).toInt().coerceIn(0, 100)
+      builder.setProgress(100, progress, false)
+    }
+    if (contentIntent != null) builder.setContentIntent(contentIntent)
+    manager.notify(8401, builder.build())
+  }
+
+  private fun cancelFocusNotification() {
+    (appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(8401)
   }
 
   @ReactMethod fun setSessionBlockedPackages(json: String, promise: Promise) {
