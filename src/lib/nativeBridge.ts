@@ -7,6 +7,8 @@ export type FocusNativeSnapshot = {
   elapsedSeconds?: number;
   stopwatchRunStartedAt?: number | null;
   durationSeconds?: number;
+  remainingSeconds?: number;
+  paused?: boolean;
   sessionType?: 'focus' | 'short-break' | 'long-break';
   title?: string;
 };
@@ -40,3 +42,5 @@ export async function setNativeSessionBlockedPackages(packages: string[]) {
 }
 
 export const getGoBackSystemBridge = () => NativeModules.GoBackSystem as SystemBridge | undefined;
+
+export const hasNativeFocusNotificationBridge = () => Platform.OS === 'android' && typeof (NativeModules.GoBackBlocking as BlockingBridge | undefined)?.setFocusState === 'function';
