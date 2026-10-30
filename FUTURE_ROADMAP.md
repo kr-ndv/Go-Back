@@ -1,9 +1,9 @@
 # Go Back — Future Feature Roadmap
 
 **Status:** Planning only  
-**Last updated:** 2026-10-25  
+**Last updated:** 2026-10-30  
 **Applies to:** Go Back Android app  
-**Current development branch:** `release/production-readiness`
+**Current development branch:** `contrib/timer-alerts-and-roadmap`
 
 This document is the persistent source of context for future Go Back planning. It records features discussed and agreed as candidates for future work so that development can resume even if earlier chat history is unavailable.
 
@@ -131,6 +131,7 @@ These improvements should be considered during relevant maintenance work and do 
 - **Accessibility audit:** verify screen-reader labels, contrast, touch targets, and text scaling.
 - **Privacy transparency:** document local data, exports, permissions, and any network requests.
 - **Notification quality:** use clear, useful notification text and avoid disturbing active focus sessions unnecessarily.
+- **Live focus notification progress (approved 2026-10-30):** upgrade the ongoing Timer/Pomodoro/Stopwatch notification from its current ~15-second text refresh to native Android chronometer/countdown and progress indicators. Keep a stable notification ID, freeze progress when paused, use persisted timestamps as the source of truth, preserve the completion alarm and silent status channel, and validate battery use plus process-death recovery on physical devices. See `docs/ROADMAP_IMPLEMENTATION_PLAN.md` for implementation and acceptance details.
 - **Regression coverage:** protect existing functionality with automated tests and real-device checks.
 
 ## Suggested order of work
@@ -149,7 +150,7 @@ Unless explicitly approved otherwise, future work must preserve:
 - Home dashboard's data-first focus minutes and task/syllabus progress.
 - The Home Usage tool showing today's total phone usage.
 - Existing productive/distracting/neutral app categorization in Screen-time insights.
-- Focus timer's ongoing notification with remaining/elapsed time.
+- Focus timer's ongoing notification with remaining/elapsed time; future native progress/chronometer work must retain the current silent status channel and completion alarm.
 - Session History filters, including Today, 7 days, 30 days, and custom date range.
 - The existing focus schedule.
 - The scrollable launchable-app blocking list and its current focus-only blocking behavior.
