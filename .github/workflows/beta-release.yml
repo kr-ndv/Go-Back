@@ -1,16 +1,10 @@
 name: Publish Go Back Beta
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Go Back CI"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'app/**'
-      - 'src/**'
-      - 'plugins/**'
-      - 'assets/**'
-      - 'package.json'
-      - 'app.json'
-      - '.github/workflows/beta-release.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,12 +16,17 @@ concurrency:
 
 jobs:
   beta:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
     name: Build and publish public beta APK
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
-      - name: Checkout repository
+      - name: Checkout tested commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -45,12 +44,6 @@ jobs:
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install --clean
-
-      - name: Check TypeScript
-        run: npm run typecheck
-
-      - name: Run unit tests
-        run: npm test -- --runInBand
 
       - name: Build standalone APK
         working-directory: android
@@ -73,12 +66,13 @@ jobs:
           cp "$APK" release/Go-Back.apk
           sha256sum "$APK" > "${APK}.sha256"
           sha256sum release/Go-Back.apk > release/Go-Back.apk.sha256
-          printf 'Version: %s\nBuild commit: %s\nPackage: com.goback.focus\nBuild: standalone Android APK, test-signed beta\n' "$VERSION" "$GITHUB_SHA" > release/BUILD-INFO.txt
+          printf 'Version: %s\nBuild commit: %s\nPackage: com.goback.focus\nBuild: standalone Android APK, test-signed beta\n' "$VERSION" "$SOURCE_SHA" > release/BUILD-INFO.txt
 
       - name: Publish GitHub prerelease
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0-beta.${{ github.run_number }}
+          target_commitish: ${{ env.SOURCE_SHA }}
           name: Go Back v1.0.0 Beta ${{ github.run_number }}
           prerelease: true
           make_latest: false
