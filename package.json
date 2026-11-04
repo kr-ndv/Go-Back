@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "build:apk": "eas build --platform android --profile preview"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
