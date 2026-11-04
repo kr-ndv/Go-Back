@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "Go Back",
+    "slug": "go-back",
+    "scheme": "goback",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.goback.focus",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#081B14"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/focus_bell.wav",
+            "./assets/sounds/focus_chime.wav",
+            "./assets/sounds/focus_digital.wav"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 128,
+          "resizeMode": "contain",
+          "backgroundColor": "#081B14",
+          "dark": {
+            "backgroundColor": "#081B14"
+          }
+        }
+      ],
+      "./plugins/withGoBackWidget",
+      "./plugins/withGoBackIcon"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
