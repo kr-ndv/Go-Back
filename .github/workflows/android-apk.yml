@@ -2,18 +2,6 @@ name: Android Standalone APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - 'src/**'
-      - 'plugins/**'
-      - 'assets/**'
-      - 'package.json'
-      - 'app.json'
-      - 'eas.json'
-      - 'tsconfig.json'
-      - '.github/workflows/android-apk.yml'
 
 permissions:
   contents: read
@@ -69,4 +57,4 @@ jobs:
             android/app/build/outputs/apk/release/app-release.apk
             android/app/build/outputs/apk/release/app-release.apk.sha256
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
