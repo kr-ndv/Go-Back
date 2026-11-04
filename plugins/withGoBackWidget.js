@@ -181,6 +181,7 @@ import com.facebook.react.bridge.ReactMethod
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.function.Consumer
+import java.util.Locale
 
 class GoBackBlockingModule(private val appContext: ReactApplicationContext) : ReactContextBaseJavaModule(appContext) {
   override fun getName() = "GoBackBlocking"
