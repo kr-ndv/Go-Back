@@ -14,6 +14,7 @@ import { FOCUS_STATUS_CHANNEL_ID, ensureFocusAlertChannel, ensureFocusStatusChan
 import { normalizeRecoverableFocusSession, type RecoverableFocusSession } from '@/lib/focusRecovery';
 import { hasNativeFocusNotificationBridge, setNativeSessionBlockedPackages, syncNativeFocusState } from '@/lib/nativeBridge';
 import { type BlockingConfig, DEFAULT_BLOCKING_CONFIG, normalizeBlockingConfig } from '@/lib/blockingConfig';
+import { M3CircularProgress } from '@/components/M3CircularProgress';
 
 const FOCUS_PRESETS = [15, 25, 45, 60];
 const STRICT_PHRASE = 'I choose to break my focus';
@@ -306,10 +307,25 @@ export default function FocusScreen() {
   const phaseLabel=sessionType==='short-break'?'SHORT BREAK':sessionType==='long-break'?'LONG BREAK':focusMode==='pomodoro'?'POMODORO FOCUS':focusMode==='stopwatch'?'STOPWATCH':'FOCUS SESSION';
   const actionLabel=restoring?'Restoring session…':running?(focusMode==='stopwatch'?'Pause stopwatch':'Pause session'):focusMode==='stopwatch'?(elapsedSeconds>0?'Resume stopwatch':'Start stopwatch'):sessionType==='short-break'?'Start short break':sessionType==='long-break'?'Start long break':focusMode==='pomodoro'?'Start Pomodoro phase':'Start focus session';
 
+  const focusProgress = focusMode === 'stopwatch'
+    ? ((elapsedSeconds % 60) / 60)
+    : Math.max(0, Math.min(1, 1 - (remaining / Math.max(1, minutes * 60))));
+
   return <SafeAreaView style={[styles.safe,{backgroundColor:theme.background}]}>
     <View style={styles.top}><Pressable accessibilityRole="button" accessibilityLabel="Close focus session" onPress={close} style={[styles.close,{backgroundColor:theme.surfaceAlt}]}><Ionicons name="close" size={22} color={theme.text}/></Pressable><Text style={[styles.topLabel,{color:theme.muted}]}>FOCUS SESSION</Text><Pressable accessibilityRole="button" accessibilityLabel="Open focus session history" onPress={()=>router.push('/sessions')} style={[styles.close,{backgroundColor:theme.surfaceAlt}]}><Ionicons name="list-outline" size={21} color={theme.text}/></Pressable></View>
     <ScrollView contentContainerStyle={[styles.main,{gap:compactLayout?14:20,paddingHorizontal:width<360?16:24}]} keyboardShouldPersistTaps="handled">
-      <View style={[styles.ring,{borderColor:theme.primary,width:ringSize,height:ringSize,borderRadius:ringSize/2}]}><Text style={[styles.status,{color:theme.muted}]}>{running?'STAY IN THE MOMENT':phaseLabel}</Text><Text style={[styles.time,{color:theme.text,fontSize:Math.min(58,ringSize*.215)}]}>{formatFocusTime(displaySeconds,focusMode==='stopwatch')}</Text><Text style={[styles.mins,{color:theme.muted}]}>{focusMode==='stopwatch'?'ELAPSED TIME':running?'YOU’RE DOING GREAT':focusMode==='pomodoro'?'ROUND '+(sessionType==='focus'?Math.min(4,pomodoroRounds+1):Math.max(1,pomodoroRounds))+' OF 4':'MINUTES OF INTENTION'}</Text></View>
+      <M3CircularProgress
+        size={ringSize}
+        progress={focusProgress}
+        strokeWidth={ringSize >= 260 ? 12 : 9}
+        active={running}
+        color={theme.primary}
+        trackColor={theme.surfaceAlt}
+      >
+        <Text style={[styles.status,{color:theme.muted}]}>{running?'STAY IN THE MOMENT':phaseLabel}</Text>
+        <Text style={[styles.time,{color:theme.text,fontSize:Math.min(58,ringSize*.215)}]}>{formatFocusTime(displaySeconds,focusMode==='stopwatch')}</Text>
+        <Text style={[styles.mins,{color:theme.muted}]}>{focusMode==='stopwatch'?'ELAPSED TIME':running?'YOU’RE DOING GREAT':focusMode==='pomodoro'?'ROUND '+(sessionType==='focus'?Math.min(4,pomodoroRounds+1):Math.max(1,pomodoroRounds))+' OF 4':'MINUTES OF INTENTION'}</Text>
+      </M3CircularProgress>
       {!running&&<><Pressable accessibilityRole="button" accessibilityLabel="Open focus presets" onPress={()=>router.push('/focus-presets')} style={[styles.presetManager,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><View style={{flex:1,gap:3}}><Text style={{color:theme.text,fontSize:12,fontWeight:'800'}}>{presetName?`Preset · ${presetName}`:'Focus presets'}</Text><Text style={{color:theme.muted,fontSize:10}}>{presetName?'This preset is prepared for the next session.':'Reuse a timer mode and session-only blocked apps.'}</Text></View><Ionicons name="chevron-forward" size={17} color={theme.muted}/></Pressable><View style={[styles.modeSwitch,{backgroundColor:theme.surface,borderColor:theme.border}]}>{([{value:'timer',label:'Timer'},{value:'pomodoro',label:'Pomodoro'},{value:'stopwatch',label:'Stopwatch'}] as {value:FocusMode;label:string}[]).map(item=><Pressable key={item.value} accessibilityRole="button" accessibilityState={{selected:focusMode===item.value}} onPress={()=>changeMode(item.value)} style={[styles.modeOption,{backgroundColor:focusMode===item.value?theme.primary:'transparent'}]}><Text style={{color:focusMode===item.value?theme.onPrimary:theme.text,fontWeight:'800',fontSize:11}}>{item.label}</Text></Pressable>)}</View>
         {focusMode==='timer'&&<><View style={styles.modes}>{([{value:'focus',label:'Focus'},{value:'short-break',label:'Short break'},{value:'long-break',label:'Long break'}] as {value:SessionType;label:string}[]).map(item=><Pressable key={item.value} onPress={()=>changeSessionType(item.value)} style={[styles.mode,{backgroundColor:sessionType===item.value?theme.surfaceAlt:theme.surface,borderColor:sessionType===item.value?theme.primary:theme.border}]}><Text style={{color:sessionType===item.value?theme.primary:theme.text,fontWeight:'800',fontSize:11}}>{item.label}</Text></Pressable>)}</View><View style={styles.presets}>{FOCUS_PRESETS.map(p=><Pressable key={p} onPress={()=>choose(p)} style={[styles.preset,{backgroundColor:minutes===p?theme.primary:theme.surface,borderColor:minutes===p?theme.primary:theme.border}]}><Text style={{color:minutes===p?theme.onPrimary:theme.text,fontWeight:'800'}}>{p}m</Text></Pressable>)}</View><View style={styles.customRow}><TextInput value={customMinutes} onChangeText={setCustomMinutes} keyboardType="number-pad" maxLength={3} placeholder="Custom minutes (1–180)" placeholderTextColor={theme.muted} style={[styles.customInput,{color:theme.text,backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}/><Pressable onPress={applyCustomMinutes} style={[styles.customButton,{backgroundColor:theme.surfaceAlt}]}><Text style={{color:theme.text,fontSize:11,fontWeight:'800'}}>Set</Text></Pressable></View></>}
         {focusMode==='pomodoro'&&<View style={[styles.pomodoroInfo,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><Ionicons name="repeat-outline" size={20} color={theme.primary}/><View style={{flex:1,gap:3}}><Text style={{color:theme.text,fontWeight:'800',fontSize:13}}>25 min focus · 5 min break</Text><Text style={{color:theme.muted,fontSize:11,lineHeight:16}}>Every fourth completed focus round prepares a 15-minute long break. You choose when to start each phase.</Text></View></View>}

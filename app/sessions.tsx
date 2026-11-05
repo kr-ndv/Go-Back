@@ -7,6 +7,7 @@ import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { getDatabase, getSetting, setSetting } from '@/lib/database';
 import { useAppTheme } from '@/state/theme';
 import { formatFocusTime, type FocusMode, type FocusSessionType } from '@/lib/focusLogic';
+import { M3SquigglyProgress } from '@/components/M3SquigglyProgress';
 
 type SessionRow = {
   id: string;
@@ -153,7 +154,14 @@ export default function SessionsScreen() {
           </View>
           <Text style={[styles.goalPercent, { color: theme.primary }]}>{Math.round(goalProgress * 100)}%</Text>
         </View>
-        <View style={[styles.goalTrack, { backgroundColor: theme.surfaceAlt }]}><View style={[styles.goalFill, { backgroundColor: theme.primary, width: ((goalProgress * 100) + '%') as `${number}%` }]} /></View>
+        <M3SquigglyProgress
+          progress={goalProgress}
+          color={theme.primary}
+          trackColor={theme.surfaceAlt}
+          active={todayFocusSeconds > 0}
+          height={14}
+          strokeWidth={3.5}
+        />
         <View style={styles.goalActions}>
           <Text style={[styles.goalHint, { color: theme.muted }]}>Set a goal that feels achievable.</Text>
           <View style={styles.goalControls}>

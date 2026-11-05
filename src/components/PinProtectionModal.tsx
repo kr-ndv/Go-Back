@@ -28,6 +28,16 @@ export function PinProtectionModal({
   const [step, setStep] = useState<'enter' | 'confirm'>('enter');
   const [error, setError] = useState('');
   const [storedPin, setStoredPin] = useState<string | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds(prev => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSeconds]);
 
   useEffect(() => {
     if (visible) {
@@ -35,11 +45,14 @@ export function PinProtectionModal({
       setFirstPin('');
       setStep('enter');
       setError('');
+      setLockoutSeconds(0);
+      setFailedAttempts(0);
       void getSecurityPin().then(pin => setStoredPin(pin));
     }
   }, [visible]);
 
   const handleDigit = (digit: string) => {
+    if (lockoutSeconds > 0) return;
     if (digits.length >= 4) return;
     const next = digits + digit;
     setDigits(next);
@@ -51,6 +64,7 @@ export function PinProtectionModal({
   };
 
   const handleBackspace = () => {
+    if (lockoutSeconds > 0) return;
     if (digits.length > 0) {
       setDigits(digits.slice(0, -1));
       setError('');
@@ -60,17 +74,35 @@ export function PinProtectionModal({
   const processFourDigits = async (entered: string) => {
     if (mode === 'verify') {
       if (matchesPin(storedPin, entered)) {
+        setFailedAttempts(0);
+        setLockoutSeconds(0);
         onSuccess();
       } else {
-        setError('Incorrect PIN. Try again.');
+        const nextFails = failedAttempts + 1;
+        setFailedAttempts(nextFails);
+        if (nextFails >= 5) {
+          setLockoutSeconds(30);
+          setError('');
+        } else {
+          setError(`Incorrect PIN. ${5 - nextFails} attempt(s) remaining.`);
+        }
         setDigits('');
       }
     } else if (mode === 'remove') {
       if (matchesPin(storedPin, entered)) {
+        setFailedAttempts(0);
+        setLockoutSeconds(0);
         await setSecurityPin(null);
         onSuccess();
       } else {
-        setError('Incorrect PIN. Cannot remove lock.');
+        const nextFails = failedAttempts + 1;
+        setFailedAttempts(nextFails);
+        if (nextFails >= 5) {
+          setLockoutSeconds(30);
+          setError('');
+        } else {
+          setError(`Incorrect PIN. ${5 - nextFails} attempt(s) remaining.`);
+        }
         setDigits('');
       }
     } else if (mode === 'set') {
@@ -106,6 +138,10 @@ export function PinProtectionModal({
     ? 'Enter your current PIN to turn off PIN protection.'
     : 'Enter your 4-digit PIN to access protected focus settings.';
 
+  const displayError = lockoutSeconds > 0
+    ? `Too many failed attempts. Locked for ${lockoutSeconds}s.`
+    : error;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
@@ -135,10 +171,13 @@ export function PinProtectionModal({
             })}
           </View>
 
-          {!!error && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
+          {!!displayError && <Text style={[styles.error, { color: theme.danger }]}>{displayError}</Text>}
 
           {/* Keypad */}
-          <View style={styles.keypad}>
+          <View
+            style={[styles.keypad, lockoutSeconds > 0 && { opacity: 0.4 }]}
+            pointerEvents={lockoutSeconds > 0 ? 'none' : 'auto'}
+          >
             {[['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']].map((row, rIdx) => (
               <View key={rIdx} style={styles.keyRow}>
                 {row.map(num => (

@@ -9,6 +9,7 @@ import { useAppTheme } from '@/state/theme';
 import { getDatabase, getSetting } from '@/lib/database';
 import { focusGoalStats, type FocusHistoryPoint } from '@/lib/focusInsights';
 import { getNativeUnlockCount } from '@/lib/nativeBridge';
+import { M3SquigglyProgress } from '@/components/M3SquigglyProgress';
 
 type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
 type UsageBridge = { hasUsageAccess: () => Promise<boolean>; getUsageStats: (days: number) => Promise<UsageStat[]> };
@@ -164,7 +165,14 @@ export default function TodayScreen() {
                 {stats.currentStreak > 0 && <View style={[styles.streakPill, { backgroundColor: 'rgba(0,0,0,0.18)' }]}><Text style={{ color: theme.onPrimary, fontSize: 10, fontWeight: '900' }}>🔥 {stats.currentStreak}d streak</Text></View>}
               </View>
               <Text style={[styles.focusMetric, { color: theme.onPrimary }]}>{focusLabel} <Text style={{ fontSize: 14, fontWeight: '700', opacity: 0.9 }}>/ {goalLabel}</Text></Text>
-              <View style={styles.goalTrack}><View style={[styles.goalFill, { width: `${focusGoalPercent}%`, backgroundColor: theme.onPrimary }]} /></View>
+              <M3SquigglyProgress
+                progress={focusGoalPercent}
+                color={theme.onPrimary}
+                trackColor="rgba(255,255,255,0.3)"
+                active={stats.focusMinutes > 0}
+                height={14}
+                strokeWidth={3.5}
+              />
             </View>
             <Ionicons name="arrow-forward-circle-outline" size={28} color={theme.onPrimary} />
           </View>
@@ -194,7 +202,14 @@ export default function TodayScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel={`Syllabus ${stats.chaptersDone} of ${stats.chaptersTotal} chapters completed`} onPress={() => router.push('/syllabus')} style={[styles.progressCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <View style={styles.progressHeading}><Ionicons name="book-outline" size={17} color={theme.primary} /><Text style={[styles.progressLabel, { color: theme.muted }]}>SYLLABUS</Text></View>
           <Text style={[styles.progressValue, { color: theme.text }]}>{stats.chaptersDone}<Text style={[styles.progressTotal, { color: theme.muted }]}> / {stats.chaptersTotal}</Text></Text>
-          <View style={[styles.track, { backgroundColor: theme.border }]}><View style={[styles.fill, { backgroundColor: theme.primary, width: `${ratio(stats.chaptersDone, stats.chaptersTotal)}%` }]} /></View>
+          <M3SquigglyProgress
+            progress={ratio(stats.chaptersDone, stats.chaptersTotal)}
+            color={theme.primary}
+            trackColor={theme.border}
+            active={stats.chaptersDone > 0}
+            height={14}
+            strokeWidth={3.5}
+          />
           <Text style={[styles.progressFoot, { color: theme.muted }]}>{ratio(stats.chaptersDone, stats.chaptersTotal)}% chapters done</Text>
         </Pressable>
 

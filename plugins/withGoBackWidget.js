@@ -153,6 +153,25 @@ class GoBackUsageModule(private val appContext: ReactApplicationContext) : React
       promise.resolve(true)
     } catch (error: Exception) { promise.reject("E_USAGE_LIMITS", error) }
   }
+
+  @ReactMethod fun getSentLimitStates(promise: Promise) {
+    try {
+      val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+      val prefs = appContext.getSharedPreferences("go_back_usage_limits", 0)
+      promise.resolve(prefs.getString("sent_" + day, "{}") ?: "{}")
+    } catch (error: Exception) { promise.reject("E_USAGE_SENT_LIMITS", error) }
+  }
+
+  @ReactMethod fun markLimitNotified(packageName: String, level: Int, promise: Promise) {
+    try {
+      val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+      val prefs = appContext.getSharedPreferences("go_back_usage_limits", 0)
+      val sent = JSONObject(prefs.getString("sent_" + day, "{}") ?: "{}")
+      sent.put(packageName, level.coerceIn(1, 2))
+      prefs.edit().putString("sent_" + day, sent.toString()).apply()
+      promise.resolve(true)
+    } catch (error: Exception) { promise.reject("E_USAGE_MARK_LIMIT", error) }
+  }
 }
 `;
 
@@ -416,6 +435,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -465,15 +485,18 @@ class GoBackBlockingService : AccessibilityService() {
     if (focusActive && config.optBoolean("blockSplitScreen", false)) {
       if (Build.VERSION.SDK_INT >= 24) {
         val allWindows = windows
-        if (allWindows != null && allWindows.size > 1) {
-          val blockedList = (config.optJSONArray("blockedPackages") ?: JSONArray()).toString()
-          for (win in allWindows) {
-            val winRoot = win.root ?: continue
-            val winPkg = winRoot.packageName?.toString() ?: ""
-            if (winPkg.isNotEmpty() && winPkg != packageName && (packageIn(winPkg, blockedList) || winPkg == YOUTUBE || winPkg == INSTAGRAM || winPkg == SNAPCHAT)) {
-              record("split-screen blocked app closed")
-              sendHome()
-              return
+        if (allWindows != null) {
+          val appWindows = allWindows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+          if (appWindows.size > 1) {
+            val blockedList = (config.optJSONArray("blockedPackages") ?: JSONArray()).toString()
+            for (win in appWindows) {
+              val winRoot = win.root ?: continue
+              val winPkg = winRoot.packageName?.toString() ?: ""
+              if (winPkg.isNotEmpty() && winPkg != packageName && (packageIn(winPkg, blockedList) || winPkg == YOUTUBE || winPkg == INSTAGRAM || winPkg == SNAPCHAT)) {
+                record("split-screen blocked app closed")
+                sendHome()
+                return
+              }
             }
           }
         }
@@ -1082,6 +1105,7 @@ function withGoBackWidget(config) {
     };
     addPermission('android.permission.PACKAGE_USAGE_STATS');
     addPermission('android.permission.RECEIVE_BOOT_COMPLETED');
+    addPermission('android.permission.SCHEDULE_EXACT_ALARM');
 
     const hasLauncherQuery = manifest.queries.some(query => (query.intent ?? []).some(intent => (intent.action ?? []).some(action => action.$?.['android:name'] === 'android.intent.action.MAIN') && (intent.category ?? []).some(category => category.$?.['android:name'] === 'android.intent.category.LAUNCHER')));
     if (!hasLauncherQuery) {

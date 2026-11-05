@@ -4,7 +4,7 @@ jest.mock('@/lib/database', () => ({
   getDatabase: jest.fn(),
 }));
 
-import { isValidPinFormat, matchesPin, setSecurityPin, getSecurityPin, verifySecurityPin } from '@/lib/securityPin';
+import { isValidPinFormat, matchesPin, setSecurityPin, getSecurityPin, verifySecurityPin, hashPin } from '@/lib/securityPin';
 import { getSetting, setSetting } from '@/lib/database';
 
 describe('securityPin', () => {
@@ -37,7 +37,13 @@ describe('securityPin', () => {
       expect(matchesPin('', '1234')).toBe(true);
     });
 
-    it('validates matching candidate pin', () => {
+    it('validates matching candidate pin against hash', () => {
+      const hashed = hashPin('1234');
+      expect(matchesPin(hashed, '1234')).toBe(true);
+      expect(matchesPin(hashed, '4321')).toBe(false);
+    });
+
+    it('validates matching candidate pin against legacy plaintext', () => {
       expect(matchesPin('1234', '1234')).toBe(true);
       expect(matchesPin('1234', '4321')).toBe(false);
     });
@@ -51,14 +57,15 @@ describe('securityPin', () => {
     });
 
     it('returns valid pin string', async () => {
-      (getSetting as jest.Mock).mockResolvedValueOnce('4321');
+      const hashed = hashPin('4321');
+      (getSetting as jest.Mock).mockResolvedValueOnce(hashed);
       const pin = await getSecurityPin();
-      expect(pin).toBe('4321');
+      expect(pin).toBe(hashed);
     });
 
-    it('stores new 4-digit pin', async () => {
+    it('stores new 4-digit pin as salted hash', async () => {
       await setSecurityPin('5678');
-      expect(setSetting).toHaveBeenCalledWith('security.pin', '5678');
+      expect(setSetting).toHaveBeenCalledWith('security.pin', hashPin('5678'));
     });
 
     it('clears pin when null passed', async () => {
@@ -71,7 +78,7 @@ describe('securityPin', () => {
     });
 
     it('verifies candidate against stored pin', async () => {
-      (getSetting as jest.Mock).mockResolvedValueOnce('9999');
+      (getSetting as jest.Mock).mockResolvedValueOnce(hashPin('9999'));
       const valid = await verifySecurityPin('9999');
       expect(valid).toBe(true);
     });

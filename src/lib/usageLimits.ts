@@ -7,7 +7,12 @@ export type UsageLimit = UsageLimitRule;
 export type LimitEvent = UsageLimitEvent;
 export { evaluateUsageLimits } from '@/lib/usageLimitLogic';
 
-type UsageBridge = { hasUsageAccess: () => Promise<boolean>; getUsageStats: (days: number) => Promise<UsageLimitStat[]> };
+type UsageBridge = {
+  hasUsageAccess: () => Promise<boolean>;
+  getUsageStats: (days: number) => Promise<UsageLimitStat[]>;
+  getSentLimitStates?: () => Promise<string>;
+  markLimitNotified?: (packageName: string, level: number) => Promise<boolean>;
+};
 const usageBridge = NativeModules.GoBackUsage as UsageBridge | undefined;
 const CHANNEL_ID = 'screen-time-limits-v1';
 
@@ -44,11 +49,37 @@ export async function evaluateAndNotifyUsageLimits(): Promise<{ events: LimitEve
     const stats = await usageBridge.getUsageStats(1);
     const key = `usage.limitAlerts.${dateKey()}`;
     const sent = await getSetting<SentLimitState>(key, {});
+
+    // Sync with native SharedPreferences sent limits to prevent duplicate alerts
+    if (usageBridge.getSentLimitStates) {
+      try {
+        const rawNativeSent = await usageBridge.getSentLimitStates();
+        const nativeMap = JSON.parse(rawNativeSent) as Record<string, number>;
+        for (const [pkg, lvl] of Object.entries(nativeMap)) {
+          const current = sent[pkg] ?? [];
+          if (lvl >= 2 && !current.includes('exceeded')) {
+            sent[pkg] = [...new Set<'warning' | 'exceeded'>([...current, 'warning', 'exceeded'])];
+          } else if (lvl >= 1 && !current.includes('warning')) {
+            sent[pkg] = [...new Set<'warning' | 'exceeded'>([...current, 'warning'])];
+          }
+        }
+      } catch { /* Ignore native read errors */ }
+    }
+
     const result = evaluateUsageLimits(stats, limits, sent);
     if (result.events.length) {
       let permission = await Notifications.getPermissionsAsync();
       if (!permission.granted) permission = await Notifications.requestPermissionsAsync();
-      if (permission.granted) for (const event of result.events) await notify(event);
+      if (permission.granted) {
+        for (const event of result.events) {
+          await notify(event);
+          if (usageBridge.markLimitNotified) {
+            try {
+              await usageBridge.markLimitNotified(event.packageName, event.kind === 'exceeded' ? 2 : 1);
+            } catch { /* Ignore native write errors */ }
+          }
+        }
+      }
       await setSetting(key, result.nextSent);
     }
     return { events: result.events };

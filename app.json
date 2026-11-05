@@ -17,7 +17,8 @@
       },
       "permissions": [
         "POST_NOTIFICATIONS",
-        "VIBRATE"
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM"
       ]
     },
     "plugins": [

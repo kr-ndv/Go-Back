@@ -53,7 +53,11 @@ export async function createBackupJson(): Promise<string> {
   const db = await getDatabase();
   const tables = {} as Record<TableName, Record<string, unknown>[]>;
   for (const table of TABLES) {
-    tables[table] = await db.getAllAsync<Record<string, unknown>>(`SELECT * FROM ${table}`);
+    if (table === 'settings') {
+      tables[table] = await db.getAllAsync<Record<string, unknown>>("SELECT * FROM settings WHERE key != 'security.pin'");
+    } else {
+      tables[table] = await db.getAllAsync<Record<string, unknown>>(`SELECT * FROM ${table}`);
+    }
   }
   const checksum = computeBackupChecksum(tables);
   return JSON.stringify({

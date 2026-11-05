@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { NativeModules, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,13 +15,17 @@ import { PinProtectionModal } from '@/components/PinProtectionModal';
 import { getSecurityPin } from '@/lib/securityPin';
 
 type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
+type LaunchableApp = { packageName: string; appName: string };
 type UsageBridge = { hasUsageAccess: () => Promise<boolean>; openUsageAccessSettings: () => Promise<boolean>; getUsageStats: (days: number) => Promise<UsageStat[]> };
+type BlockingBridge = { getLaunchableApps?: () => Promise<LaunchableApp[]> };
 const usage = NativeModules.GoBackUsage as UsageBridge | undefined;
+const blocking = NativeModules.GoBackBlocking as BlockingBridge | undefined;
 const formatDuration = (ms: number) => { const min = Math.floor(ms / 60000); return min >= 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; };
 
 export default function UsageLimitsScreen() {
   const theme = useAppTheme();
   const [stats, setStats] = useState<UsageStat[]>([]);
+  const [installedApps, setInstalledApps] = useState<LaunchableApp[]>([]);
   const [limits, setLimits] = useState<UsageLimit[]>([]);
   const [hasAccess, setHasAccess] = useState(false);
   const [search, setSearch] = useState('');
@@ -36,11 +40,13 @@ export default function UsageLimitsScreen() {
   const load = useCallback(async () => {
     try {
       const db = await getDatabase();
-      const [saved, storedPin] = await Promise.all([
+      const [saved, storedPin, appRows] = await Promise.all([
         db.getAllAsync<UsageLimit>('SELECT id, package_name, app_name, limit_minutes, warning_percent, enabled FROM usage_limits ORDER BY app_name ASC'),
         getSecurityPin(),
+        blocking?.getLaunchableApps ? blocking.getLaunchableApps().catch(() => []) : Promise.resolve([] as LaunchableApp[]),
       ]);
       setLimits(saved);
+      setInstalledApps(Array.isArray(appRows) ? appRows : []);
       const pinExists = Boolean(storedPin);
       setHasPin(pinExists);
       if (pinExists && !isUnlocked) {
@@ -58,8 +64,50 @@ export default function UsageLimitsScreen() {
   }, [isUnlocked]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
-  const visible = stats.filter(item => !search.trim() || item.appName.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()) || item.packageName.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+
   const findLimit = (pkg: string) => limits.find(limit => limit.package_name === pkg);
+
+  const mergedApps = useMemo(() => {
+    const statsMap = new Map(stats.map(s => [s.packageName, s]));
+    const result: UsageStat[] = [];
+    const seen = new Set<string>();
+
+    for (const stat of stats) {
+      result.push(stat);
+      seen.add(stat.packageName);
+    }
+    for (const app of installedApps) {
+      if (!seen.has(app.packageName)) {
+        result.push({
+          packageName: app.packageName,
+          appName: app.appName,
+          foregroundTimeMs: 0,
+        });
+        seen.add(app.packageName);
+      }
+    }
+    for (const lim of limits) {
+      if (!seen.has(lim.package_name)) {
+        result.push({
+          packageName: lim.package_name,
+          appName: lim.app_name,
+          foregroundTimeMs: 0,
+        });
+        seen.add(lim.package_name);
+      }
+    }
+    return result;
+  }, [stats, installedApps, limits]);
+
+  const query = search.trim().toLocaleLowerCase();
+  const visible = mergedApps.filter(item => {
+    const matchesSearch = !query || item.appName.toLocaleLowerCase().includes(query) || item.packageName.toLocaleLowerCase().includes(query);
+    if (!matchesSearch) return false;
+    if (!query) {
+      return item.foregroundTimeMs > 0 || Boolean(findLimit(item.packageName));
+    }
+    return true;
+  });
 
   const begin = (stat: UsageStat) => {
     const existing = findLimit(stat.packageName);
@@ -98,9 +146,9 @@ export default function UsageLimitsScreen() {
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={[styles.eyebrow,{color:theme.muted}]}>GENTLE BOUNDARIES</Text><Text style={[styles.title,{color:theme.text}]}>Notice before time slips away.</Text><Text style={[styles.subtitle,{color:theme.muted}]}>Set local daily alerts for selected apps. Android usage data can be delayed, so these are reminders—not guaranteed real-time enforcement.</Text>
       {!usage ? <View style={[styles.notice,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><Ionicons name="construct-outline" size={23} color={theme.primary}/><Text style={[styles.hint,{color:theme.muted,flex:1}]}>Install a native Android build to use Usage Access.</Text></View> : !hasAccess ? <View style={[styles.notice,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><Ionicons name="phone-portrait-outline" size={23} color={theme.primary}/><View style={{flex:1,gap:7}}><Text style={[styles.rowTitle,{color:theme.text}]}>Usage Access required</Text><Text style={[styles.hint,{color:theme.muted}]}>Go Back needs Android Usage Access to compare today’s app time with your limits.</Text><Pressable onPress={() => void openAccess()} style={[styles.smallPrimary,{backgroundColor:theme.primary}]}><Text style={{color:theme.onPrimary,fontWeight:'800'}}>Open Android settings</Text></Pressable></View></View> : <>
-        <TextInput value={search} onChangeText={setSearch} placeholder="Search apps used today…" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text,backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}/>
+        <TextInput value={search} onChangeText={setSearch} placeholder="Search all installed apps…" placeholderTextColor={theme.muted} style={[styles.input,{color:theme.text,backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}/>
         {visible.map(stat => { const limit=findLimit(stat.packageName); const editing=editingPackage===stat.packageName; return <View key={stat.packageName} style={[styles.card,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><View style={styles.row}><View style={[styles.icon,{backgroundColor:theme.surfaceAlt}]}><Ionicons name="apps-outline" size={18} color={theme.primary}/></View><View style={{flex:1,gap:3}}><Text style={[styles.rowTitle,{color:theme.text}]}>{stat.appName}</Text><Text style={[styles.hint,{color:theme.muted}]}>{formatDuration(stat.foregroundTimeMs)} today{limit ? ` · ${limit.limit_minutes}m limit · warn at ${limit.warning_percent}%` : ''}</Text></View>{limit && !editing ? <Pressable onPress={() => begin(stat)} style={[styles.edit,{backgroundColor:theme.surfaceAlt}]}><Ionicons name="create-outline" size={17} color={theme.text}/></Pressable> : null}</View>{editing ? <View style={styles.editor}><TextInput value={minutes} onChangeText={setMinutes} keyboardType="number-pad" placeholder="Daily minutes" placeholderTextColor={theme.muted} style={[styles.editorInput,{color:theme.text,borderColor:theme.border}]}/><TextInput value={warningPercent} onChangeText={setWarningPercent} keyboardType="number-pad" placeholder="Warn %" placeholderTextColor={theme.muted} style={[styles.editorInput,{color:theme.text,borderColor:theme.border}]}/><Pressable onPress={() => void saveLimit(stat)} style={[styles.save,{backgroundColor:theme.primary}]}><Text style={{color:theme.onPrimary,fontWeight:'900'}}>Save</Text></Pressable><Pressable onPress={()=>setEditingPackage('')} style={styles.cancel}><Text style={{color:theme.muted,fontWeight:'800'}}>Cancel</Text></Pressable></View> : <View style={styles.actions}>{limit ? <Pressable onPress={()=>void remove(stat.packageName)} style={styles.link}><Text style={{color:theme.danger,fontSize:11,fontWeight:'800'}}>Remove limit</Text></Pressable> : <Pressable onPress={()=>begin(stat)} style={[styles.add,{backgroundColor:theme.surfaceAlt}]}><Ionicons name="add" size={16} color={theme.primary}/><Text style={{color:theme.text,fontSize:11,fontWeight:'800'}}>Set daily limit</Text></Pressable>}</View>}</View>; })}
-        {visible.length===0 && <View style={[styles.notice,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><Text style={[styles.hint,{color:theme.muted}]}>No matching usage data is available yet.</Text></View>}
+        {visible.length===0 && <View style={[styles.notice,{backgroundColor:theme.surfaceElevated,borderColor:theme.border}]}><Text style={[styles.hint,{color:theme.muted}]}>{search.trim() ? 'No matching apps found.' : 'No apps used today yet. Search above to set a limit on any installed app.'}</Text></View>}
       </>}
       {!!status && <Text style={{color:theme.danger,fontSize:11}}>{status}</Text>}
     </ScrollView>
