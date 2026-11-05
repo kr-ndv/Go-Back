@@ -23,16 +23,10 @@ The app is designed around a simple idea: build better habits through clarity, c
 
 ## Screenshots
 
-| Home dashboard | Focus mode |
+| | |
 |---|---|
 | ![Go Back home dashboard](docs/screenshots/04-home-dashboard.jpg) | ![Go Back focus mode](docs/screenshots/02-focus-mode.jpg) |
-
-| Tasks | Screen-time insights |
-|---|---|
 | ![Go Back tasks](docs/screenshots/03-tasks.jpg) | ![Go Back screen-time insights](docs/screenshots/05-screen-time-insights.png) |
-
-| Personal notes | Exam planner |
-|---|---|
 | ![Go Back personal notes](docs/screenshots/01-personal-notes.png) | ![Go Back exam planner](docs/screenshots/08-exam-planner.jpg) |
 
 ## Project status
