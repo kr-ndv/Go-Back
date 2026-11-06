@@ -2,7 +2,7 @@
 
 **Status:** Proposal for review; documentation only. No application code or existing release has been changed.
 
-**Target:** Replace the React Native/Expo implementation with the PBMR app-family Kotlin + Jetpack Compose architecture described in [PBMR Android App Family Architecture](https://github.com/kr-ndv/PBMR-Browser/blob/architecture/app-family-baseline/docs/APP_FAMILY_ARCHITECTURE.md).
+**Target:** Replace the React Native/Expo implementation with the PBMR app-family Kotlin + Jetpack Compose architecture described in [PBMR Android App Family Architecture](https://github.com/kr-ndv/PBMR-Browser/pull/1).
 
 ## 1. Current baseline
 
