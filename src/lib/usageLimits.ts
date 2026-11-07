@@ -14,7 +14,7 @@ type UsageBridge = {
   markLimitNotified?: (packageName: string, level: number) => Promise<boolean>;
 };
 const usageBridge = NativeModules.GoBackUsage as UsageBridge | undefined;
-const CHANNEL_ID = 'screen-time-limits-v1';
+const CHANNEL_ID = 'screen-time-limits-v2';
 
 const dateKey = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
@@ -22,17 +22,27 @@ async function notify(event: LimitEvent) {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Screen-time limit alerts',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 180, 100, 180],
+      description: 'Audible notifications when apps approach or exceed daily screen time limits',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      enableVibrate: true,
+      vibrationPattern: [0, 250, 150, 250],
+      lightColor: '#F87171',
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.NOTIFICATION_EVENT,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
     });
   }
   const trigger = Platform.OS === 'android' ? ({ channelId: CHANNEL_ID } as Notifications.NotificationTriggerInput) : null;
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: event.kind === 'exceeded' ? `${event.appName} reached its daily limit` : `${event.appName} is nearing its daily limit`,
+      title: event.kind === 'exceeded' ? `⚠️ ${event.appName} reached its daily limit` : `⏳ ${event.appName} nearing daily limit`,
       body: event.kind === 'exceeded'
-        ? `${event.usedMinutes} minutes used today · ${event.limitMinutes} minute limit.`
-        : `${event.usedMinutes} of ${event.limitMinutes} minutes used today.`,
+        ? `${event.usedMinutes} minutes used today · ${event.limitMinutes} minute limit reached. Consider stepping away.`
+        : `${event.usedMinutes} of ${event.limitMinutes} minutes used today (${Math.round((event.usedMinutes / event.limitMinutes) * 100)}%).`,
+      sound: 'default',
+      priority: Notifications.AndroidNotificationPriority.HIGH,
       data: { goBackKind: 'usage-limit', packageName: event.packageName },
     },
     trigger,

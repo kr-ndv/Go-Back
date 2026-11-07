@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { getDatabase } from '@/lib/database';
 import { detectedTimeZone, upcomingScheduleOccurrences, type AdvancedSchedule } from '@/lib/scheduleAdvanced';
 
-const CHANNEL_ID = 'focus-schedules-v2';
+const CHANNEL_ID = 'focus-schedules-v3';
 
 export async function cancelManagedFocusScheduleNotifications() {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
@@ -20,9 +20,16 @@ export async function rescheduleAdvancedFocusNotifications(options: { askPermiss
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Focus schedule reminders',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 180, 120, 180],
+      description: 'Audible notifications when scheduled focus blocks start or are approaching',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      enableVibrate: true,
+      vibrationPattern: [0, 250, 150, 250],
       lightColor: '#C7F485',
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.NOTIFICATION_EVENT,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
     });
   }
 
@@ -53,6 +60,8 @@ export async function rescheduleAdvancedFocusNotifications(options: { askPermiss
           content: {
             title: early ? 'Focus time is coming up' : 'Your focus time is here',
             body,
+            sound: 'default',
+            priority: Notifications.AndroidNotificationPriority.HIGH,
             data: { goBackKind: 'focus-schedule', scheduleId: schedule.id, occurrenceAt: occurrence.start.toISOString() },
           },
           trigger,

@@ -2,7 +2,10 @@ node_modules/
 .expo/
 dist/
 web-build/
-android/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
 ios/
 .env
 .env.*

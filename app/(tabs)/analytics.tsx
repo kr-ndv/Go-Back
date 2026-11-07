@@ -19,6 +19,9 @@ type UsageBridge = {
 };
 const usage = NativeModules.GoBackUsage as UsageBridge | undefined;
 
+let cachedDailyUsage: { timestamp: number; rows: DailyUsagePoint[] } | null = null;
+const USAGE_CACHE_TTL_MS = 90_000;
+
 const formatMinutes = (seconds: number) => {
   const min = Math.floor(seconds / 60);
   return min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min}m`;
@@ -48,9 +51,10 @@ export default function AnalyticsScreen() {
   const [appSearch, setAppSearch] = useState('');
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (forceRefresh = false, isMounted?: () => boolean) => {
     try {
       const db = await getDatabase();
+      if (isMounted && !isMounted()) return;
       const [history, savedCategories, savedGoal, unlocks] = await Promise.all([
         db.getAllAsync<FocusHistoryPoint>(
           'SELECT started_at, duration_seconds, session_type FROM focus_sessions WHERE session_type = \'focus\' AND datetime(started_at) >= datetime(?, \'-90 days\') ORDER BY started_at ASC',
@@ -60,26 +64,47 @@ export default function AnalyticsScreen() {
         getSetting<number>('focus.dailyGoalMinutes', 120),
         getNativeUnlockCount(1),
       ]);
+      if (isMounted && !isMounted()) return;
       setSessions(history);
       setCategories(savedCategories && typeof savedCategories === 'object' ? savedCategories : {});
       setGoalMinutes(Number.isInteger(savedGoal) && savedGoal >= 15 && savedGoal <= 480 ? savedGoal : 120);
       setUnlocksToday(unlocks);
 
       if (usage && (await usage.hasUsageAccess())) {
-        const daily = usage.getDailyUsageStats ? await usage.getDailyUsageStats(60) : [];
+        if (isMounted && !isMounted()) return;
+        let daily: DailyUsagePoint[];
+        if (!forceRefresh && cachedDailyUsage && (Date.now() - cachedDailyUsage.timestamp < USAGE_CACHE_TTL_MS)) {
+          daily = cachedDailyUsage.rows;
+        } else if (usage.getDailyUsageStats) {
+          daily = await usage.getDailyUsageStats(60);
+          cachedDailyUsage = { timestamp: Date.now(), rows: daily };
+        } else {
+          daily = [];
+        }
+        if (isMounted && !isMounted()) return;
         setUsageRows(daily);
         setUsageAvailable(true);
       } else {
+        if (isMounted && !isMounted()) return;
         setUsageRows([]);
         setUsageAvailable(false);
       }
       setError('');
     } catch {
+      if (isMounted && !isMounted()) return;
       setError('Could not refresh usage analytics.');
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(
+    useCallback(() => {
+      let isCurrent = true;
+      void load(false, () => isCurrent);
+      return () => {
+        isCurrent = false;
+      };
+    }, [load])
+  );
 
   const currentRange = useMemo(() => dateRangeEndingToday(period), [period]);
   const previous = useMemo(() => previousRange(currentRange), [currentRange]);
@@ -167,7 +192,7 @@ export default function AnalyticsScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>REGAIN INSIGHTS</Text>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Usage Analytics</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Refresh analytics" onPress={() => void load()} style={[styles.iconButton, { backgroundColor: theme.surfaceAlt }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Refresh analytics" onPress={() => void load(true)} style={[styles.iconButton, { backgroundColor: theme.surfaceAlt }]}>
           <Ionicons name="refresh" size={18} color={theme.text} />
         </Pressable>
       </View>

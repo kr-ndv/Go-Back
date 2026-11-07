@@ -29,7 +29,31 @@ type SystemBridge = {
   scheduleMaintenance?: () => Promise<boolean>;
   runMaintenanceNow?: () => Promise<boolean>;
   setUpdateChecksEnabled?: (enabled: boolean) => Promise<boolean>;
+  updateWidgetData?: (json: string) => Promise<boolean>;
 };
+
+export type WidgetSnapshot = {
+  focusMinutesToday: number;
+  dailyGoalMinutes: number;
+  streakDays: number;
+  nextExamTitle: string;
+  nextExamDate: string;
+  nextExamDays: number;
+  totalNotes: number;
+  syllabusProgress: string;
+};
+
+export async function syncWidgetSnapshot(snapshot: WidgetSnapshot) {
+  if (Platform.OS !== 'android') return;
+  const bridge = NativeModules.GoBackSystem as SystemBridge | undefined;
+  try {
+    if (bridge?.updateWidgetData) {
+      await bridge.updateWidgetData(JSON.stringify(snapshot));
+    }
+  } catch {
+    // Non-fatal if native bridge is not ready
+  }
+}
 
 export async function syncNativeFocusState(snapshot: FocusNativeSnapshot) {
   if (Platform.OS !== 'android') return;

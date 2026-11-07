@@ -1,5 +1,5 @@
 import { showThemedDialog } from '@/state/dialog';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { MotionPressable as Pressable } from '@/components/MotionPressable';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -17,15 +17,29 @@ export default function NotesScreen() {
   const [title, setTitle] = useState('');
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
-  const load = useCallback(async () => {
+  const load = useCallback(async (isMounted?: () => boolean) => {
     try {
       const db = await getDatabase();
-      setNotes(await db.getAllAsync<Note>('SELECT * FROM notes ORDER BY updated_at DESC'));
+      if (isMounted && !isMounted()) return;
+      const loaded = await db.getAllAsync<Note>('SELECT * FROM notes ORDER BY updated_at DESC');
+      if (isMounted && !isMounted()) return;
+      setNotes(loaded);
     } catch (error) {
+      if (isMounted && !isMounted()) return;
       showThemedDialog('Notes could not load', error instanceof Error ? error.message : 'Go Back could not read your saved notes.');
     }
   }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  useFocusEffect(
+    useCallback(() => {
+      let isCurrent = true;
+      void load(() => isCurrent);
+      return () => {
+        isCurrent = false;
+      };
+    }, [load])
+  );
+
   const create = async () => {
     const clean = title.trim();
     if (creating) return;
@@ -44,7 +58,12 @@ export default function NotesScreen() {
       setCreating(false);
     }
   };
-  const filteredNotes = notes.filter(note => (note.title + ' ' + note.body).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+
+  const filteredNotes = useMemo(() => {
+    const q = search.trim().toLocaleLowerCase();
+    if (!q) return notes;
+    return notes.filter(note => (note.title + ' ' + note.body).toLocaleLowerCase().includes(q));
+  }, [notes, search]);
   return <Screen>
     <View style={styles.header}><View><Text style={[styles.eyebrow, { color: theme.muted }]}>THINK IT THROUGH</Text><Text style={[styles.title, { color: theme.text }]}>Personal notes</Text></View><View style={[styles.noteIcon, { backgroundColor: theme.surfaceAlt }]}><Ionicons name="document-text-outline" size={22} color={theme.primary} /></View></View>
     <Text style={[styles.sub, { color: theme.muted }]}>Private by default. Stored on this device.</Text>

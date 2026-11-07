@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '@/state/theme';
 import { motion } from '@/theme/motion';
@@ -174,7 +173,6 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           };
 
           const onPress = () => {
-            void Haptics.selectionAsync().catch(() => undefined);
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,

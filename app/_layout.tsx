@@ -10,6 +10,7 @@ import { getDatabase } from '@/lib/database';
 import { runForegroundMaintenance } from '@/lib/maintenance';
 import { notificationUrl } from '@/lib/notificationLinks';
 import { rescheduleAdvancedFocusNotifications } from '@/lib/scheduleNotifications';
+import { rescheduleExamNotifications } from '@/lib/examNotifications';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 SplashScreen.setOptions({ duration: 350, fade: true });
@@ -41,6 +42,7 @@ export default function RootLayout() {
       // Maintenance is deliberately non-blocking: the local app remains usable offline.
       void runForegroundMaintenance().catch(() => undefined);
       void rescheduleAdvancedFocusNotifications().catch(() => undefined);
+      void rescheduleExamNotifications().catch(() => undefined);
     })();
     return () => { active = false; };
   }, [hydrateTheme]);

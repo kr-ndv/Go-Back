@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include domain="database" path="goback.db" />
+    <include domain="sharedpref" path="." />
+    <!-- Exclude security pin from device-to-device transfers -->
+    <exclude domain="sharedpref" path="security_pin.xml" />
+</full-backup-content>

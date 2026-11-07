@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getDatabase } from '@/lib/database';
 import { createLocalId } from '@/lib/id';
+import { rescheduleExamNotifications } from '@/lib/examNotifications';
 import { daysUntilISODate, isValidISODate } from '@/lib/date';
 import { useAppTheme } from '@/state/theme';
 import { DateField } from '@/components/DateField';
@@ -48,6 +49,7 @@ export default function ExamsScreen() {
       await db.runAsync('INSERT INTO exams (id, title, exam_date, details) VALUES (?, ?, ?, ?)', createLocalId('exam'), cleanTitle, date, details.trim());
       setTitle(''); setDate(''); setDetails('');
       await load();
+      void rescheduleExamNotifications({ askPermission: true });
       showThemedDialog('Exam added', cleanTitle + ' is now in your timetable.');
     } catch (error) {
       showThemedDialog('Exam not saved', error instanceof Error ? error.message : 'Go Back could not save this exam. Please try again.');
@@ -63,7 +65,12 @@ export default function ExamsScreen() {
   const remove = (exam: Exam) => showThemedDialog('Remove exam?', `Remove ${exam.title} from your timetable?`, [
     { text: 'Cancel', style: 'cancel' },
     { text: 'Remove', style: 'destructive', onPress: async () => {
-      try { const db = await getDatabase(); await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id); await load(); }
+      try {
+        const db = await getDatabase();
+        await db.runAsync('DELETE FROM exams WHERE id = ?', exam.id);
+        await load();
+        void rescheduleExamNotifications();
+      }
       catch (error) { showThemedDialog('Exam not removed', error instanceof Error ? error.message : 'Go Back could not remove this exam.'); }
     } },
   ]);

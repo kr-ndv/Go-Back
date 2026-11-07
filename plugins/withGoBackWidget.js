@@ -208,7 +208,10 @@ class GoBackBlockingModule(private val appContext: ReactApplicationContext) : Re
   @ReactMethod fun isAccessibilityEnabled(promise: Promise) {
     try {
       val manager = appContext.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-      promise.resolve(manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK).any { it.resolveInfo.serviceInfo.packageName == appContext.packageName && it.resolveInfo.serviceInfo.name.endsWith("GoBackBlockingService") })
+      val enabledViaList = manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK).any { it.resolveInfo.serviceInfo.packageName == appContext.packageName && it.resolveInfo.serviceInfo.name.endsWith("GoBackBlockingService") }
+      val enabledServices = Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+      val enabledViaSettings = enabledServices.split(':').any { it.contains("GoBackBlockingService", ignoreCase = true) && it.contains(appContext.packageName, ignoreCase = true) }
+      promise.resolve(enabledViaList || enabledViaSettings)
     } catch (error: Exception) { promise.reject("E_BLOCKING_ACCESSIBILITY", error) }
   }
 
@@ -413,6 +416,14 @@ class GoBackSystemModule(private val appContext: ReactApplicationContext) : Reac
       manager.requestAddTileService(component, "Go Back Focus", icon, appContext.mainExecutor, Consumer { result -> promise.resolve(result) })
     } catch (error: Exception) { promise.reject("E_TILE_REQUEST", error) }
   }
+  @ReactMethod fun updateWidgetData(dataJson: String, promise: Promise) {
+    try {
+      appContext.getSharedPreferences("go_back_widget_data", 0).edit().putString("data", dataJson).apply()
+      GoBackWidgetProvider.refresh(appContext)
+      GoBackFocusWidgetProvider.refresh(appContext)
+      promise.resolve(true)
+    } catch (error: Exception) { promise.reject("E_WIDGET_DATA", error) }
+  }
 }
 `;
 
@@ -443,6 +454,21 @@ import java.util.Locale
 class GoBackBlockingService : AccessibilityService() {
   private val handler = Handler(Looper.getMainLooper())
   private var lastActionAt = 0L
+
+  override fun onServiceConnected() {
+    super.onServiceConnected()
+    val info = android.accessibilityservice.AccessibilityServiceInfo().apply {
+      eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+              AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+              AccessibilityEvent.TYPE_VIEW_SCROLLED
+      feedbackType = android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_GENERIC
+      flags = android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+              android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+              android.accessibilityservice.AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+      notificationTimeout = 50
+    }
+    serviceInfo = info
+  }
 
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
     if (event == null) return
@@ -506,8 +532,8 @@ class GoBackBlockingService : AccessibilityService() {
     if (focusOnly && !focusActive) return
 
     // 4. Whole-app blocking
-    if (packageIn(pkg, (config.optJSONArray("blockedPackages") ?: JSONArray()).toString())) {
-      record("blocked app closed")
+    if (packageIn(pkg, config.optJSONArray("blockedPackages"))) {
+      record("blocked app closed: $pkg")
       sendHome()
       return
     }
@@ -576,9 +602,16 @@ class GoBackBlockingService : AccessibilityService() {
     return true
   }
 
-  private fun packageIn(pkg: String, json: String): Boolean {
-    val array = try { JSONArray(json) } catch (_: Exception) { return false }
-    for (index in 0 until array.length()) if (array.optString(index) == pkg) return true
+  private fun packageIn(pkg: String, jsonOrArray: Any?): Boolean {
+    if (jsonOrArray == null) return false
+    val array = when (jsonOrArray) {
+      is JSONArray -> jsonOrArray
+      is String -> try { JSONArray(jsonOrArray) } catch (_: Exception) { return false }
+      else -> return false
+    }
+    for (index in 0 until array.length()) {
+      if (pkg.equals(array.optString(index), ignoreCase = true)) return true
+    }
     return false
   }
 
@@ -588,14 +621,14 @@ class GoBackBlockingService : AccessibilityService() {
 
   private fun sendHome() {
     val now = System.currentTimeMillis()
-    if (now - lastActionAt < 1200) return
+    if (now - lastActionAt < 300) return
     lastActionAt = now
     performGlobalAction(GLOBAL_ACTION_HOME)
   }
 
   private fun sendBack() {
     val now = System.currentTimeMillis()
-    if (now - lastActionAt < 1000) return
+    if (now - lastActionAt < 300) return
     lastActionAt = now
     performGlobalAction(GLOBAL_ACTION_BACK)
   }
@@ -971,7 +1004,7 @@ class GoBackFocusTileService : TileService() {
 }
 `;
 
-const accessibilityXml = `<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://schemas.android.com/apk/res/android" android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewSelected|typeViewFocused" android:accessibilityFeedbackType="feedbackGeneric" android:notificationTimeout="150" android:canRetrieveWindowContent="true" android:description="@string/go_back_accessibility_description" android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows" />`;
+const accessibilityXml = `<?xml version="1.0" encoding="utf-8"?><accessibility-service xmlns:android="http://schemas.android.com/apk/res/android" android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled|typeViewSelected|typeViewFocused" android:accessibilityFeedbackType="feedbackGeneric" android:notificationTimeout="50" android:canRetrieveWindowContent="true" android:description="@string/go_back_accessibility_description" android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews" />`;
 
 const provider = `package com.goback.focus
 import android.app.PendingIntent
@@ -989,8 +1022,26 @@ import org.json.JSONObject
 
 class GoBackWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    val prefs = context.getSharedPreferences("go_back_widget_data", 0)
+    val data = try { JSONObject(prefs.getString("data", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+    val focusMin = data.optInt("focusMinutesToday", 0)
+    val streak = data.optInt("streakDays", 0)
+    val nextExam = data.optString("nextExamTitle", "")
+    val nextExamDays = data.optInt("nextExamDays", -1)
+    val notesCount = data.optInt("totalNotes", 0)
+    val syllabus = data.optString("syllabusProgress", "")
+
+    val focusLabel = if (focusMin > 0) "Focus · ${focusMin}m" else if (streak > 0) "Focus · 🔥${streak}d" else "Focus"
+    val syllabusLabel = if (syllabus.isNotEmpty()) "Syllabus · $syllabus" else "Syllabus"
+    val examsLabel = if (nextExam.isNotEmpty() && nextExamDays >= 0) "Exams · ${nextExam.take(7)} ${nextExamDays}d" else "Exams"
+    val notesLabel = if (notesCount > 0) "Notes · $notesCount" else "Notes"
+
     appWidgetIds.forEach { widgetId ->
       val views = RemoteViews(context.packageName, R.layout.go_back_widget)
+      views.setTextViewText(R.id.widget_focus, focusLabel)
+      views.setTextViewText(R.id.widget_syllabus, syllabusLabel)
+      views.setTextViewText(R.id.widget_exams, examsLabel)
+      views.setTextViewText(R.id.widget_notes, notesLabel)
       bindAction(context, views, R.id.widget_focus, "focus", 100)
       bindAction(context, views, R.id.widget_syllabus, "syllabus", 101)
       bindAction(context, views, R.id.widget_exams, "exams", 102)
@@ -1004,6 +1055,14 @@ class GoBackWidgetProvider : AppWidgetProvider() {
     }
     val pendingIntent = PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     views.setOnClickPendingIntent(viewId, pendingIntent)
+  }
+  companion object {
+    fun refresh(context: Context) {
+      val manager = AppWidgetManager.getInstance(context)
+      val component = ComponentName(context, GoBackWidgetProvider::class.java)
+      val ids = manager.getAppWidgetIds(component)
+      if (ids.isNotEmpty()) GoBackWidgetProvider().onUpdate(context, manager, ids)
+    }
   }
 }
 
@@ -1038,7 +1097,7 @@ class GoBackFocusWidgetProvider : AppWidgetProvider() {
     val active = state.optBoolean("active", false) && (modeForState == "stopwatch" || (endAtForState > 0L && endAtForState > System.currentTimeMillis()))
     if (!active && prefs.getBoolean("focus_active", false)) prefs.edit().putBoolean("focus_active", false).remove("session_blocked_packages").apply()
 
-    views.setTextViewText(R.id.widget_focus_title, if (active) state.optString("title", "Focus session") else "Focus session")
+    views.setTextViewText(R.id.widget_focus_title, if (active) state.optString("title", "Focus session") else "Daily Focus")
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("goback:///focus"), context, MainActivity::class.java).apply {
       flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
@@ -1047,7 +1106,16 @@ class GoBackFocusWidgetProvider : AppWidgetProvider() {
 
     if (!active) {
       views.setViewVisibility(R.id.widget_focus_timer, View.GONE)
-      views.setTextViewText(R.id.widget_focus_subtitle, "Make space for deep work")
+      val widgetData = try { JSONObject(context.getSharedPreferences("go_back_widget_data", 0).getString("data", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+      val focusMin = widgetData.optInt("focusMinutesToday", 0)
+      val goalMin = widgetData.optInt("dailyGoalMinutes", 120)
+      val streak = widgetData.optInt("streakDays", 0)
+      val subtitleText = if (focusMin > 0 || streak > 0) {
+        "${focusMin}m of ${goalMin}m goal" + (if (streak > 0) " · 🔥 ${streak}d streak" else "")
+      } else {
+        "Goal: ${goalMin}m · Tap to start deep work"
+      }
+      views.setTextViewText(R.id.widget_focus_subtitle, subtitleText)
     } else {
       views.setViewVisibility(R.id.widget_focus_timer, View.VISIBLE)
       if (modeForState == "stopwatch") {
@@ -1076,9 +1144,62 @@ class GoBackFocusWidgetProvider : AppWidgetProvider() {
   }
 }
 
-class GoBackSyllabusWidgetProvider : GoBackSingleActionWidgetProvider() { override val route = "syllabus"; override val title = "Syllabus tracker"; override val subtitle = "Track your chapters" }
-class GoBackExamsWidgetProvider : GoBackSingleActionWidgetProvider() { override val route = "exams"; override val title = "Exam planner"; override val subtitle = "Keep the next date in sight" }
-class GoBackNotesWidgetProvider : GoBackSingleActionWidgetProvider() { override val route = "notes"; override val title = "Quick notes"; override val subtitle = "Save an idea before it slips away" }
+class GoBackSyllabusWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "syllabus"
+  override val title = "Syllabus tracker"
+  override val subtitle = "Track your chapters"
+  override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    val widgetData = try { JSONObject(context.getSharedPreferences("go_back_widget_data", 0).getString("data", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+    val syllabus = widgetData.optString("syllabusProgress", "")
+    val displaySub = if (syllabus.isNotEmpty()) "$syllabus completed" else subtitle
+    appWidgetIds.forEach { widgetId ->
+      val views = RemoteViews(context.packageName, R.layout.go_back_single_action_widget)
+      views.setTextViewText(R.id.widget_action_title, title)
+      views.setTextViewText(R.id.widget_action_subtitle, displaySub)
+      bind(context, views, R.id.widget_action_button, route)
+      manager.updateAppWidget(widgetId, views)
+    }
+  }
+}
+
+class GoBackExamsWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "exams"
+  override val title = "Exam planner"
+  override val subtitle = "Keep the next date in sight"
+  override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    val widgetData = try { JSONObject(context.getSharedPreferences("go_back_widget_data", 0).getString("data", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+    val nextExam = widgetData.optString("nextExamTitle", "")
+    val nextExamDays = widgetData.optInt("nextExamDays", -1)
+    val displayTitle = if (nextExam.isNotEmpty()) "Next: $nextExam" else title
+    val displaySub = if (nextExamDays >= 0) (if (nextExamDays == 0) "Exam is today!" else "$nextExamDays days to go") else subtitle
+    appWidgetIds.forEach { widgetId ->
+      val views = RemoteViews(context.packageName, R.layout.go_back_single_action_widget)
+      views.setTextViewText(R.id.widget_action_title, displayTitle)
+      views.setTextViewText(R.id.widget_action_subtitle, displaySub)
+      bind(context, views, R.id.widget_action_button, route)
+      manager.updateAppWidget(widgetId, views)
+    }
+  }
+}
+
+class GoBackNotesWidgetProvider : GoBackSingleActionWidgetProvider() {
+  override val route = "notes"
+  override val title = "Quick notes"
+  override val subtitle = "Save an idea before it slips away"
+  override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
+    val widgetData = try { JSONObject(context.getSharedPreferences("go_back_widget_data", 0).getString("data", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+    val count = widgetData.optInt("totalNotes", 0)
+    val displaySub = if (count > 0) "$count saved ${if (count == 1) "thought" else "thoughts"}" else subtitle
+    appWidgetIds.forEach { widgetId ->
+      val views = RemoteViews(context.packageName, R.layout.go_back_single_action_widget)
+      views.setTextViewText(R.id.widget_action_title, title)
+      views.setTextViewText(R.id.widget_action_subtitle, displaySub)
+      bind(context, views, R.id.widget_action_button, route)
+      manager.updateAppWidget(widgetId, views)
+    }
+  }
+}
+
 class GoBackInsightsWidgetProvider : GoBackSingleActionWidgetProvider() { override val route = "usage"; override val title = "Usage insights"; override val subtitle = "Review your time and trends" }
 class GoBackBlockingWidgetProvider : GoBackSingleActionWidgetProvider() { override val route = "blocking"; override val title = "App blocking"; override val subtitle = "Manage distraction rules" }
 `;

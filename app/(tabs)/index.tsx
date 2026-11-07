@@ -7,8 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { useAppTheme } from '@/state/theme';
 import { getDatabase, getSetting } from '@/lib/database';
-import { focusGoalStats, type FocusHistoryPoint } from '@/lib/focusInsights';
-import { getNativeUnlockCount } from '@/lib/nativeBridge';
+import { calculateStreakMilestone, focusGoalStats, type FocusHistoryPoint } from '@/lib/focusInsights';
+import { getNativeUnlockCount, syncWidgetSnapshot } from '@/lib/nativeBridge';
 import { M3SquigglyProgress } from '@/components/M3SquigglyProgress';
 
 type UsageStat = { packageName: string; appName: string; foregroundTimeMs: number };
@@ -97,6 +97,18 @@ export default function TodayScreen() {
           setProfileName(name);
           setProfileImageUri(imageUri);
         }
+
+        const examDays = exams?.exam_date ? Math.ceil((new Date(`${exams.exam_date}T12:00:00`).getTime() - Date.now()) / 86400000) : -1;
+        void syncWidgetSnapshot({
+          focusMinutesToday: focusTodayMinutes,
+          dailyGoalMinutes: validGoal,
+          streakDays: goalStats.currentStreak,
+          nextExamTitle: exams?.title ?? '',
+          nextExamDate: exams?.exam_date ?? '',
+          nextExamDays: examDays,
+          totalNotes: notes?.total ?? 0,
+          syllabusProgress: chaptersTotal > 0 ? `${chaptersDone}/${chaptersTotal} done` : '',
+        });
       } catch (error) {
         console.warn('Could not refresh Go Back dashboard', error);
       }
@@ -127,6 +139,7 @@ export default function TodayScreen() {
   const focusGoalPercent = Math.min(100, Math.round((stats.focusMinutes / Math.max(1, stats.dailyGoalMinutes)) * 100));
 
   const examDaysRemaining = stats.nextExamDate ? Math.ceil((new Date(`${stats.nextExamDate}T12:00:00`).getTime() - Date.now()) / 86400000) : null;
+  const streakMilestone = calculateStreakMilestone(stats.currentStreak);
   const examDateLabel = stats.nextExamDate
     ? new Date(`${stats.nextExamDate}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
     : 'No exam planned';
@@ -162,7 +175,13 @@ export default function TodayScreen() {
             <View style={{ flex: 1, gap: 3 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.focusLabel, { color: theme.onPrimary }]}>TODAY'S FOCUS</Text>
-                {stats.currentStreak > 0 && <View style={[styles.streakPill, { backgroundColor: 'rgba(0,0,0,0.18)' }]}><Text style={{ color: theme.onPrimary, fontSize: 10, fontWeight: '900' }}>🔥 {stats.currentStreak}d streak</Text></View>}
+                {stats.currentStreak > 0 && (
+                  <View style={[styles.streakPill, { backgroundColor: 'rgba(0,0,0,0.18)' }]}>
+                    <Text style={{ color: theme.onPrimary, fontSize: 10, fontWeight: '900' }}>
+                      🔥 {stats.currentStreak}d streak · {streakMilestone.badge} {streakMilestone.label}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={[styles.focusMetric, { color: theme.onPrimary }]}>{focusLabel} <Text style={{ fontSize: 14, fontWeight: '700', opacity: 0.9 }}>/ {goalLabel}</Text></Text>
               <M3SquigglyProgress

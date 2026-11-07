@@ -14,6 +14,7 @@ import { FOCUS_STATUS_CHANNEL_ID, ensureFocusAlertChannel, ensureFocusStatusChan
 import { normalizeRecoverableFocusSession, type RecoverableFocusSession } from '@/lib/focusRecovery';
 import { hasNativeFocusNotificationBridge, setNativeSessionBlockedPackages, syncNativeFocusState } from '@/lib/nativeBridge';
 import { type BlockingConfig, DEFAULT_BLOCKING_CONFIG, normalizeBlockingConfig } from '@/lib/blockingConfig';
+import { checkAndCelebrateDailyGoal } from '@/lib/goalCelebration';
 import { M3CircularProgress } from '@/components/M3CircularProgress';
 
 const FOCUS_PRESETS = [15, 25, 45, 60];
@@ -188,9 +189,14 @@ export default function FocusScreen() {
       const db=await getDatabase();
       if(elapsed>0) await db.runAsync('INSERT OR IGNORE INTO focus_sessions (id,started_at,duration_seconds,completed,session_type,mode,tag,notes) VALUES (?,?,?,?,?,?,?,?)',sessionId,sessionStart,elapsed,completed?1:0,finishedType,finishedMode,finishedTag,finishedNotes);
       await setSetting('focus.active',null); resetMetadata(); await clearPreset();
+      let celebrated = false;
+      if (finishedType === 'focus' && elapsed > 0) {
+        const goalResult = await checkAndCelebrateDailyGoal(elapsed);
+        celebrated = goalResult.achieved;
+      }
       if(completed&&finishedMode==='pomodoro'){
-        const next=nextPomodoroPhase(finishedType,pomodoroRoundsRef.current); pomodoroRoundsRef.current=next.completedFocusRounds; setPomodoroRounds(next.completedFocusRounds); sessionTypeRef.current=next.sessionType; setSessionType(next.sessionType); minutesRef.current=next.minutes; setMinutes(next.minutes); remainingRef.current=next.minutes*60; setRemaining(next.minutes*60); await setSetting('focus.pomodoroRounds',next.completedFocusRounds); await setSetting('focus.pomodoroNextType',next.sessionType); const nextLabel=next.sessionType==='long-break'?'a long break':next.sessionType==='short-break'?'a short break':'your next focus round'; showThemedDialog('Pomodoro phase complete','Your session is saved. Next up: '+nextLabel+'. Start it when you are ready.');
-      }else if(completed) showThemedDialog(finishedType==='focus'?'Focus session complete':'Break complete',finishedType==='focus'?'You showed up for yourself. Take a short break.':'Your break is complete. Return when you feel ready.');
+        const next=nextPomodoroPhase(finishedType,pomodoroRoundsRef.current); pomodoroRoundsRef.current=next.completedFocusRounds; setPomodoroRounds(next.completedFocusRounds); sessionTypeRef.current=next.sessionType; setSessionType(next.sessionType); minutesRef.current=next.minutes; setMinutes(next.minutes); remainingRef.current=next.minutes*60; setRemaining(next.minutes*60); await setSetting('focus.pomodoroRounds',next.completedFocusRounds); await setSetting('focus.pomodoroNextType',next.sessionType); const nextLabel=next.sessionType==='long-break'?'a long break':next.sessionType==='short-break'?'a short break':'your next focus round'; showThemedDialog(celebrated ? '🎉 Daily Goal & Pomodoro Phase Complete!' : 'Pomodoro phase complete','Your session is saved. Next up: '+nextLabel+'. Start it when you are ready.');
+      }else if(completed) showThemedDialog(celebrated ? '🎉 Daily Focus Goal Completed!' : (finishedType==='focus'?'Focus session complete':'Break complete'),celebrated ? 'You reached your daily focus goal today! Take a well-deserved break.' : (finishedType==='focus'?'You showed up for yourself. Take a short break.':'Your break is complete. Return when you feel ready.'));
     }catch{showThemedDialog('Could not save session','Your session ended, but its history could not be saved. Please check storage space and try again.');}
     finally{finishingRef.current=false;}
   };

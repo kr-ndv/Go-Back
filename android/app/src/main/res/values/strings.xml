@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Go Back</string>
+    <string name="accessibility_service_description">Protects your focus sessions by automatically closing short-form video feeds (Shorts, Reels, Spotlight), configured distracting apps, and adult websites.</string>
+    <string name="widget_description">Displays your today\'s focus goal and allows one-tap focus session launching.</string>
+</resources>
