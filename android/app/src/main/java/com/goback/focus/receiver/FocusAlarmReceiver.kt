@@ -29,7 +29,13 @@ class FocusAlarmReceiver : BroadcastReceiver() {
         )
 
         val isSchedule = intent.getStringExtra("kind") == "schedule"
-        val channel = if (isSchedule) GoBackApplication.CHANNEL_SCHEDULE else GoBackApplication.CHANNEL_FOCUS_ALERTS
+        val selectedSound = context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+            .getString("focus_alarm_sound", "default") ?: "default"
+        val channel = if (isSchedule) {
+            GoBackApplication.CHANNEL_SCHEDULE
+        } else {
+            GoBackApplication.ensureFocusAlarmChannel(context, selectedSound)
+        }
 
         val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(android.R.drawable.ic_dialog_info)

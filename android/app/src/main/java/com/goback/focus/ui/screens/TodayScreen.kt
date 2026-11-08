@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.ui.components.M3CircularProgress
+import com.goback.focus.ui.components.ProfileAvatar
 import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
@@ -76,6 +77,7 @@ fun TodayScreen(
         // 1. Top Header & Welcome Greeting
         TopHeaderSection(
             profileName = state.profileName,
+            profileImageUri = state.profileImageUri,
             onProfileClick = onNavigateToSettings
         )
 
@@ -127,6 +129,7 @@ fun TodayScreen(
 @Composable
 private fun TopHeaderSection(
     profileName: String,
+    profileImageUri: String,
     onProfileClick: () -> Unit
 ) {
     Row(
@@ -173,23 +176,12 @@ private fun TopHeaderSection(
             color = MaterialTheme.colorScheme.surfaceVariant,
             border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                if (profileName.isNotBlank()) {
-                    Text(
-                        text = profileName.trim().take(1).uppercase(),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.Shield,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
+            ProfileAvatar(
+                name = profileName,
+                imageUri = profileImageUri,
+                modifier = Modifier.fillMaxSize(),
+                contentDescription = "Open profile settings"
+            )
         }
     }
 }

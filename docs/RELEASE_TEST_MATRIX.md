@@ -1,96 +1,52 @@
-# Go Back — Android Release Test Matrix
+# Native Android release test matrix
 
-Use this checklist for every release candidate. Record **date, app version, commit SHA, device model, Android version, launcher, test result, and issue link**. Do not mark an item passed without performing the test on the target device.
+Use a physical device for permission-dependent and background behaviour. Mark each case only after it has been run on the release candidate.
 
-## Device coverage
+| Area | Test | Expected result | Result |
+|---|---|---|---|
+| Install / upgrade | Install clean build on API 24+ | App launches, icon and label render | ☐ |
+| Upgrade data | Install over a copy of a prior Go Back build with Expo SQLite `user_version=0` | Existing notes, subjects, sessions, schedules, exams, settings and limits remain after Room 0→1 migration | ☐ |
+| Older beta data | Test a copy missing the later focus session and schedule columns | Migration supplies only the legacy defaults and retains every existing row | ☐ |
+| Launch / navigation | Visit every bottom-tab and secondary route | No crash; back stack and bottom navigation behave consistently | ☐ |
+| Theme | Change system/light/dark and every accent palette | Compose scheme updates immediately and persists after restart | ☐ |
+| Focus timer | Start, pause, resume, finish early and complete naturally | Time is accurate; session saved once; UI recovers after process restart | ☐ |
+| Pomodoro | Complete focus, short break and long break phases | Correct next phase and round count | ☐ |
+| Stopwatch | Start, pause, resume, finish | Elapsed time is preserved and saved | ☐ |
+| Strict mode | Attempt early exit with wrong and correct challenge phrase | Wrong phrase cannot end session; correct phrase can | ☐ |
+| Focus presets | Save timer / Pomodoro / stopwatch preset; apply; delete | Mode and duration load; only selected session apps are blocked | ☐ |
+| Session app blocks | Start a preset session, pause it, stop it and complete it | Session-only blocks are active only while the focus session is active and are cleared afterwards | ☐ |
+| Timer notification | Run timer in background and open Quick Settings tile | Ongoing status remains accurate; tile actions work | ☐ |
+| Finish alarms | Test default, bell, chime and digital sound | Each selection uses its expected sound; channel settings are documented | ☐ |
+| Exact alarm | Test with exact-alarm access allowed and denied | Graceful handling of both states; no crash | ☐ |
+| Blocking permission | Enable / disable Accessibility service | Blocking starts only when enabled and stops when revoked | ☐ |
+| Selected-app blocking | Block a user-selected app | App is redirected while the rule is active | ☐ |
+| Focus-only blocking | Enable and disable focus-only rules | Rules apply only during an active focus session | ☐ |
+| Content blocking | Test Shorts, Reels, Spotlight and supported browser keyword checks | Supported target surfaces are handled; unsupported surfaces are not overclaimed | ☐ |
+| Split screen | Test configured app in split-screen / floating window | Behaviour matches supported Android window reporting | ☐ |
+| Usage access | Grant / revoke Usage Access | Usage summaries and limits report unavailable state when permission is absent | ☐ |
+| Daily limits | Trigger warning and limit thresholds; cross midnight | Notifications, blocking state and daily reset behave as intended | ☐ |
+| Syllabus | Add subject, chapters and progress | Entries persist and dashboard progress matches | ☐ |
+| Notes | Create, edit, search and delete | Data persists with correct updated timestamp | ☐ |
+| Exams | Create, edit and delete exams; test reminders | Dates, countdown and reminder scheduling are correct | ☐ |
+| Schedules | Create recurring schedule, reminder and skip date | Only intended dates/times are scheduled; timezone change handled | ☐ |
+| Analytics | Compare session history with saved records | Durations, type filters, range totals and streaks are correct | ☐ |
+| Profile photo | Choose an image from the system document picker; restart app | URI permission remains available; photo appears in Settings and dashboard; display-name fallback works | ☐ |
+| Backup export | Export JSON to local file provider | All eight tables included; PIN omitted | ☐ |
+| Backup import | Restore a current and schema 1–5 backup | Data replaced atomically; local PIN retained; restore point created | ☐ |
+| Backup integrity | Modify checksum, duplicate an ID, corrupt table type and cancel restore | Invalid input is rejected; current database remains unchanged | ☐ |
+| Undo restore | Restore previous local restore point | Data returns to pre-restore snapshot | ☐ |
+| Widget | Add, refresh and interact with home-screen widget | Widget reflects current focus state | ☐ |
+| Update check | Enable/disable background release check | GitHub request occurs only when enabled and network is available | ☐ |
+| Accessibility | TalkBack, font scaling, touch targets and dark mode | Key tasks remain readable and usable | ☐ |
+| Release source | Inspect workflow directory and tracked generated files | No Actions workflow or committed build artifact remains | ☐ |
 
-Select at least three physical devices before a production release:
-- A current Android version supported by the app.
-- The oldest Android version the app intends to support.
-- A low- or mid-range device with vendor-specific background/battery management.
+## Local checks
 
-Include different manufacturers/launchers where possible.
+From \`android/\` on the release machine:
 
-## Core app and persistence
+\`\`\`bash
+./gradlew test
+./gradlew assembleDebug
+\`\`\`
 
-- [ ] Fresh install opens without a crash and creates the local database.
-- [ ] Create, edit, complete, and delete tasks; force-stop/relaunch and verify persistence.
-- [ ] Create, edit, pin if supported, search, and delete notes; verify autosave before navigating away.
-- [ ] Create subjects/chapters and update completion; verify progress before and after restart.
-- [ ] Create and edit exams/timetable details; verify date display around midnight and time-zone changes.
-- [ ] Create habits/goals and update progress; verify day boundaries and streaks.
-- [ ] Switch each appearance mode and each accent palette; verify after app restart.
-- [ ] Test long text, empty fields, fast repeated taps, back navigation, rotation/size changes where supported, and font scaling.
-- [ ] Simulate storage or import failure where feasible; ensure errors are understandable and existing data remains intact.
-
-## Focus timer and notifications
-
-- [ ] Start, pause, resume, complete, and cancel a session.
-- [ ] Background the app, lock the screen, open another app, and return.
-- [ ] Verify elapsed/remaining time after process death and relaunch.
-- [ ] Test across midnight and after changing the device time/time zone.
-- [ ] Test notification permission accepted and denied.
-- [ ] Verify completion notification appears once, at the right time, and does not fire after cancellation.
-- [ ] Test battery saver/Doze and vendor battery restrictions; record limitations.
-- [ ] Reboot during an active session and verify documented recovery behavior.
-
-## Usage insights
-
-- [ ] Open insights before granting Usage Access and verify clear onboarding.
-- [ ] Grant access, return to Go Back, and verify data loads.
-- [ ] Revoke access and verify the app recovers with a clear message.
-- [ ] Test no data, newly installed apps, removed apps, and date-range boundaries.
-- [ ] Confirm the app does not include its own usage in reported third-party totals unless intentionally designed.
-
-## Accessibility-based blocking (experimental until validated)
-
-- [ ] Explain permission purpose and local processing before opening system settings.
-- [ ] Enable and disable the service and verify the state updates correctly.
-- [ ] Test each blocking toggle independently.
-- [ ] Test YouTube feed previews versus an active watch page; avoid blocking unrelated screens.
-- [ ] Test Instagram feed versus Reels and navigation surfaces.
-- [ ] Test configured channel matching against similar/overlapping names and missing labels.
-- [ ] Test third-party app version changes and accessibility trees.
-- [ ] Verify a clear escape route and that disabling a rule/service returns control immediately.
-- [ ] Verify core Go Back features remain usable when permission is denied or the target apps are not installed.
-
-## Home-screen widgets and links
-
-- [ ] Add, resize, remove, and re-add the quick-action widget.
-- [ ] Tap every action while the app is closed, in the background, and already open.
-- [ ] Test individual action widgets and verify each route opens the intended screen.
-- [ ] Test supported launchers and Android versions; record launcher-specific behavior.
-- [ ] Verify no crash or dead-end route occurs from malformed/unknown deep links.
-
-## Backup and restore
-
-- [ ] Export backup and verify file name, schema/version, and data completeness.
-- [ ] Restore into a clean app install and compare record counts and important fields.
-- [ ] Round-trip non-ASCII text, emoji, long notes, and special characters.
-- [ ] Try malformed JSON, unsupported schema versions, missing fields, wrong types, duplicate IDs, and oversized files.
-- [ ] Verify an invalid backup is rejected without partially replacing existing data.
-- [ ] Verify cancellation leaves current data untouched and errors show clear next steps.
-- [ ] Confirm UI/docs clearly state that exported JSON is not encrypted unless encryption has been implemented and tested.
-
-## Release artifact and upgrade
-
-- [ ] Run CI from a clean checkout with lockfile-based dependency installation.
-- [ ] Verify unit tests, TypeScript checks, Expo prebuild, and release Gradle build.
-- [ ] Install the produced APK/AAB on a clean physical device and launch every main feature.
-- [ ] Verify app label, icon, application ID `com.goback.focus`, version name, and monotonically increasing versionCode.
-- [ ] Verify the artifact is signed with the intended release key and is not test-signed.
-- [ ] Verify SHA-256 checksum and build metadata correspond to the exact published artifact.
-- [ ] Upgrade over the previous public beta/release; check that data remains intact.
-- [ ] Test the documented backup-and-restore path before uninstalling.
-- [ ] Verify release notes, privacy policy, licence, permission disclosures, and source tag match the artifact.
-
-## Result
-
-Release candidate:  
-Commit SHA:  
-App version / versionCode:  
-Test date:  
-Devices / Android versions:  
-Blockers:  
-Decision: **GO / NO-GO**  
-Approved by:
+These commands are intentionally not run by the repository's GitHub Actions; no Actions workflow is present. Complete the test cases above and add a signed release configuration locally before publishing a binary.

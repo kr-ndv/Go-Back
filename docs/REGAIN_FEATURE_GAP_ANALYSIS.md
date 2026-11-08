@@ -1,3 +1,5 @@
+> **Historical planning document — not a current implementation status report.** This comparison was written against the October 2026 Expo-era project and reference-app screenshots. Use [FEATURE_PARITY_AUDIT.md](FEATURE_PARITY_AUDIT.md) for the Kotlin / Jetpack Compose source state. Items described below as “current”, “on the production-readiness branch”, or “implemented” may have changed during the native migration.
+
 # Go Back — Regain Feature and Gap Analysis
 
 **Purpose:** Compare the Regain app (`ai.regainapp`, EpowerX Labs) and the Regain screenshots supplied for this project with the current Go Back implementation. This is a feature-planning document, not a commitment to copy every feature or to claim that undocumented behavior has been tested.

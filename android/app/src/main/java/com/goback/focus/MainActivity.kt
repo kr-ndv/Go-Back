@@ -97,8 +97,18 @@ fun GoBackMainApp(initialRoute: String? = null) {
             }
             composable(NavTab.Focus.route) {
                 FocusScreen(
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToPresets = { navController.navigate("focus_presets") }
                 )
+            }
+            composable("focus_presets") {
+                FocusPresetsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onApplyPreset = { navController.popBackStack() }
+                )
+            }
+            composable("backup_restore") {
+                BackupRestoreScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(NavTab.Analytics.route) {
                 AnalyticsScreen()
@@ -125,7 +135,9 @@ fun GoBackMainApp(initialRoute: String? = null) {
                     onNavigateToBlocking = { navController.navigate("blocking") },
                     onNavigateToUsageLimits = { navController.navigate("usage_limits") },
                     onNavigateToSchedules = { navController.navigate("schedules") },
-                    onNavigateToExams = { navController.navigate("exams") }
+                    onNavigateToExams = { navController.navigate("exams") },
+                    onNavigateToFocusPresets = { navController.navigate("focus_presets") },
+                    onNavigateToBackupRestore = { navController.navigate("backup_restore") }
                 )
             }
             composable("syllabus") {

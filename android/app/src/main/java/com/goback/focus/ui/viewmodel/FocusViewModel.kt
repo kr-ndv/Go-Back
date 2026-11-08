@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import org.json.JSONArray
 import java.time.Instant
 import java.util.UUID
 import kotlin.math.ceil
@@ -75,9 +76,54 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private var stopwatchRunStartedAtMs: Long? = null
     private var accumulatedElapsedSeconds: Int = 0
     private var tickerJob: Job? = null
+    private var pendingPresetPackages: Set<String> = emptySet()
 
     init {
         restoreState()
+    }
+
+    /**
+     * Applies a one-shot preset payload saved by FocusPresetsScreen.
+     * Session package rules are applied only when the user starts the session.
+     */
+    fun loadPendingPreset() {
+        if (_uiState.value.isRunning || _uiState.value.isPaused) return
+        val raw = prefs.getString("focus.pending_preset", null) ?: return
+        try {
+            val json = JSONObject(raw)
+            val mode = when (json.optString("mode", "timer")) {
+                "pomodoro" -> FocusMode.POMODORO
+                "stopwatch" -> FocusMode.STOPWATCH
+                else -> FocusMode.TIMER
+            }
+            val minutes = json.optInt("durationMinutes", 25).coerceIn(1, 180)
+            val packages = mutableSetOf<String>()
+            val array = json.optJSONArray("blockedPackages") ?: JSONArray()
+            for (index in 0 until array.length()) {
+                val value = array.optString(index).trim()
+                if (value.isNotEmpty() && value != getApplication<Application>().packageName) {
+                    packages += value.lowercase()
+                }
+            }
+            pendingPresetPackages = packages
+            _uiState.update {
+                it.copy(
+                    mode = mode,
+                    sessionType = PomodoroSessionType.FOCUS,
+                    selectedMinutes = minutes,
+                    remainingSeconds = minutes * 60,
+                    elapsedSeconds = 0,
+                    pomodoroRounds = 0,
+                    presetName = json.optString("name", "").take(60),
+                    isRunning = false,
+                    isPaused = false,
+                    customMinutesInput = ""
+                )
+            }
+            prefs.edit().remove("focus.pending_preset").apply()
+        } catch (_: Exception) {
+            prefs.edit().remove("focus.pending_preset").apply()
+        }
     }
 
     fun restoreState() {
@@ -235,6 +281,14 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         if (_uiState.value.isRunning) return
         val now = System.currentTimeMillis()
         val state = _uiState.value
+
+        if (pendingPresetPackages.isNotEmpty()) {
+            prefs.edit()
+                .putString("session_blocked_packages", JSONArray(pendingPresetPackages.toList()).toString())
+                .apply()
+        } else {
+            prefs.edit().remove("session_blocked_packages").apply()
+        }
 
         if (sessionId == null) sessionId = UUID.randomUUID().toString()
         if (startedAt == null) startedAt = Instant.now().toString()
@@ -487,6 +541,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         endAtMs = null
         stopwatchRunStartedAtMs = null
         accumulatedElapsedSeconds = 0
+        pendingPresetPackages = emptySet()
 
         prefs.edit()
             .putBoolean("focus_active", false)

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -87,6 +88,46 @@ class GoBackApplication : Application() {
         // 7. App Screen-Time Limits (High importance usage threshold warnings)
         const val CHANNEL_USAGE_LIMITS = "screen-time-limits-native-v2"
         const val CHANNEL_APP_LIMITS = "go-back-app-limits"
+
+        /**
+         * Creates a dedicated notification channel for the selected finish sound.
+         * Android locks a channel's sound after creation, so each sound choice gets its own ID.
+         */
+        fun ensureFocusAlarmChannel(context: Context, soundKey: String): String {
+            val resourceName = soundKey.lowercase().removeSuffix(".wav").replace(Regex("[^a-z0-9_-]"), "")
+            val safeKey = resourceName.ifBlank { "default" }
+            val channelId = "go-back-focus-alerts-sound-$safeKey"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val manager = context.getSystemService(NotificationManager::class.java)
+                    ?: return channelId
+                val soundUri = if (safeKey == "default") {
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                } else {
+                    Uri.parse("android.resource://${context.packageName}/raw/$safeKey")
+                }
+                val attributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                val label = when (safeKey) {
+                    "focus_bell" -> "Soft bell"
+                    "focus_chime" -> "Warm chime"
+                    "focus_digital" -> "Digital alert"
+                    else -> "System default"
+                }
+                val channel = NotificationChannel(
+                    channelId,
+                    "Focus finish · $label",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Sound used when a focus timer or Pomodoro phase finishes"
+                    enableVibration(true)
+                    soundUri?.let { setSound(it, attributes) }
+                }
+                manager.createNotificationChannel(channel)
+            }
+            return channelId
+        }
 
         // Notification IDs
         const val NOTIFICATION_ID_GOAL_CELEBRATION = 9103

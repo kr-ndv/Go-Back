@@ -40,6 +40,7 @@ data class StreakMilestone(
 
 data class TodayUiState(
     val profileName: String = "",
+    val profileImageUri: String = "",
     val focusMinutesToday: Int = 0,
     val dailyGoalMinutes: Int = 120,
     val goalProgress: Float = 0f,
@@ -81,8 +82,9 @@ class TodayViewModel(
 
         val settingsFlow = combine(
             settingDao.observeValue("focus.dailyGoalMinutes"),
-            settingDao.observeValue("profile.name")
-        ) { goal, name -> Pair(goal, name) }
+            settingDao.observeValue("profile.name"),
+            settingDao.observeValue("profile.imageUri")
+        ) { goal, name, imageUri -> Triple(goal, name, imageUri) }
 
         // Combine reactive Room flows into a unified dashboard state
         combine(
@@ -91,7 +93,10 @@ class TodayViewModel(
             subjectDao.getAll(),
             noteDao.getAll(),
             settingsFlow
-        ) { sessions, nextExam, subjects, notes, (goalSetting, nameSetting) ->
+        ) { sessions, nextExam, subjects, notes, profileSettings ->
+            val goalSetting = profileSettings.first
+            val nameSetting = profileSettings.second
+            val profileImageUri = profileSettings.third ?: ""
             val dailyGoal = goalSetting?.toIntOrNull()?.coerceIn(15, 480) ?: 120
             val profileName = nameSetting ?: ""
             val totalNotes = notes.size
@@ -136,6 +141,7 @@ class TodayViewModel(
 
             TodayUiState(
                 profileName = profileName,
+                profileImageUri = profileImageUri,
                 focusMinutesToday = focusMinutesToday,
                 dailyGoalMinutes = dailyGoal,
                 goalProgress = goalProgress,

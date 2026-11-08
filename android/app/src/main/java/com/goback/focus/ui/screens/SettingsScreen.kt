@@ -8,6 +8,8 @@ import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,9 +33,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.goback.focus.R
+import com.goback.focus.GoBackApplication
 import com.goback.focus.data.db.GoBackDatabase
 import com.goback.focus.data.entity.SettingEntity
 import com.goback.focus.service.FocusTileService
+import com.goback.focus.ui.components.ProfileAvatar
 import com.goback.focus.ui.components.PinModalMode
 import com.goback.focus.ui.components.SecurityPinDialog
 import com.goback.focus.ui.components.SecurityPinUtil
@@ -74,6 +78,8 @@ fun SettingsScreen(
     onNavigateToUsageLimits: () -> Unit = {},
     onNavigateToSchedules: () -> Unit = {},
     onNavigateToExams: () -> Unit = {},
+    onNavigateToFocusPresets: () -> Unit = {},
+    onNavigateToBackupRestore: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -81,6 +87,7 @@ fun SettingsScreen(
     val db = remember { GoBackDatabase.getDatabase(context) }
 
     var profileName by remember { mutableStateOf("") }
+    var profileImageUri by remember { mutableStateOf<String?>(null) }
     var dailyGoalMinutes by remember { mutableStateOf(120) }
     var selectedThemeMode by remember { mutableStateOf("system") }
     var selectedPaletteName by remember { mutableStateOf("Forest") }
@@ -94,11 +101,38 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         profileName = db.settingDao().getValue("profile.name") ?: ""
+        profileImageUri = db.settingDao().getValue("profile.imageUri")
         dailyGoalMinutes = db.settingDao().getValue("focus.dailyGoalMinutes")?.toIntOrNull() ?: 120
         selectedThemeMode = db.settingDao().getValue("theme.mode") ?: "system"
         selectedPaletteName = db.settingDao().getValue("theme.palette") ?: "Forest"
         selectedAlarmSound = db.settingDao().getValue("focus.alarmSound") ?: "default"
+        val alarmSoundKey = context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+            .getString("focus_alarm_sound", selectedAlarmSound) ?: selectedAlarmSound
+        selectedAlarmSound = alarmSoundKey
+        context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+            .edit().putString("focus_alarm_sound", alarmSoundKey).apply()
+        GoBackApplication.ensureFocusAlarmChannel(context, alarmSoundKey)
         storedPinHash = db.settingDao().getValue(SecurityPinUtil.PIN_SETTING_KEY)
+    }
+
+    val profilePhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            scope.launch {
+                runCatching {
+                    db.settingDao().setValue(SettingEntity("profile.imageUri", uri.toString()))
+                }.onSuccess {
+                    profileImageUri = uri.toString()
+                    feedbackMessage = "Profile photo saved on this device."
+                }.onFailure {
+                    feedbackMessage = "Profile photo could not be saved."
+                }
+            }
+        }
     }
 
     fun playPreviewSound(soundKey: String) {
@@ -226,6 +260,20 @@ fun SettingsScreen(
                         desc = "Countdown to exams with 3-stage reminders",
                         onClick = onNavigateToExams
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    SettingsNavRow(
+                        icon = Icons.Filled.Tune,
+                        title = "Focus Presets",
+                        desc = "Save reusable timer modes and temporary app blocks",
+                        onClick = onNavigateToFocusPresets
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    SettingsNavRow(
+                        icon = Icons.Filled.Backup,
+                        title = "Backup & Restore",
+                        desc = "Export your local data or restore a Go Back backup",
+                        onClick = onNavigateToBackupRestore
+                    )
                 }
             }
         }
@@ -257,6 +305,9 @@ fun SettingsScreen(
                                     scope.launch {
                                         db.settingDao().setValue(SettingEntity("focus.alarmSound", key))
                                     }
+                                    context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+                                        .edit().putString("focus_alarm_sound", key).apply()
+                                    GoBackApplication.ensureFocusAlarmChannel(context, key)
                                     playPreviewSound(key)
                                 }
                                 .padding(vertical = 6.dp),
@@ -495,26 +546,33 @@ fun SettingsScreen(
             }
         }
 
-        // Profile Display Name
+        // Local profile
         item {
             Text("Local Profile", fontWeight = FontWeight.Bold, fontSize = 17.sp)
             Spacer(modifier = Modifier.height(6.dp))
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
+                modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
                 shape = CardShape,
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        ProfileAvatar(name = profileName, imageUri = profileImageUri, modifier = Modifier.size(64.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Profile photo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            OutlinedButton(
+                                onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
+                                shape = PillShape
+                            ) {
+                                Text(if (profileImageUri.isNullOrBlank()) "Choose photo" else "Change photo")
+                            }
+                        }
+                    }
                     Text("Display Name", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = profileName,
-                            onValueChange = { profileName = it },
+                            onValueChange = { profileName = it.take(60) },
                             placeholder = { Text("Your name (optional)") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),

@@ -21,6 +21,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.logic.FocusEngine
@@ -34,11 +38,21 @@ import com.goback.focus.ui.viewmodel.FocusViewModel
 @Composable
 fun FocusScreen(
     onNavigateBack: () -> Unit = {},
+    onNavigateToPresets: () -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadPendingPreset()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val progress = when (state.mode) {
         FocusMode.STOPWATCH -> ((state.elapsedSeconds % 60) / 60f).coerceIn(0f, 1f)
@@ -98,7 +112,23 @@ fun FocusScreen(
                 letterSpacing = 1.8.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.size(48.dp))
+            if (!state.isRunning && !state.isPaused) {
+                TextButton(onClick = onNavigateToPresets) {
+                    Text("Presets", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Spacer(modifier = Modifier.size(48.dp))
+            }
+        }
+
+        if (state.presetName.isNotBlank()) {
+            Text(
+                text = "Preset · ${state.presetName}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         // Hero Circular Progress Ring

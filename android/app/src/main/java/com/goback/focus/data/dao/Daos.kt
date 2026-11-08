@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
+    @Query("DELETE FROM notes")
+    suspend fun deleteAll()
     @Query("SELECT * FROM notes ORDER BY updated_at DESC")
     fun getAll(): Flow<List<NoteEntity>>
 
@@ -27,6 +29,8 @@ interface NoteDao {
 
 @Dao
 interface SubjectDao {
+    @Query("DELETE FROM subjects")
+    suspend fun deleteAll()
     @Query("SELECT * FROM subjects ORDER BY updated_at DESC")
     fun getAll(): Flow<List<SubjectEntity>>
 
@@ -42,6 +46,8 @@ interface SubjectDao {
 
 @Dao
 interface FocusSessionDao {
+    @Query("DELETE FROM focus_sessions")
+    suspend fun deleteAll()
     @Query("SELECT * FROM focus_sessions ORDER BY started_at DESC")
     fun getAll(): Flow<List<FocusSessionEntity>>
 
@@ -60,6 +66,8 @@ interface FocusSessionDao {
 
 @Dao
 interface FocusScheduleDao {
+    @Query("DELETE FROM focus_schedules")
+    suspend fun deleteAll()
     @Query("SELECT * FROM focus_schedules ORDER BY start_time ASC")
     fun getAll(): Flow<List<FocusScheduleEntity>>
 
@@ -72,6 +80,8 @@ interface FocusScheduleDao {
 
 @Dao
 interface FocusPresetDao {
+    @Query("DELETE FROM focus_presets")
+    suspend fun deleteAll()
     @Query("SELECT * FROM focus_presets ORDER BY created_at DESC")
     fun getAll(): Flow<List<FocusPresetEntity>>
 
@@ -84,6 +94,8 @@ interface FocusPresetDao {
 
 @Dao
 interface UsageLimitDao {
+    @Query("DELETE FROM usage_limits")
+    suspend fun deleteAll()
     @Query("SELECT * FROM usage_limits ORDER BY app_name ASC")
     fun getAll(): Flow<List<UsageLimitEntity>>
 
@@ -99,6 +111,8 @@ interface UsageLimitDao {
 
 @Dao
 interface ExamDao {
+    @Query("DELETE FROM exams")
+    suspend fun deleteAll()
     @Query("SELECT * FROM exams ORDER BY exam_date ASC")
     fun getAll(): Flow<List<ExamEntity>>
 
@@ -114,6 +128,11 @@ interface ExamDao {
 
 @Dao
 interface SettingDao {
+    @Query("SELECT * FROM settings ORDER BY key ASC")
+    fun getAll(): Flow<List<SettingEntity>>
+
+    @Query("DELETE FROM settings")
+    suspend fun deleteAll()
     @Query("SELECT value FROM settings WHERE key = :key LIMIT 1")
     suspend fun getValue(key: String): String?
 

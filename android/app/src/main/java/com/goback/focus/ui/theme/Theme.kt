@@ -1,54 +1,83 @@
 package com.goback.focus.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import com.goback.focus.data.db.GoBackDatabase
 
-private val LightColorScheme = lightColorScheme(
-    primary = ForestPrimaryLight,
-    onPrimary = ForestOnPrimaryLight,
-    primaryContainer = ForestPrimaryContainerLight,
-    onPrimaryContainer = ForestOnPrimaryContainerLight,
-    background = ForestBackgroundLight,
-    surface = ForestSurfaceLight,
-    onSurface = ForestTextLight,
-    surfaceVariant = ForestBorderLight,
-    onSurfaceVariant = ForestMutedLight,
-    outline = ForestBorderLight
-)
-
-private val DarkColorScheme = darkColorScheme(
-    primary = ForestPrimaryDark,
-    onPrimary = ForestOnPrimaryDark,
-    primaryContainer = ForestPrimaryContainerDark,
-    onPrimaryContainer = ForestOnPrimaryContainerDark,
-    background = ForestBackgroundDark,
-    surface = ForestSurfaceDark,
-    onSurface = ForestTextDark,
-    surfaceVariant = ForestBorderDark,
-    onSurfaceVariant = ForestMutedDark,
-    outline = ForestBorderDark
+private val PaletteColors = mapOf(
+    "Forest" to Color(0xFF365C32),
+    "Blue" to Color(0xFF2563EB),
+    "Violet" to Color(0xFF7C3AED),
+    "Amber" to Color(0xFFD97706),
+    "Rose" to Color(0xFFE11D48),
+    "Teal" to Color(0xFF0D9488),
+    "Berry" to Color(0xFF9333EA),
+    "Sakura" to Color(0xFFEC4899),
+    "Graphite" to Color(0xFF4B5563),
+    "Coral" to Color(0xFFEA580C),
+    "Lavender" to Color(0xFF8B5CF6),
+    "Crimson" to Color(0xFFDC2626)
 )
 
 @Composable
 fun GoBackTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val context = LocalContext.current
+    val database = remember { GoBackDatabase.getDatabase(context) }
+    val savedMode by database.settingDao().observeValue("theme.mode").collectAsState(initial = "system")
+    val savedPalette by database.settingDao().observeValue("theme.palette").collectAsState(initial = "Forest")
+
+    val useDarkTheme = when (savedMode) {
+        "light" -> false
+        "dark" -> true
+        else -> darkTheme
+    }
+    val accent = PaletteColors.entries.firstOrNull { it.key.equals(savedPalette, ignoreCase = true) }?.value
+        ?: PaletteColors.getValue("Forest")
+    val onAccent = if (accent.luminance() > 0.48f) Color(0xFF171717) else Color.White
+
+    val colorScheme = if (useDarkTheme) {
+        darkColorScheme(
+            primary = accent,
+            onPrimary = onAccent,
+            primaryContainer = accent.copy(alpha = 0.28f),
+            onPrimaryContainer = Color.White,
+            secondary = accent,
+            onSecondary = onAccent,
+            background = ForestBackgroundDark,
+            surface = ForestSurfaceDark,
+            surfaceVariant = ForestBorderDark,
+            onSurface = ForestTextDark,
+            onSurfaceVariant = ForestMutedDark,
+            outline = ForestBorderDark
+        )
+    } else {
+        lightColorScheme(
+            primary = accent,
+            onPrimary = onAccent,
+            primaryContainer = accent.copy(alpha = 0.16f),
+            onPrimaryContainer = accent,
+            secondary = accent,
+            onSecondary = onAccent,
+            background = ForestBackgroundLight,
+            surface = ForestSurfaceLight,
+            surfaceVariant = ForestBorderLight,
+            onSurface = ForestTextLight,
+            onSurfaceVariant = ForestMutedLight,
+            outline = ForestBorderLight
+        )
     }
 
     MaterialTheme(
