@@ -17,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import java.time.LocalDate
+import java.time.ZoneId
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.ceil
@@ -259,8 +261,6 @@ class TodayViewModel(
     }
 
     companion object {
-        private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
         data class GoalStatsResult(
             val currentStreak: Int,
             val bestStreak: Int,
@@ -291,7 +291,11 @@ class TodayViewModel(
                 }
             }
 
-            val todayKey = DATE_FORMAT.format(todayDate)
+            val todayKey = try {
+                todayDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString()
+            } catch (_: Exception) {
+                LocalDate.now().toString()
+            }
             val todaySeconds = dailyTotals[todayKey] ?: 0
             val todayGoalMet = todaySeconds >= goalSeconds
 
@@ -349,10 +353,7 @@ class TodayViewModel(
 
         private fun previousDateKey(dateKey: String, days: Int): String {
             return try {
-                val cal = Calendar.getInstance()
-                cal.time = DATE_FORMAT.parse(dateKey) ?: return dateKey
-                cal.add(Calendar.DAY_OF_YEAR, -days)
-                DATE_FORMAT.format(cal.time)
+                LocalDate.parse(dateKey).minusDays(days.toLong()).toString()
             } catch (_: Exception) {
                 dateKey
             }

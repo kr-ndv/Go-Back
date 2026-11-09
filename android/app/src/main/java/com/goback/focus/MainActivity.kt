@@ -1,5 +1,6 @@
 package com.goback.focus
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,32 +24,49 @@ import com.goback.focus.ui.components.NavTab
 import com.goback.focus.ui.screens.*
 import com.goback.focus.ui.theme.GoBackTheme
 
+data class NavigationTarget(val route: String, val timestamp: Long = System.currentTimeMillis())
+
 class MainActivity : ComponentActivity() {
+
+    private val targetRoute = mutableStateOf<NavigationTarget?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val startRoute = intent?.getStringExtra("route")
+        if (!startRoute.isNullOrEmpty()) {
+            targetRoute.value = NavigationTarget(startRoute)
+        }
 
         setContent {
             GoBackTheme {
-                GoBackMainApp(initialRoute = startRoute)
+                GoBackMainApp(navigationTarget = targetRoute.value)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val route = intent.getStringExtra("route")
+        if (!route.isNullOrEmpty()) {
+            targetRoute.value = NavigationTarget(route)
         }
     }
 }
 
 @Composable
-fun GoBackMainApp(initialRoute: String? = null) {
+fun GoBackMainApp(navigationTarget: NavigationTarget? = null) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: NavTab.Home.route
     val isTopLevelDestination = NavTab.items.any { it.route == currentRoute }
 
-    LaunchedEffect(initialRoute) {
-        if (!initialRoute.isNullOrEmpty() && initialRoute != NavTab.Home.route) {
-            navController.navigate(initialRoute) {
+    LaunchedEffect(navigationTarget) {
+        val route = navigationTarget?.route
+        if (!route.isNullOrEmpty() && route != NavTab.Home.route) {
+            navController.navigate(route) {
                 popUpTo(NavTab.Home.route) {
                     saveState = true
                 }

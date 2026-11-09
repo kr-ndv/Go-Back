@@ -75,6 +75,7 @@ class NoteEditorViewModel(
     private val _isPreviewMode = MutableStateFlow(false)
     val isPreviewMode: StateFlow<Boolean> = _isPreviewMode.asStateFlow()
 
+    private var isDeleted = false
     private var autoSaveJob: Job? = null
     private val persistenceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -117,7 +118,7 @@ class NoteEditorViewModel(
     }
 
     private fun triggerDebouncedAutosave() {
-        if (!_isReady.value) return
+        if (isDeleted || !_isReady.value) return
         _saveStatus.value = "Saving…"
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
@@ -127,7 +128,7 @@ class NoteEditorViewModel(
     }
 
     suspend fun executeSave(): Boolean {
-        if (!_isReady.value) return false
+        if (isDeleted || !_isReady.value) return false
         _saveStatus.value = "Saving…"
         return withContext(Dispatchers.IO) {
             try {
@@ -163,7 +164,7 @@ class NoteEditorViewModel(
      */
     fun flushSave() {
         autoSaveJob?.cancel()
-        if (!_isReady.value) return
+        if (isDeleted || !_isReady.value) return
         val currentTitle = _title.value.trim().ifEmpty { "Untitled note" }
         val currentBody = _body.value
         val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
@@ -185,6 +186,7 @@ class NoteEditorViewModel(
     }
 
     fun deleteCurrentNote(onDeleted: () -> Unit) {
+        isDeleted = true
         autoSaveJob?.cancel()
         persistenceScope.launch {
             try {
@@ -198,7 +200,9 @@ class NoteEditorViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        flushSave()
+        if (!isDeleted) {
+            flushSave()
+        }
     }
 }
 

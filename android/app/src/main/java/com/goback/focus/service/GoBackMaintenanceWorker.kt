@@ -20,7 +20,9 @@ import com.goback.focus.BuildConfig
 import com.goback.focus.GoBackApplication
 import com.goback.focus.MainActivity
 import com.goback.focus.data.db.GoBackDatabase
+import com.goback.focus.logic.ScheduleEvaluationEngine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -45,6 +47,14 @@ class GoBackMaintenanceWorker(
             checkUsageLimits()
         } catch (e: Exception) {
             Log.e(TAG, "checkUsageLimits encountered an unexpected error", e)
+        }
+
+        try {
+            val db = GoBackDatabase.getDatabase(context)
+            val schedules = db.focusScheduleDao().getAll().first()
+            ScheduleEvaluationEngine.evaluateAndSync(context, schedules)
+        } catch (e: Exception) {
+            Log.e(TAG, "evaluateAndSync schedules encountered an unexpected error", e)
         }
 
         Result.success()
@@ -101,12 +111,17 @@ class GoBackMaintenanceWorker(
         val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(now))
         val sent = try { JSONObject(prefs.getString("sent_$day", "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
         var changed = false
+        val exceededPackages = mutableSetOf<String>()
 
         limits.forEachIndexed { index, limit ->
             val usedMinutes = ((totals[limit.packageName] ?: 0L) / 60000L).toInt()
             val state = sent.optInt(limit.packageName, 0)
             val warningAt = (limit.limitMinutes * limit.warningPercent / 100).coerceAtLeast(1)
             val nextState = if (usedMinutes >= limit.limitMinutes) 2 else if (usedMinutes >= warningAt) 1 else 0
+
+            if (usedMinutes >= limit.limitMinutes) {
+                exceededPackages.add(limit.packageName.lowercase(Locale.ROOT))
+            }
 
             if (nextState > state) {
                 val title = if (nextState == 2) {
@@ -145,6 +160,14 @@ class GoBackMaintenanceWorker(
 
         if (changed) {
             prefs.edit().putString("sent_$day", sent.toString()).apply()
+        }
+
+        val blockingPrefs = context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
+        val currentBlocked = blockingPrefs.getStringSet("usage_limit_blocked_packages", emptySet()) ?: emptySet()
+        if (currentBlocked != exceededPackages) {
+            blockingPrefs.edit()
+                .putStringSet("usage_limit_blocked_packages", exceededPackages)
+                .apply()
         }
     }
 

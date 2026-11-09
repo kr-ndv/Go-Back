@@ -42,6 +42,7 @@ import com.goback.focus.GoBackApplication
 import com.goback.focus.data.dao.ExamDao
 import com.goback.focus.data.dao.SubjectDao
 import com.goback.focus.data.entity.ExamEntity
+import com.goback.focus.logic.AlarmScheduler
 import com.goback.focus.receiver.FocusAlarmReceiver
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.ChipShape
@@ -221,93 +222,12 @@ class ExamsViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun rescheduleAllExamReminders(exams: List<ExamEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return@launch
-            val nowMs = System.currentTimeMillis()
-            val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
-            exams.forEach { exam ->
-                val examDateObj = try {
-                    format.parse(exam.examDate.trim())
-                } catch (_: Exception) { null } ?: return@forEach
-
-                // Stage 1: 7 days before at 9:00 AM
-                val stage1Cal = Calendar.getInstance().apply {
-                    time = examDateObj
-                    add(Calendar.DAY_OF_YEAR, -7)
-                    set(Calendar.HOUR_OF_DAY, 9)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                }
-
-                // Stage 2: 1 day before at 9:00 AM
-                val stage2Cal = Calendar.getInstance().apply {
-                    time = examDateObj
-                    add(Calendar.DAY_OF_YEAR, -1)
-                    set(Calendar.HOUR_OF_DAY, 9)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                }
-
-                // Stage 3: Morning of exam at 7:00 AM
-                val stage3Cal = Calendar.getInstance().apply {
-                    time = examDateObj
-                    set(Calendar.HOUR_OF_DAY, 7)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                }
-
-                val reminderStages = listOf(
-                    Triple(1, stage1Cal.timeInMillis, "📅 Exam in 7 days: ${exam.title}" to "${exam.title} is coming up in one week (${exam.examDate}). Review syllabus chapters early!"),
-                    Triple(2, stage2Cal.timeInMillis, "⚠️ Exam tomorrow: ${exam.title}" to "${exam.title} is tomorrow. Take time to review key summary notes and rest well tonight."),
-                    Triple(3, stage3Cal.timeInMillis, "🎯 Exam day: ${exam.title}" to "Good luck with your ${exam.title} exam today! Stay calm, focused, and confident.")
-                )
-
-                reminderStages.forEach { (stage, triggerTimeMs, alert) ->
-                    if (triggerTimeMs > nowMs) {
-                        val intent = Intent(context, FocusAlarmReceiver::class.java).apply {
-                            putExtra("kind", "exam")
-                            putExtra("exam_id", exam.id)
-                            putExtra("title", alert.first)
-                            putExtra("body", alert.second)
-                        }
-
-                        val requestCode = (exam.id.hashCode() and 0xFFFF) * 10 + stage
-                        val pendingIntent = PendingIntent.getBroadcast(
-                            context,
-                            requestCode,
-                            intent,
-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                        )
-
-                        try {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMs, pendingIntent)
-                            } else {
-                                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerTimeMs, pendingIntent)
-                            }
-                        } catch (_: Exception) {}
-                    }
-                }
-            }
+            AlarmScheduler.rescheduleAllExams(context)
         }
     }
 
     private fun cancelExamReminders(examId: String) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        for (stage in 1..3) {
-            val intent = Intent(context, FocusAlarmReceiver::class.java)
-            val requestCode = (examId.hashCode() and 0xFFFF) * 10 + stage
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-            )
-            if (pendingIntent != null) {
-                alarmManager.cancel(pendingIntent)
-                pendingIntent.cancel()
-            }
-        }
+        AlarmScheduler.cancelExam(context, examId)
     }
 }
 

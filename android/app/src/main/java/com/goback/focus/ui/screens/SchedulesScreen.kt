@@ -45,6 +45,8 @@ import com.goback.focus.GoBackApplication
 import com.goback.focus.MainActivity
 import com.goback.focus.data.dao.FocusScheduleDao
 import com.goback.focus.data.entity.FocusScheduleEntity
+import com.goback.focus.logic.AlarmScheduler
+import com.goback.focus.logic.ScheduleEvaluationEngine
 import com.goback.focus.receiver.FocusAlarmReceiver
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.ChipShape
@@ -59,151 +61,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.*
-
-// =============================================================================
-// Active Interval Evaluation Engine
-// =============================================================================
-
-object ScheduleEvaluationEngine {
-    val WEEKDAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-
-    /**
-     * Checks if a schedule is active at this exact moment.
-     * Evaluates enabled status, skip dates, day of week, and 24-hr time span (including midnight rollover).
-     */
-    fun isScheduleActive(
-        schedule: FocusScheduleEntity,
-        calendar: Calendar = Calendar.getInstance()
-    ): Boolean {
-        if (schedule.enabled != 1) return false
-
-        // 1. Check skip dates
-        val todayIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.time)
-        val skips = parseSkipDates(schedule.skipDatesJson)
-        if (skips.contains(todayIso)) return false
-
-        // 2. Check Day of Week (Calendar: 1=Sun, 2=Mon... 7=Sat -> 0-indexed: 0=Sun..6=Sat)
-        val currentDayIndex = calendar.get(Calendar.DAY_OF_WEEK) - 1
-        val days = getActiveDays(schedule)
-        if (!days.contains(currentDayIndex)) return false
-
-        // 3. Check Time Window
-        val parts = schedule.startTime.split(":")
-        if (parts.size != 2) return false
-        val startHour = parts[0].toIntOrNull() ?: return false
-        val startMinute = parts[1].toIntOrNull() ?: return false
-
-        val currentMinuteOfDay = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
-        val startMinuteOfDay = startHour * 60 + startMinute
-        val endMinuteOfDay = startMinuteOfDay + schedule.durationMinutes
-
-        return if (endMinuteOfDay <= 24 * 60) {
-            currentMinuteOfDay in startMinuteOfDay until endMinuteOfDay
-        } else {
-            // Rollover past midnight
-            currentMinuteOfDay >= startMinuteOfDay || currentMinuteOfDay < (endMinuteOfDay % (24 * 60))
-        }
-    }
-
-    /**
-     * Evaluates all schedules and returns the currently active one (if any).
-     */
-    fun findActiveSchedule(
-        schedules: List<FocusScheduleEntity>,
-        calendar: Calendar = Calendar.getInstance()
-    ): FocusScheduleEntity? {
-        return schedules.firstOrNull { isScheduleActive(it, calendar) }
-    }
-
-    /**
-     * Syncs the active scheduled blocking state to "go_back_blocking" SharedPreferences
-     * so that GoBackBlockingService instantly reflects scheduled focus enforcement.
-     */
-    fun evaluateAndSync(
-        context: Context,
-        schedules: List<FocusScheduleEntity>
-    ): Boolean {
-        val activeSchedule = findActiveSchedule(schedules)
-        val isActive = activeSchedule != null
-        val prefs = context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
-
-        val editor = prefs.edit().putBoolean("scheduled_blocking_active", isActive)
-        if (activeSchedule != null) {
-            editor.putString("active_schedule_id", activeSchedule.id)
-            editor.putString("active_schedule_title", activeSchedule.title)
-        } else {
-            editor.remove("active_schedule_id")
-            editor.remove("active_schedule_title")
-        }
-        editor.apply()
-        return isActive
-    }
-
-    fun parseDays(daysJson: String): Set<Int> {
-        val set = mutableSetOf<Int>()
-        try {
-            val arr = JSONArray(daysJson)
-            for (i in 0 until arr.length()) {
-                set.add(arr.getInt(i))
-            }
-        } catch (_: Exception) {}
-        return set
-    }
-
-    fun getActiveDays(schedule: FocusScheduleEntity): Set<Int> {
-        return when (schedule.routineType) {
-            "weekday" -> setOf(1, 2, 3, 4, 5)
-            "weekend" -> setOf(0, 6)
-            else -> parseDays(schedule.daysJson)
-        }
-    }
-
-    fun parseSkipDates(skipDatesJson: String): Set<String> {
-        val set = mutableSetOf<String>()
-        try {
-            val arr = JSONArray(skipDatesJson)
-            for (i in 0 until arr.length()) {
-                set.add(arr.getString(i))
-            }
-        } catch (_: Exception) {}
-        return set
-    }
-
-    fun formatDaysSummary(days: Set<Int>, routineType: String): String {
-        return when (routineType) {
-            "weekday" -> "Weekdays"
-            "weekend" -> "Weekends"
-            else -> {
-                if (days.size == 7) "Every day"
-                else if (days.size == 5 && days.containsAll(listOf(1, 2, 3, 4, 5))) "Weekdays"
-                else if (days.size == 2 && days.contains(0) && days.contains(6)) "Weekends"
-                else if (days.isEmpty()) "No days selected"
-                else days.sorted().joinToString(", ") { WEEKDAY_LABELS[it] }
-            }
-        }
-    }
-
-    fun format12HourTime(time24: String): String {
-        val parts = time24.split(":")
-        if (parts.size != 2) return time24
-        val h = parts[0].toIntOrNull() ?: return time24
-        val m = parts[1].toIntOrNull() ?: return time24
-        val period = if (h >= 12) "PM" else "AM"
-        val hour12 = if (h % 12 == 0) 12 else h % 12
-        return String.format(Locale.US, "%d:%02d %s", hour12, m, period)
-    }
-
-    fun calculateEndTime12Hour(startTime24: String, durationMinutes: Int): String {
-        val parts = startTime24.split(":")
-        if (parts.size != 2) return ""
-        val h = parts[0].toIntOrNull() ?: return ""
-        val m = parts[1].toIntOrNull() ?: return ""
-        val totalMinutes = (h * 60 + m + durationMinutes) % (24 * 60)
-        val endH = totalMinutes / 60
-        val endM = totalMinutes % 60
-        return format12HourTime(String.format(Locale.US, "%02d:%02d", endH, endM))
-    }
-}
 
 // =============================================================================
 // UI Models
@@ -400,6 +257,7 @@ class SchedulesViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             val entity = rawSchedules.firstOrNull { it.id == scheduleId } ?: return@launch
             scheduleDao.delete(entity)
+            AlarmScheduler.cancelSchedule(context, scheduleId)
 
             context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
                 .edit()
@@ -410,59 +268,8 @@ class SchedulesViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun rescheduleAlarms(schedules: List<FocusScheduleEntity>) {
         viewModelScope.launch(Dispatchers.IO) {
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return@launch
-            val now = Calendar.getInstance()
-
             schedules.forEach { schedule ->
-                if (schedule.enabled != 1) return@forEach
-                val parts = schedule.startTime.split(":")
-                if (parts.size != 2) return@forEach
-                val startHour = parts[0].toIntOrNull() ?: return@forEach
-                val startMinute = parts[1].toIntOrNull() ?: return@forEach
-                val days = ScheduleEvaluationEngine.getActiveDays(schedule)
-
-                // Schedule next occurrence in the next 7 days
-                for (offset in 0..7) {
-                    val target = Calendar.getInstance().apply {
-                        add(Calendar.DAY_OF_YEAR, offset)
-                        set(Calendar.HOUR_OF_DAY, startHour)
-                        set(Calendar.MINUTE, startMinute)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                        // Apply pre-reminder offset
-                        if (schedule.reminderMinutes > 0) {
-                            add(Calendar.MINUTE, -schedule.reminderMinutes)
-                        }
-                    }
-
-                    val targetDayIndex = target.get(Calendar.DAY_OF_WEEK) - 1
-                    if (!days.contains(targetDayIndex)) continue
-                    if (target.timeInMillis <= now.timeInMillis) continue
-
-                    val intent = Intent(context, FocusAlarmReceiver::class.java).apply {
-                        putExtra("kind", "schedule")
-                        putExtra("schedule_id", schedule.id)
-                        putExtra("title", if (schedule.reminderMinutes > 0) "Focus time is coming up" else "Your focus block has started")
-                        putExtra("body", "${schedule.title} · ${schedule.durationMinutes} min. Open Go Back to focus.")
-                    }
-
-                    val requestCode = (schedule.id.hashCode() and 0xFFFF) + offset
-                    val pendingIntent = PendingIntent.getBroadcast(
-                        context,
-                        requestCode,
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, target.timeInMillis, pendingIntent)
-                        } else {
-                            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, target.timeInMillis, pendingIntent)
-                        }
-                    } catch (_: Exception) {}
-                    break // Next occurrence scheduled
-                }
+                AlarmScheduler.scheduleNextOccurrence(context, schedule)
             }
         }
     }

@@ -39,11 +39,11 @@ class GoBackBlockingService : AccessibilityService() {
         // 1. Remove TYPE_VIEW_SCROLLED to avoid high-frequency gesture event floods
         // 2. Remove FLAG_INCLUDE_NOT_IMPORTANT_VIEWS to eliminate empty/decorative layout nodes
         // 3. Set notificationTimeout to 120ms to batch rapid window updates
-        val info = AccessibilityServiceInfo().apply {
+        val info = (serviceInfo ?: AccessibilityServiceInfo()).apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+            flags = flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             notificationTimeout = 120
         }
@@ -618,7 +618,7 @@ class GoBackBlockingService : AccessibilityService() {
         private const val MAX_TRAVERSAL_NODES = 50
         private const val MAX_CHILDREN_PER_NODE = 8
 
-        private val SETTINGS_KEYWORDS = listOf("com.goback.focus", "go back")
+        private val SETTINGS_KEYWORDS = listOf("com.goback.focus")
 
         private val BROWSER_PACKAGES = setOf(
             "com.android.chrome", "org.mozilla.firefox", "com.opera.browser",
