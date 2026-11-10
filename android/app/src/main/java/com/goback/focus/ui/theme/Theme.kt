@@ -1,5 +1,6 @@
 package com.goback.focus.ui.theme
 
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -7,11 +8,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.goback.focus.data.db.GoBackDatabase
+import kotlinx.coroutines.flow.catch
 
 private val PaletteColors = mapOf(
     "Forest" to Color(0xFF365C32),
@@ -35,9 +38,27 @@ fun GoBackTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val database = remember { GoBackDatabase.getDatabase(context) }
-    val savedMode by database.settingDao().observeValue("theme.mode").collectAsState(initial = "system")
-    val savedPalette by database.settingDao().observeValue("theme.palette").collectAsState(initial = "Forest")
+    val prefs = remember(context) {
+        context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+    }
+    val initialMode = remember(prefs) { prefs.getString("theme.mode", "system") ?: "system" }
+    val initialPalette = remember(prefs) { prefs.getString("theme.palette", "Forest") ?: "Forest" }
+
+    val database = remember(context) {
+        runCatching { GoBackDatabase.getDatabase(context) }.getOrNull()
+    }
+    val modeFlow = remember(database) {
+        database?.settingDao()?.observeValue("theme.mode")?.catch { emit(initialMode) }
+    }
+    val paletteFlow = remember(database) {
+        database?.settingDao()?.observeValue("theme.palette")?.catch { emit(initialPalette) }
+    }
+
+    val savedModeState = modeFlow?.collectAsState(initial = initialMode)
+    val savedPaletteState = paletteFlow?.collectAsState(initial = initialPalette)
+
+    val savedMode = savedModeState?.value ?: initialMode
+    val savedPalette = savedPaletteState?.value ?: initialPalette
 
     val useDarkTheme = when (savedMode) {
         "light" -> false

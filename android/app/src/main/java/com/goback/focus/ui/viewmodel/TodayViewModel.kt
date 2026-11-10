@@ -193,52 +193,62 @@ class TodayViewModel(
     }
 
     private fun checkUsageAccess(): Boolean {
-        val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-        return ops.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
+        return try {
+            val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+            ops.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                context.packageName
+            ) == AppOpsManager.MODE_ALLOWED
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private fun queryUsageAndUnlocks(): Pair<Long, Int> {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startOfDay = calendar.timeInMillis
-        val now = System.currentTimeMillis()
-
-        val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return Pair(0L, 0)
-
-        // 1. Screen Time Sum
-        var screenTimeMs = 0L
-        manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startOfDay, now)?.forEach { stat ->
-            if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
-                screenTimeMs += stat.totalTimeInForeground
+        return try {
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
-        }
+            val startOfDay = calendar.timeInMillis
+            val now = System.currentTimeMillis()
 
-        // 2. Unlocks via UsageEvents (KEYGUARD_HIDDEN = 18)
-        var unlockCount = 0
-        try {
-            val events = manager.queryEvents(startOfDay, now)
-            val event = UsageEvents.Event()
-            while (events.hasNextEvent()) {
-                events.getNextEvent(event)
-                if (event.eventType == 18) { // KEYGUARD_HIDDEN
-                    unlockCount++
+            val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return Pair(0L, 0)
+
+            // 1. Screen Time Sum
+            var screenTimeMs = 0L
+            try {
+                manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startOfDay, now)?.forEach { stat ->
+                    if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
+                        screenTimeMs += stat.totalTimeInForeground
+                    }
                 }
-            }
-        } catch (_: Exception) {}
+            } catch (_: Throwable) {}
 
-        val prefs = context.getSharedPreferences("go_back_unlocks", 0)
-        val fallback = prefs.getInt("today_unlocks", 0)
-        val finalUnlocks = if (unlockCount > 0) unlockCount else fallback
+            // 2. Unlocks via UsageEvents (KEYGUARD_HIDDEN = 18)
+            var unlockCount = 0
+            try {
+                val events = manager.queryEvents(startOfDay, now)
+                val event = UsageEvents.Event()
+                while (events.hasNextEvent()) {
+                    events.getNextEvent(event)
+                    if (event.eventType == 18) { // KEYGUARD_HIDDEN
+                        unlockCount++
+                    }
+                }
+            } catch (_: Throwable) {}
 
-        return Pair(screenTimeMs, finalUnlocks)
+            val prefs = context.getSharedPreferences("go_back_unlocks", 0)
+            val fallback = prefs.getInt("today_unlocks", 0)
+            val finalUnlocks = if (unlockCount > 0) unlockCount else fallback
+
+            Pair(screenTimeMs, finalUnlocks)
+        } catch (_: Throwable) {
+            Pair(0L, 0)
+        }
     }
 
     private fun syncWidgetSnapshot(

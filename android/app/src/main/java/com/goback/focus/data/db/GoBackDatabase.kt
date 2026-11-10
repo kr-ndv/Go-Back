@@ -172,6 +172,8 @@ abstract class GoBackDatabase : RoomDatabase() {
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                     .addMigrations(MIGRATION_0_1)
+                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                 INSTANCE = instance
                 instance

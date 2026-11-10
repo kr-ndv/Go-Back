@@ -110,6 +110,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setThemeMode(mode: String) {
         _selectedThemeMode.value = mode
+        getApplication<Application>().getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+            .edit().putString("theme.mode", mode).apply()
         viewModelScope.launch {
             db.settingDao().setValue(SettingEntity("theme.mode", mode))
         }
@@ -117,6 +119,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setThemePalette(paletteName: String) {
         _selectedPaletteName.value = paletteName
+        getApplication<Application>().getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
+            .edit().putString("theme.palette", paletteName).apply()
         viewModelScope.launch {
             db.settingDao().setValue(SettingEntity("theme.palette", paletteName))
         }

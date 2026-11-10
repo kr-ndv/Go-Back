@@ -182,43 +182,45 @@ class AnalyticsViewModel(
         var unlocksToday = 0
 
         if (hasAccess) {
-            val usageManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            if (usageManager != null) {
-                // Day-by-day query for chart points & total screen time
-                for (offset in (period.days - 1) downTo 0) {
-                    val dayStart = startOfDayTimestamp(-offset)
-                    val dayEnd = if (offset == 0) now else startOfDayTimestamp(-offset + 1)
-                    val dateKey = dateFormat.format(Date(dayStart))
+            try {
+                val usageManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                if (usageManager != null) {
+                    // Day-by-day query for chart points & total screen time
+                    for (offset in (period.days - 1) downTo 0) {
+                        val dayStart = startOfDayTimestamp(-offset)
+                        val dayEnd = if (offset == 0) now else startOfDayTimestamp(-offset + 1)
+                        val dateKey = dateFormat.format(Date(dayStart))
 
-                    usageManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd)?.forEach { stat ->
+                        usageManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd)?.forEach { stat ->
+                            if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
+                                usageByDay[dateKey] = (usageByDay[dateKey] ?: 0L) + stat.totalTimeInForeground
+                                currentUsageMs += stat.totalTimeInForeground
+                                appUsageAggregated[stat.packageName] = (appUsageAggregated[stat.packageName] ?: 0L) + stat.totalTimeInForeground
+                            }
+                        }
+                    }
+
+                    // Previous period total usage
+                    usageManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, prevStartMs, prevEndMs)?.forEach { stat ->
                         if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
-                            usageByDay[dateKey] = (usageByDay[dateKey] ?: 0L) + stat.totalTimeInForeground
-                            currentUsageMs += stat.totalTimeInForeground
-                            appUsageAggregated[stat.packageName] = (appUsageAggregated[stat.packageName] ?: 0L) + stat.totalTimeInForeground
+                            prevUsageMs += stat.totalTimeInForeground
                         }
                     }
-                }
 
-                // Previous period total usage
-                usageManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, prevStartMs, prevEndMs)?.forEach { stat ->
-                    if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
-                        prevUsageMs += stat.totalTimeInForeground
-                    }
-                }
-
-                // Unlocks query today via UsageEvents (KEYGUARD_HIDDEN = 18)
-                val todayStart = startOfDayTimestamp(0)
-                try {
-                    val events = usageManager.queryEvents(todayStart, now)
-                    val event = UsageEvents.Event()
-                    while (events.hasNextEvent()) {
-                        events.getNextEvent(event)
-                        if (event.eventType == 18) {
-                            unlocksToday++
+                    // Unlocks query today via UsageEvents (KEYGUARD_HIDDEN = 18)
+                    val todayStart = startOfDayTimestamp(0)
+                    try {
+                        val events = usageManager.queryEvents(todayStart, now)
+                        val event = UsageEvents.Event()
+                        while (events.hasNextEvent()) {
+                            events.getNextEvent(event)
+                            if (event.eventType == 18) {
+                                unlocksToday++
+                            }
                         }
-                    }
-                } catch (_: Exception) {}
-            }
+                    } catch (_: Exception) {}
+                }
+            } catch (_: Throwable) {}
         }
 
         if (unlocksToday == 0) {
@@ -380,12 +382,16 @@ class AnalyticsViewModel(
     }
 
     private fun checkUsageAccess(): Boolean {
-        val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-        return ops.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
+        return try {
+            val ops = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+            ops.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                context.packageName
+            ) == AppOpsManager.MODE_ALLOWED
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private fun startOfDayTimestamp(dayOffset: Int): Long {

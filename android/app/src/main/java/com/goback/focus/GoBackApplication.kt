@@ -37,8 +37,46 @@ class GoBackApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        ensureNotificationChannels(this)
-        scheduleMaintenanceWorker()
+        initCrashHandler()
+        try {
+            ensureNotificationChannels(this)
+        } catch (e: Throwable) {
+            android.util.Log.e("GoBackApplication", "Failed to initialize notification channels", e)
+        }
+        try {
+            scheduleMaintenanceWorker()
+        } catch (e: Throwable) {
+            android.util.Log.e("GoBackApplication", "Failed to schedule maintenance worker", e)
+        }
+    }
+
+    private fun initCrashHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                android.util.Log.e("GoBackCrash", "CRITICAL UNCAUGHT EXCEPTION in thread ${thread.name}", throwable)
+                val crashFile = java.io.File(filesDir, "crash_log.txt")
+                java.io.FileOutputStream(crashFile).use { fos ->
+                    java.io.PrintWriter(fos).use { pw ->
+                        pw.println("--- Go Back Crash Report ---")
+                        pw.println("Time: ${java.util.Date()}")
+                        pw.println("Thread: ${thread.name} (id: ${thread.id})")
+                        pw.println("Exception: ${throwable.javaClass.name}: ${throwable.message}")
+                        throwable.printStackTrace(pw)
+                        var cause = throwable.cause
+                        while (cause != null) {
+                            pw.println("Caused by: ${cause.javaClass.name}: ${cause.message}")
+                            cause.printStackTrace(pw)
+                            cause = cause.cause
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                android.util.Log.e("GoBackCrash", "Failed to write crash log", t)
+            } finally {
+                defaultHandler?.uncaughtException(thread, throwable)
+            }
+        }
     }
 
     private fun scheduleMaintenanceWorker() {
@@ -98,33 +136,37 @@ class GoBackApplication : Application() {
             val safeKey = resourceName.ifBlank { "default" }
             val channelId = "go-back-focus-alerts-sound-$safeKey"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val manager = context.getSystemService(NotificationManager::class.java)
-                    ?: return channelId
-                val soundUri = if (safeKey == "default") {
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                } else {
-                    Uri.parse("android.resource://${context.packageName}/raw/$safeKey")
+                try {
+                    val manager = context.getSystemService(NotificationManager::class.java)
+                        ?: return channelId
+                    val soundUri = if (safeKey == "default") {
+                        runCatching { RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) }.getOrNull()
+                    } else {
+                        Uri.parse("android.resource://${context.packageName}/raw/$safeKey")
+                    }
+                    val attributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    val label = when (safeKey) {
+                        "focus_bell" -> "Soft bell"
+                        "focus_chime" -> "Warm chime"
+                        "focus_digital" -> "Digital alert"
+                        else -> "System default"
+                    }
+                    val channel = NotificationChannel(
+                        channelId,
+                        "Focus finish · $label",
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = "Sound used when a focus timer or Pomodoro phase finishes"
+                        enableVibration(true)
+                        soundUri?.let { setSound(it, attributes) }
+                    }
+                    manager.createNotificationChannel(channel)
+                } catch (e: Throwable) {
+                    android.util.Log.e("GoBackApplication", "Failed to create focus alarm channel: $channelId", e)
                 }
-                val attributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                val label = when (safeKey) {
-                    "focus_bell" -> "Soft bell"
-                    "focus_chime" -> "Warm chime"
-                    "focus_digital" -> "Digital alert"
-                    else -> "System default"
-                }
-                val channel = NotificationChannel(
-                    channelId,
-                    "Focus finish · $label",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Sound used when a focus timer or Pomodoro phase finishes"
-                    enableVibration(true)
-                    soundUri?.let { setSound(it, attributes) }
-                }
-                manager.createNotificationChannel(channel)
             }
             return channelId
         }
@@ -141,15 +183,16 @@ class GoBackApplication : Application() {
          */
         fun ensureNotificationChannels(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val manager = context.getSystemService(NotificationManager::class.java) ?: return
+                try {
+                    val manager = context.getSystemService(NotificationManager::class.java) ?: return
 
-                val audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                    val soundUri = runCatching { RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) }.getOrNull()
 
-                val channels = mutableListOf<NotificationChannel>()
+                    val channels = mutableListOf<NotificationChannel>()
 
                 // 1. Focus Timer status (ongoing silent chronometer)
                 channels += NotificationChannel(
@@ -279,8 +322,11 @@ class GoBackApplication : Application() {
                 }
 
                 manager.createNotificationChannels(channels)
+            } catch (e: Throwable) {
+                android.util.Log.e("GoBackApplication", "Failed to create notification channels", e)
             }
         }
+    }
 
         // =========================================================================
         // Centralized Notification Dispatch Helpers
