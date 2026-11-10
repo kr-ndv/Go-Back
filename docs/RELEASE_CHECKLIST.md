@@ -12,7 +12,7 @@ This repository is prepared for a **source-code release candidate**. No APK, AAB
 - [ ] Test JSON backup / restore, including schema 1–5 backups and malformed files.
 - [ ] Confirm Accessibility, Usage Access, notifications and exact-alarm disclosures are accurate.
 - [ ] Decide whether the historical Tasks / Habits / Goals references are expected in this release; those modules are not present in the latest active source tree.
-- [ ] Select and add the repository's intended software licence.
+- [x] Select and add the repository's intended software licence (MIT License added in repository root).
 - [ ] Configure local release signing credentials if publishing a signed APK. Never commit keystores or passwords.
 
 ## Source-only GitHub Release

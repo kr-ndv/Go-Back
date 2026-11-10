@@ -22,7 +22,7 @@ The repository has been consolidated around the standalone Kotlin / Jetpack Comp
 | Timer alerts | Implemented in source | Verify exact-alarm permission, Do Not Disturb and each custom sound on device |
 | Release signing | Not configured | Use a maintainer-owned signing key kept outside Git |
 | GitHub Actions | Intentionally absent | Do not add an APK-producing workflow unless explicitly requested |
-| Licence | Not selected | Choose and add the intended licence before inviting reuse |
+| Licence | Selected | MIT License added in repository root |
 
 ## Data preservation
 

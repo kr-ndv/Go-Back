@@ -4,10 +4,7 @@ import android.app.StatusBarManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.media.MediaPlayer
-import android.media.RingtoneManager
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,20 +29,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.R
-import com.goback.focus.GoBackApplication
-import com.goback.focus.data.db.GoBackDatabase
-import com.goback.focus.data.entity.SettingEntity
 import com.goback.focus.service.FocusTileService
 import com.goback.focus.ui.components.ProfileAvatar
 import com.goback.focus.ui.components.PinModalMode
 import com.goback.focus.ui.components.SecurityPinDialog
-import com.goback.focus.ui.components.SecurityPinUtil
 import com.goback.focus.ui.theme.CardShape
-import com.goback.focus.ui.theme.ChipShape
-import com.goback.focus.ui.theme.ModalShape
 import com.goback.focus.ui.theme.PillShape
-import kotlinx.coroutines.launch
+import com.goback.focus.ui.viewmodel.SettingsViewModel
 
 data class ThemeColorOption(val name: String, val color: Color)
 
@@ -80,40 +73,21 @@ fun SettingsScreen(
     onNavigateToExams: () -> Unit = {},
     onNavigateToFocusPresets: () -> Unit = {},
     onNavigateToBackupRestore: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val db = remember { GoBackDatabase.getDatabase(context) }
 
-    var profileName by remember { mutableStateOf("") }
-    var profileImageUri by remember { mutableStateOf<String?>(null) }
-    var dailyGoalMinutes by remember { mutableStateOf(120) }
-    var selectedThemeMode by remember { mutableStateOf("system") }
-    var selectedPaletteName by remember { mutableStateOf("Forest") }
-    var selectedAlarmSound by remember { mutableStateOf("default") }
-    var storedPinHash by remember { mutableStateOf<String?>(null) }
-    var feedbackMessage by remember { mutableStateOf<String?>(null) }
-
-    // PIN modal
-    var pinModalVisible by remember { mutableStateOf(false) }
-    var pinModalMode by remember { mutableStateOf(PinModalMode.SET) }
-
-    LaunchedEffect(Unit) {
-        profileName = db.settingDao().getValue("profile.name") ?: ""
-        profileImageUri = db.settingDao().getValue("profile.imageUri")
-        dailyGoalMinutes = db.settingDao().getValue("focus.dailyGoalMinutes")?.toIntOrNull() ?: 120
-        selectedThemeMode = db.settingDao().getValue("theme.mode") ?: "system"
-        selectedPaletteName = db.settingDao().getValue("theme.palette") ?: "Forest"
-        selectedAlarmSound = db.settingDao().getValue("focus.alarmSound") ?: "default"
-        val alarmSoundKey = context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
-            .getString("focus_alarm_sound", selectedAlarmSound) ?: selectedAlarmSound
-        selectedAlarmSound = alarmSoundKey
-        context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
-            .edit().putString("focus_alarm_sound", alarmSoundKey).apply()
-        GoBackApplication.ensureFocusAlarmChannel(context, alarmSoundKey)
-        storedPinHash = db.settingDao().getValue(SecurityPinUtil.PIN_SETTING_KEY)
-    }
+    val profileName by viewModel.profileName.collectAsStateWithLifecycle()
+    val profileImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle()
+    val dailyGoalMinutes by viewModel.dailyGoalMinutes.collectAsStateWithLifecycle()
+    val selectedThemeMode by viewModel.selectedThemeMode.collectAsStateWithLifecycle()
+    val selectedPaletteName by viewModel.selectedPaletteName.collectAsStateWithLifecycle()
+    val selectedAlarmSound by viewModel.selectedAlarmSound.collectAsStateWithLifecycle()
+    val storedPinHash by viewModel.storedPinHash.collectAsStateWithLifecycle()
+    val feedbackMessage by viewModel.feedbackMessage.collectAsStateWithLifecycle()
+    val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
+    val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
 
     val profilePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -122,37 +96,7 @@ fun SettingsScreen(
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            scope.launch {
-                runCatching {
-                    db.settingDao().setValue(SettingEntity("profile.imageUri", uri.toString()))
-                }.onSuccess {
-                    profileImageUri = uri.toString()
-                    feedbackMessage = "Profile photo saved on this device."
-                }.onFailure {
-                    feedbackMessage = "Profile photo could not be saved."
-                }
-            }
-        }
-    }
-
-    fun playPreviewSound(soundKey: String) {
-        try {
-            val resName = soundKey.removeSuffix(".wav").lowercase()
-            val resId = context.resources.getIdentifier(resName, "raw", context.packageName)
-            if (resId != 0) {
-                val mp = MediaPlayer.create(context, resId)
-                mp?.setOnCompletionListener { it.release() }
-                mp?.start()
-            } else {
-                val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val ringtone = RingtoneManager.getRingtone(context, ringtoneUri)
-                ringtone?.play()
-            }
-            feedbackMessage = "Playing sound preview"
-        } catch (_: Exception) {
-            val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(context, ringtoneUri)
-            ringtone?.play()
+            viewModel.saveProfileImageUri(uri.toString())
         }
     }
 
@@ -301,14 +245,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    selectedAlarmSound = key
-                                    scope.launch {
-                                        db.settingDao().setValue(SettingEntity("focus.alarmSound", key))
-                                    }
-                                    context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
-                                        .edit().putString("focus_alarm_sound", key).apply()
-                                    GoBackApplication.ensureFocusAlarmChannel(context, key)
-                                    playPreviewSound(key)
+                                    viewModel.setAlarmSound(key)
                                 }
                                 .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -316,16 +253,12 @@ fun SettingsScreen(
                             RadioButton(
                                 selected = selectedAlarmSound == key,
                                 onClick = {
-                                    selectedAlarmSound = key
-                                    scope.launch {
-                                        db.settingDao().setValue(SettingEntity("focus.alarmSound", key))
-                                    }
-                                    playPreviewSound(key)
+                                    viewModel.setAlarmSound(key)
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { playPreviewSound(key) }) {
+                            IconButton(onClick = { viewModel.playPreviewSound(key) }) {
                                 Icon(Icons.Filled.VolumeUp, contentDescription = "Preview", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
@@ -363,10 +296,7 @@ fun SettingsScreen(
                             FilterChip(
                                 selected = dailyGoalMinutes == goal,
                                 onClick = {
-                                    dailyGoalMinutes = goal
-                                    scope.launch {
-                                        db.settingDao().setValue(SettingEntity("focus.dailyGoalMinutes", goal.toString()))
-                                    }
+                                    viewModel.setDailyGoalMinutes(goal)
                                 },
                                 label = { Text("${goal}m") }
                             )
@@ -398,8 +328,7 @@ fun SettingsScreen(
                             FilterChip(
                                 selected = selectedThemeMode == mode,
                                 onClick = {
-                                    selectedThemeMode = mode
-                                    scope.launch { db.settingDao().setValue(SettingEntity("theme.mode", mode)) }
+                                    viewModel.setThemeMode(mode)
                                 },
                                 label = { Text(label) },
                                 leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) }
@@ -421,8 +350,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier
                                     .clickable {
-                                        selectedPaletteName = pal.name
-                                        scope.launch { db.settingDao().setValue(SettingEntity("theme.palette", pal.name)) }
+                                        viewModel.setThemePalette(pal.name)
                                     }
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
@@ -481,20 +409,29 @@ fun SettingsScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         if (storedPinHash.isNullOrEmpty()) {
                             Button(
-                                onClick = { pinModalMode = PinModalMode.SET; pinModalVisible = true },
+                                onClick = {
+                                    viewModel.setPinModalMode(PinModalMode.SET)
+                                    viewModel.setPinModalVisible(true)
+                                },
                                 shape = PillShape
                             ) {
                                 Text("Set 4-Digit PIN")
                             }
                         } else {
                             Button(
-                                onClick = { pinModalMode = PinModalMode.SET; pinModalVisible = true },
+                                onClick = {
+                                    viewModel.setPinModalMode(PinModalMode.SET)
+                                    viewModel.setPinModalVisible(true)
+                                },
                                 shape = PillShape
                             ) {
                                 Text("Change PIN")
                             }
                             OutlinedButton(
-                                onClick = { pinModalMode = PinModalMode.REMOVE; pinModalVisible = true },
+                                onClick = {
+                                    viewModel.setPinModalMode(PinModalMode.REMOVE)
+                                    viewModel.setPinModalVisible(true)
+                                },
                                 shape = PillShape
                             ) {
                                 Text("Remove PIN", color = MaterialTheme.colorScheme.error)
@@ -572,7 +509,7 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = profileName,
-                            onValueChange = { profileName = it.take(60) },
+                            onValueChange = { viewModel.setProfileName(it.take(60)) },
                             placeholder = { Text("Your name (optional)") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
@@ -580,10 +517,7 @@ fun SettingsScreen(
                         )
                         Button(
                             onClick = {
-                                scope.launch {
-                                    db.settingDao().setValue(SettingEntity("profile.name", profileName.trim()))
-                                    feedbackMessage = "Profile name saved."
-                                }
+                                viewModel.saveProfileName()
                             },
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.height(52.dp)
@@ -615,23 +549,11 @@ fun SettingsScreen(
             mode = pinModalMode,
             storedPinHash = storedPinHash,
             onSuccess = { newPin ->
-                pinModalVisible = false
-                if (pinModalMode == PinModalMode.SET && newPin != null) {
-                    scope.launch {
-                        val hashed = SecurityPinUtil.hashPin(newPin)
-                        db.settingDao().setValue(SettingEntity(SecurityPinUtil.PIN_SETTING_KEY, hashed))
-                        storedPinHash = hashed
-                        feedbackMessage = "Security PIN successfully updated."
-                    }
-                } else if (pinModalMode == PinModalMode.REMOVE) {
-                    scope.launch {
-                        db.settingDao().delete(SecurityPinUtil.PIN_SETTING_KEY)
-                        storedPinHash = null
-                        feedbackMessage = "Security PIN removed."
-                    }
-                }
+                viewModel.onPinSuccess(newPin)
             },
-            onDismiss = { pinModalVisible = false }
+            onDismiss = {
+                viewModel.setPinModalVisible(false)
+            }
         )
     }
 }

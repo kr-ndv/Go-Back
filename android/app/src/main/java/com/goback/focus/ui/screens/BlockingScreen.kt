@@ -1,12 +1,7 @@
 package com.goback.focus.ui.screens
 
-import android.accessibilityservice.AccessibilityServiceInfo
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.ApplicationInfo
 import android.provider.Settings
-import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,20 +25,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.goback.focus.data.db.GoBackDatabase
-import com.goback.focus.data.entity.SettingEntity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.ui.components.PinModalMode
 import com.goback.focus.ui.components.SecurityPinDialog
-import com.goback.focus.ui.components.SecurityPinUtil
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.ChipShape
 import com.goback.focus.ui.theme.PillShape
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.Locale
+import com.goback.focus.ui.viewmodel.BlockingViewModel
 
 data class LaunchableApp(
     val packageName: String,
@@ -69,184 +58,26 @@ data class BlockingConfigState(
 @Composable
 fun BlockingScreen(
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: BlockingViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val db = remember { GoBackDatabase.getDatabase(context) }
-    val prefs = remember { context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE) }
 
-    var config by remember { mutableStateOf(BlockingConfigState()) }
-    var installedApps by remember { mutableStateOf<List<LaunchableApp>>(emptyList()) }
-    var appSearchQuery by remember { mutableStateOf("") }
-    var showSystemApps by remember { mutableStateOf(false) }
-    var selectedOnly by remember { mutableStateOf(false) }
-
-    var channelInputText by remember { mutableStateOf("") }
-    var isAccessibilityEnabled by remember { mutableStateOf(false) }
-    var lastActionDiagnostic by remember { mutableStateOf("") }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
-    var hasUnsavedChanges by remember { mutableStateOf(false) }
-
-    // Security PIN state
-    var storedPinHash by remember { mutableStateOf<String?>(null) }
-    var isPinUnlocked by remember { mutableStateOf(false) }
-    var pinModalVisible by remember { mutableStateOf(false) }
-    var pinModalMode by remember { mutableStateOf(PinModalMode.VERIFY) }
-
-    fun checkAccessibilityStatus(): Boolean {
-        return try {
-            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val enabledViaList = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)?.any {
-                it.resolveInfo.serviceInfo.packageName == context.packageName &&
-                        it.resolveInfo.serviceInfo.name.endsWith("GoBackBlockingService")
-            } ?: false
-            val enabledServices = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
-            val enabledViaSettings = enabledServices.split(':').any {
-                it.contains("GoBackBlockingService", ignoreCase = true) && it.contains(context.packageName, ignoreCase = true)
-            }
-            enabledViaList || enabledViaSettings
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    fun loadConfiguration() {
-        val blocked = prefs.getStringSet("blocked_packages", emptySet()) ?: emptySet()
-        val channels = prefs.getStringSet("youtube_allowed_channels", emptySet()) ?: emptySet()
-        val reason = prefs.getString("last_action_reason", "").orEmpty()
-
-        config = BlockingConfigState(
-            blockOnlyDuringFocus = prefs.getBoolean("block_only_during_focus", false),
-            strictMode = prefs.getBoolean("strict_mode_active", false),
-            strictUninstallProtection = prefs.getBoolean("strict_uninstall_protection", false),
-            blockSplitScreen = prefs.getBoolean("block_split_screen", false),
-            blockShorts = prefs.getBoolean("block_shorts", false),
-            blockReels = prefs.getBoolean("block_reels", false),
-            blockSpotlight = prefs.getBoolean("block_spotlight", false),
-            blockAdultSites = prefs.getBoolean("block_adult", false),
-            blockYoutube = prefs.getBoolean("youtube_study_mode", false),
-            allowedChannels = channels,
-            blockedPackages = blocked
-        )
-        isAccessibilityEnabled = checkAccessibilityStatus()
-        lastActionDiagnostic = reason
-        hasUnsavedChanges = false
-    }
-
-    // Initial load
-    LaunchedEffect(Unit) {
-        loadConfiguration()
-
-        // Check PIN in Room SettingDao
-        val pin = db.settingDao().getValue(SecurityPinUtil.PIN_SETTING_KEY)
-        storedPinHash = pin
-        if (!pin.isNullOrEmpty() && !isPinUnlocked) {
-            pinModalMode = PinModalMode.VERIFY
-            pinModalVisible = true
-        } else {
-            isPinUnlocked = true
-        }
-
-        // Query installed launchable apps in background
-        withContext(Dispatchers.IO) {
-            val pm = context.packageManager
-            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val list = pm.queryIntentActivities(intent, 0).mapNotNull { resolve ->
-                val appInfo = resolve.activityInfo?.applicationInfo ?: return@mapNotNull null
-                if (appInfo.packageName == context.packageName) return@mapNotNull null
-                val label = resolve.loadLabel(pm)?.toString()?.trim().orEmpty()
-                if (label.isEmpty()) return@mapNotNull null
-                val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                LaunchableApp(appInfo.packageName, label, isSystem)
-            }.distinctBy { it.packageName }.sortedBy { it.appName.lowercase(Locale.ROOT) }
-            installedApps = list
-        }
-    }
-
-    fun saveRules() {
-        scope.launch {
-            val jsonConfig = JSONObject().apply {
-                put("blockYoutube", config.blockYoutube)
-                put("blockShorts", config.blockShorts)
-                put("blockReels", config.blockReels)
-                put("blockSpotlight", config.blockSpotlight)
-                put("blockAdultSites", config.blockAdultSites)
-                put("blockSplitScreen", config.blockSplitScreen)
-                put("strictUninstallProtection", config.strictUninstallProtection)
-                put("strictMode", config.strictMode)
-                put("blockOnlyDuringFocus", config.blockOnlyDuringFocus)
-                put("allowedChannels", JSONArray(config.allowedChannels))
-                put("blockedPackages", JSONArray(config.blockedPackages))
-            }
-
-            prefs.edit()
-                .putStringSet("blocked_packages", config.blockedPackages)
-                .putStringSet("youtube_allowed_channels", config.allowedChannels)
-                .putBoolean("block_only_during_focus", config.blockOnlyDuringFocus)
-                .putBoolean("strict_mode_active", config.strictMode)
-                .putBoolean("strict_uninstall_protection", config.strictUninstallProtection)
-                .putBoolean("block_split_screen", config.blockSplitScreen)
-                .putBoolean("block_adult", config.blockAdultSites)
-                .putBoolean("block_shorts", config.blockShorts)
-                .putBoolean("youtube_study_mode", config.blockYoutube)
-                .putBoolean("block_reels", config.blockReels)
-                .putBoolean("block_spotlight", config.blockSpotlight)
-                .putString("config", jsonConfig.toString())
-                .apply()
-
-            hasUnsavedChanges = false
-            statusMessage = if (isAccessibilityEnabled) "Blocking rules saved & actively enforced."
-            else "Rules saved. Enable Go Back in Accessibility settings to activate."
-        }
-    }
-
-    fun addChannel() {
-        val clean = channelInputText.trim().replace("\\s+".toRegex(), " ")
-        if (clean.isEmpty()) return
-        if (clean.length > 80) {
-            statusMessage = "Channel name is too long (max 80 chars)."
-            return
-        }
-        if (config.allowedChannels.size >= 50) {
-            statusMessage = "Allowlist is full (max 50 channels)."
-            return
-        }
-        config = config.copy(allowedChannels = config.allowedChannels + clean)
-        channelInputText = ""
-        hasUnsavedChanges = true
-    }
-
-    fun removeChannel(channel: String) {
-        config = config.copy(allowedChannels = config.allowedChannels - channel)
-        hasUnsavedChanges = true
-    }
-
-    fun toggleBlockedPackage(pkg: String) {
-        val current = config.blockedPackages
-        if (current.contains(pkg)) {
-            config = config.copy(blockedPackages = current - pkg)
-            hasUnsavedChanges = true
-        } else {
-            if (current.size >= 100) {
-                statusMessage = "Whole-app block limit reached (max 100 apps)."
-                return
-            }
-            config = config.copy(blockedPackages = current + pkg)
-            hasUnsavedChanges = true
-        }
-    }
-
-    val filteredApps = remember(installedApps, appSearchQuery, showSystemApps, selectedOnly, config.blockedPackages) {
-        installedApps.filter { app ->
-            val matchesQuery = appSearchQuery.isEmpty() ||
-                    app.appName.contains(appSearchQuery, ignoreCase = true) ||
-                    app.packageName.contains(appSearchQuery, ignoreCase = true)
-            val matchesSystem = showSystemApps || !app.isSystemApp
-            val matchesSelected = !selectedOnly || config.blockedPackages.contains(app.packageName)
-            matchesQuery && matchesSystem && matchesSelected
-        }
-    }
+    val config by viewModel.config.collectAsStateWithLifecycle()
+    val installedApps by viewModel.installedApps.collectAsStateWithLifecycle()
+    val appSearchQuery by viewModel.appSearchQuery.collectAsStateWithLifecycle()
+    val showSystemApps by viewModel.showSystemApps.collectAsStateWithLifecycle()
+    val selectedOnly by viewModel.selectedOnly.collectAsStateWithLifecycle()
+    val channelInputText by viewModel.channelInputText.collectAsStateWithLifecycle()
+    val isAccessibilityEnabled by viewModel.isAccessibilityEnabled.collectAsStateWithLifecycle()
+    val lastActionDiagnostic by viewModel.lastActionDiagnostic.collectAsStateWithLifecycle()
+    val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
+    val hasUnsavedChanges by viewModel.hasUnsavedChanges.collectAsStateWithLifecycle()
+    val storedPinHash by viewModel.storedPinHash.collectAsStateWithLifecycle()
+    val isPinUnlocked by viewModel.isPinUnlocked.collectAsStateWithLifecycle()
+    val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
+    val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
+    val filteredApps by viewModel.filteredApps.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -259,7 +90,7 @@ fun BlockingScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { loadConfiguration() }) {
+                    IconButton(onClick = { viewModel.loadConfiguration() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh Status")
                     }
                 }
@@ -372,28 +203,28 @@ fun BlockingScreen(
                             title = "Only block during focus sessions",
                             detail = "Enforce blocking rules only while a focus countdown or stopwatch is active.",
                             value = config.blockOnlyDuringFocus,
-                            onValueChange = { config = config.copy(blockOnlyDuringFocus = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockOnlyDuringFocus = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Strict Mode (Challenge to exit)",
                             detail = "Requires typing commitment phrase 'I choose to break my focus' before canceling early.",
                             value = config.strictMode,
-                            onValueChange = { config = config.copy(strictMode = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(strictMode = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Settings & Uninstall Protection",
                             detail = "Prevents opening Android Settings to force-stop or uninstall Go Back while active.",
                             value = config.strictUninstallProtection,
-                            onValueChange = { config = config.copy(strictUninstallProtection = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(strictUninstallProtection = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Block Floating & Split-Screen Windows",
                             detail = "Immediately terminates blocked apps if launched in split-screen or multi-window mode.",
                             value = config.blockSplitScreen,
-                            onValueChange = { config = config.copy(blockSplitScreen = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockSplitScreen = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
@@ -402,8 +233,8 @@ fun BlockingScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    pinModalMode = if (storedPinHash.isNullOrEmpty()) PinModalMode.SET else PinModalMode.REMOVE
-                                    pinModalVisible = true
+                                    viewModel.setPinModalMode(if (storedPinHash.isNullOrEmpty()) PinModalMode.SET else PinModalMode.REMOVE)
+                                    viewModel.setPinModalVisible(true)
                                 }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -443,28 +274,28 @@ fun BlockingScreen(
                             title = "Block YouTube Shorts",
                             detail = "Automatically navigates Back when the Shorts feed or tab is detected in YouTube.",
                             value = config.blockShorts,
-                            onValueChange = { config = config.copy(blockShorts = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockShorts = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Block Instagram Reels",
                             detail = "Closes the Reels surface immediately upon detection in Instagram.",
                             value = config.blockReels,
-                            onValueChange = { config = config.copy(blockReels = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockReels = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Block Snapchat Spotlight",
                             detail = "Navigates away from Spotlight videos inside Snapchat.",
                             value = config.blockSpotlight,
-                            onValueChange = { config = config.copy(blockSpotlight = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockSpotlight = checked) } }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         ToggleRow(
                             title = "Block Adult Websites",
                             detail = "Monitors browser address bars across Chrome, Firefox, Edge, Brave, Samsung Internet & DuckDuckGo.",
                             value = config.blockAdultSites,
-                            onValueChange = { config = config.copy(blockAdultSites = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockAdultSites = checked) } }
                         )
                     }
                 }
@@ -486,7 +317,7 @@ fun BlockingScreen(
                             title = "Limit YouTube to Allowed Channels",
                             detail = "Dismisses video player and miniplayers when watching channels not on your study allowlist.",
                             value = config.blockYoutube,
-                            onValueChange = { config = config.copy(blockYoutube = it); hasUnsavedChanges = true }
+                            onValueChange = { checked -> viewModel.updateConfig { it.copy(blockYoutube = checked) } }
                         )
 
                         AnimatedVisibility(visible = config.blockYoutube) {
@@ -498,14 +329,14 @@ fun BlockingScreen(
                                 ) {
                                     OutlinedTextField(
                                         value = channelInputText,
-                                        onValueChange = { channelInputText = it },
+                                        onValueChange = { viewModel.setChannelInputText(it) },
                                         placeholder = { Text("@handle or channel name", fontSize = 13.sp) },
                                         singleLine = true,
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp)
                                     )
                                     Button(
-                                        onClick = { addChannel() },
+                                        onClick = { viewModel.addChannel() },
                                         shape = RoundedCornerShape(14.dp),
                                         modifier = Modifier.height(52.dp)
                                     ) {
@@ -522,7 +353,7 @@ fun BlockingScreen(
                                         config.allowedChannels.forEach { channel ->
                                             InputChip(
                                                 selected = true,
-                                                onClick = { removeChannel(channel) },
+                                                onClick = { viewModel.removeChannel(channel) },
                                                 label = { Text(channel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                                 trailingIcon = { Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp)) },
                                                 shape = ChipShape
@@ -568,12 +399,12 @@ fun BlockingScreen(
                 // Search Box
                 OutlinedTextField(
                     value = appSearchQuery,
-                    onValueChange = { appSearchQuery = it },
+                    onValueChange = { viewModel.setAppSearchQuery(it) },
                     placeholder = { Text("Search apps by name or package…", fontSize = 13.sp) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (appSearchQuery.isNotEmpty()) {
-                            IconButton(onClick = { appSearchQuery = "" }) {
+                            IconButton(onClick = { viewModel.setAppSearchQuery("") }) {
                                 Icon(Icons.Filled.Clear, contentDescription = "Clear search")
                             }
                         }
@@ -589,12 +420,12 @@ fun BlockingScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = selectedOnly,
-                        onClick = { selectedOnly = !selectedOnly },
+                        onClick = { viewModel.setSelectedOnly(!selectedOnly) },
                         label = { Text("Selected (${config.blockedPackages.size})") }
                     )
                     FilterChip(
                         selected = showSystemApps,
-                        onClick = { showSystemApps = !showSystemApps },
+                        onClick = { viewModel.setShowSystemApps(!showSystemApps) },
                         label = { Text("Include System Apps") }
                     )
                 }
@@ -629,7 +460,7 @@ fun BlockingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { toggleBlockedPackage(app.packageName) }
+                                .clickable { viewModel.toggleBlockedPackage(app.packageName) }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -672,7 +503,7 @@ fun BlockingScreen(
 
                             Switch(
                                 checked = isBlocked,
-                                onCheckedChange = { toggleBlockedPackage(app.packageName) }
+                                onCheckedChange = { viewModel.toggleBlockedPackage(app.packageName) }
                             )
                         }
                     }
@@ -683,7 +514,7 @@ fun BlockingScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = { saveRules() },
+                    onClick = { viewModel.saveRules() },
                     shape = PillShape,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -718,28 +549,10 @@ fun BlockingScreen(
             mode = pinModalMode,
             storedPinHash = storedPinHash,
             onSuccess = { newPin ->
-                pinModalVisible = false
-                isPinUnlocked = true
-                if (pinModalMode == PinModalMode.SET && newPin != null) {
-                    scope.launch {
-                        val hashed = SecurityPinUtil.hashPin(newPin)
-                        db.settingDao().setValue(SettingEntity(SecurityPinUtil.PIN_SETTING_KEY, hashed))
-                        storedPinHash = hashed
-                        statusMessage = "Security PIN enabled."
-                    }
-                } else if (pinModalMode == PinModalMode.REMOVE) {
-                    scope.launch {
-                        db.settingDao().delete(SecurityPinUtil.PIN_SETTING_KEY)
-                        storedPinHash = null
-                        statusMessage = "Security PIN removed."
-                    }
-                }
+                viewModel.onPinSuccess(newPin)
             },
             onDismiss = {
-                pinModalVisible = false
-                if (!isPinUnlocked) {
-                    onNavigateBack()
-                }
+                viewModel.onPinDismiss(onNavigateBack)
             }
         )
     }

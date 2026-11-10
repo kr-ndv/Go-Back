@@ -24,6 +24,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.ModalShape
+import kotlinx.coroutines.delay
 
 object SecurityPinUtil {
     const val PIN_SETTING_KEY = "security.pin"
@@ -77,6 +78,15 @@ fun SecurityPinDialog(
     var enteredDigits by remember { mutableStateOf("") }
     var firstAttemptPin by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var failedAttempts by remember { mutableStateOf(0) }
+    var lockoutSecondsRemaining by remember { mutableStateOf(0) }
+
+    LaunchedEffect(lockoutSecondsRemaining) {
+        if (lockoutSecondsRemaining > 0) {
+            delay(1000L)
+            lockoutSecondsRemaining -= 1
+        }
+    }
 
     val isStepTwoConfirm = mode == PinModalMode.SET && firstAttemptPin != null
 
@@ -86,13 +96,15 @@ fun SecurityPinDialog(
         PinModalMode.REMOVE -> "Verify PIN to Remove"
     }
 
-    val subtitle = when (mode) {
-        PinModalMode.VERIFY -> "Enter your 4-digit PIN to access protection settings."
-        PinModalMode.SET -> if (isStepTwoConfirm) "Re-enter the exact same 4 digits to confirm." else "Choose a 4-digit PIN to prevent impulse bypasses."
-        PinModalMode.REMOVE -> "Confirm your current PIN to turn off security protection."
+    val subtitle = when {
+        lockoutSecondsRemaining > 0 -> "Too many incorrect attempts. Please wait $lockoutSecondsRemaining seconds."
+        mode == PinModalMode.VERIFY -> "Enter your 4-digit PIN to access protection settings."
+        mode == PinModalMode.SET -> if (isStepTwoConfirm) "Re-enter the exact same 4 digits to confirm." else "Choose a 4-digit PIN to prevent impulse bypasses."
+        else -> "Confirm your current PIN to turn off security protection."
     }
 
     fun handleDigit(digit: String) {
+        if (lockoutSecondsRemaining > 0) return
         if (enteredDigits.length < 4) {
             errorMessage = null
             val next = enteredDigits + digit
@@ -101,17 +113,35 @@ fun SecurityPinDialog(
                 when (mode) {
                     PinModalMode.VERIFY -> {
                         if (SecurityPinUtil.matchesPin(storedPinHash, next)) {
+                            failedAttempts = 0
                             onSuccess(null)
                         } else {
-                            errorMessage = "Incorrect PIN. Please try again."
+                            failedAttempts++
+                            if (failedAttempts >= 5) {
+                                lockoutSecondsRemaining = 30
+                                failedAttempts = 0
+                                errorMessage = "Too many failed attempts. Locked for 30 seconds."
+                            } else {
+                                val remaining = 5 - failedAttempts
+                                errorMessage = "Incorrect PIN. $remaining attempt${if (remaining == 1) "" else "s"} remaining."
+                            }
                             enteredDigits = ""
                         }
                     }
                     PinModalMode.REMOVE -> {
                         if (SecurityPinUtil.matchesPin(storedPinHash, next)) {
+                            failedAttempts = 0
                             onSuccess(null)
                         } else {
-                            errorMessage = "Incorrect PIN. Verification failed."
+                            failedAttempts++
+                            if (failedAttempts >= 5) {
+                                lockoutSecondsRemaining = 30
+                                failedAttempts = 0
+                                errorMessage = "Too many failed attempts. Locked for 30 seconds."
+                            } else {
+                                val remaining = 5 - failedAttempts
+                                errorMessage = "Incorrect PIN. $remaining attempt${if (remaining == 1) "" else "s"} remaining."
+                            }
                             enteredDigits = ""
                         }
                     }
@@ -135,6 +165,7 @@ fun SecurityPinDialog(
     }
 
     fun handleBackspace() {
+        if (lockoutSecondsRemaining > 0) return
         if (enteredDigits.isNotEmpty()) {
             errorMessage = null
             enteredDigits = enteredDigits.dropLast(1)
@@ -255,7 +286,7 @@ fun SecurityPinDialog(
                                             if (key == "CANCEL" || key == "DEL") MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                             else MaterialTheme.colorScheme.surfaceVariant
                                         )
-                                        .clickable {
+                                        .clickable(enabled = lockoutSecondsRemaining == 0 || key == "CANCEL") {
                                             when (key) {
                                                 "CANCEL" -> onDismiss()
                                                 "DEL" -> handleBackspace()

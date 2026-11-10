@@ -78,4 +78,6 @@ assets/icon.svg Source artwork for the launcher icon
 
 See [the release checklist](docs/RELEASE_CHECKLIST.md), [the test matrix](docs/RELEASE_TEST_MATRIX.md) and [production readiness notes](docs/PRODUCTION_READINESS.md).
 
-The repository does not currently declare a software licence. Choose and add a licence before describing the project as open source for reuse or redistribution.
+## Licence
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,8 +1,5 @@
 package com.goback.focus.ui.screens
 
-import android.content.Intent
-import android.content.Context
-import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,128 +13,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.goback.focus.data.db.GoBackDatabase
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.data.entity.FocusPresetEntity
-import com.goback.focus.logic.FocusMode
 import com.goback.focus.ui.theme.CardShape
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.goback.focus.ui.viewmodel.FocusPresetsViewModel
 import org.json.JSONArray
-import org.json.JSONObject
-import java.time.Instant
-import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FocusPresetsScreen(
     onNavigateBack: () -> Unit,
     onApplyPreset: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: FocusPresetsViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-    val database = remember { GoBackDatabase.getDatabase(context) }
-    val scope = rememberCoroutineScope()
-    val presets by database.focusPresetDao().getAll().collectAsStateWithLifecycle(initialValue = emptyList())
-
-    var name by remember { mutableStateOf("") }
-    var mode by remember { mutableStateOf("timer") }
-    var duration by remember { mutableStateOf("25") }
-    var appSearch by remember { mutableStateOf("") }
-    var installedApps by remember { mutableStateOf<List<LaunchableApp>>(emptyList()) }
-    var selectedPackages by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var saving by remember { mutableStateOf(false) }
-    var presetToDelete by remember { mutableStateOf<FocusPresetEntity?>(null) }
-
-    LaunchedEffect(Unit) {
-        installedApps = withContext(Dispatchers.IO) {
-            val pm = context.packageManager
-            val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            runCatching {
-                pm.queryIntentActivities(query, 0).mapNotNull { resolve ->
-                    val info = resolve.activityInfo?.applicationInfo ?: return@mapNotNull null
-                    if (info.packageName == context.packageName) return@mapNotNull null
-                    val label = resolve.loadLabel(pm)?.toString()?.trim().orEmpty()
-                    if (label.isBlank()) return@mapNotNull null
-                    LaunchableApp(
-                        packageName = info.packageName,
-                        appName = label,
-                        isSystemApp = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    )
-                }.distinctBy { it.packageName }.sortedBy { it.appName.lowercase() }
-            }.getOrDefault(emptyList())
-        }
-    }
-
-    val visibleApps = remember(installedApps, appSearch) {
-        val query = appSearch.trim().lowercase()
-        installedApps.filter {
-            query.isBlank() || it.appName.lowercase().contains(query) || it.packageName.lowercase().contains(query)
-        }
-    }
-
-    fun savePreset() {
-        val cleanName = name.trim()
-        val minutes = duration.trim().toIntOrNull()
-        if (cleanName.isBlank()) {
-            error = "Enter a name for this preset."
-            return
-        }
-        if (mode != "stopwatch" && (minutes == null || minutes !in 1..180)) {
-            error = "Choose a timer duration from 1 to 180 minutes."
-            return
-        }
-        if (selectedPackages.size > 100) {
-            error = "A preset can block up to 100 apps."
-            return
-        }
-        saving = true
-        error = null
-        scope.launch {
-            runCatching {
-                database.focusPresetDao().upsert(
-                    FocusPresetEntity(
-                        id = "preset_${UUID.randomUUID()}",
-                        name = cleanName.take(60),
-                        mode = mode,
-                        durationMinutes = if (mode == "stopwatch") 25 else minutes!!,
-                        blockedPackagesJson = JSONArray(selectedPackages.sorted()).toString(),
-                        createdAt = Instant.now().toString()
-                    )
-                )
-            }.onSuccess {
-                name = ""
-                mode = "timer"
-                duration = "25"
-                selectedPackages = emptySet()
-                appSearch = ""
-            }.onFailure {
-                error = "The preset could not be saved. Please try again."
-            }
-            saving = false
-        }
-    }
-
-    fun applyPreset(preset: FocusPresetEntity) {
-        val packages = runCatching {
-            val array = JSONArray(preset.blockedPackagesJson)
-            List(array.length()) { array.optString(it) }.filter { it.isNotBlank() }
-        }.getOrDefault(emptyList())
-        val payload = JSONObject()
-            .put("name", preset.name)
-            .put("mode", preset.mode)
-            .put("durationMinutes", preset.durationMinutes)
-            .put("blockedPackages", JSONArray(packages))
-        context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
-            .edit().putString("focus.pending_preset", payload.toString()).apply()
-        onApplyPreset()
-    }
+    val presets by viewModel.presets.collectAsStateWithLifecycle()
+    val installedApps by viewModel.installedApps.collectAsStateWithLifecycle()
+    val name by viewModel.name.collectAsStateWithLifecycle()
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val duration by viewModel.duration.collectAsStateWithLifecycle()
+    val appSearch by viewModel.appSearch.collectAsStateWithLifecycle()
+    val visibleApps by viewModel.visibleApps.collectAsStateWithLifecycle()
+    val selectedPackages by viewModel.selectedPackages.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    val saving by viewModel.saving.collectAsStateWithLifecycle()
+    val presetToDelete by viewModel.presetToDelete.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier,
@@ -171,7 +74,7 @@ fun FocusPresetsScreen(
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedTextField(
                             value = name,
-                            onValueChange = { name = it.take(60) },
+                            onValueChange = { viewModel.setName(it.take(60)) },
                             label = { Text("Preset name") },
                             placeholder = { Text("Deep Work, Reading, Revision…") },
                             singleLine = true,
@@ -181,7 +84,7 @@ fun FocusPresetsScreen(
                             listOf("timer" to "Timer", "pomodoro" to "Pomodoro", "stopwatch" to "Stopwatch").forEach { (value, label) ->
                                 FilterChip(
                                     selected = mode == value,
-                                    onClick = { mode = value },
+                                    onClick = { viewModel.setMode(value) },
                                     label = { Text(label) }
                                 )
                             }
@@ -189,7 +92,7 @@ fun FocusPresetsScreen(
                         if (mode != "stopwatch") {
                             OutlinedTextField(
                                 value = duration,
-                                onValueChange = { duration = it.filter(Char::isDigit).take(3) },
+                                onValueChange = { viewModel.setDuration(it.filter(Char::isDigit).take(3)) },
                                 label = { Text("Duration in minutes") },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -198,7 +101,7 @@ fun FocusPresetsScreen(
                         Text("SESSION APP BLOCKS · OPTIONAL", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         OutlinedTextField(
                             value = appSearch,
-                            onValueChange = { appSearch = it },
+                            onValueChange = { viewModel.setAppSearch(it) },
                             placeholder = { Text("Search installed apps") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
@@ -217,18 +120,14 @@ fun FocusPresetsScreen(
                                 items(visibleApps, key = { it.packageName }) { app ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth().clickable {
-                                            selectedPackages = if (app.packageName in selectedPackages) {
-                                                selectedPackages - app.packageName
-                                            } else if (selectedPackages.size < 100) {
-                                                selectedPackages + app.packageName
-                                            } else selectedPackages
+                                            viewModel.togglePackage(app.packageName)
                                         }.padding(vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Checkbox(
                                             checked = app.packageName in selectedPackages,
-                                            onCheckedChange = { checked ->
-                                                selectedPackages = if (checked) selectedPackages + app.packageName else selectedPackages - app.packageName
+                                            onCheckedChange = { _ ->
+                                                viewModel.togglePackage(app.packageName)
                                             }
                                         )
                                         Column(Modifier.weight(1f)) {
@@ -245,7 +144,7 @@ fun FocusPresetsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Button(
-                            onClick = { savePreset() },
+                            onClick = { viewModel.savePreset() },
                             enabled = !saving,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -276,12 +175,15 @@ fun FocusPresetsScreen(
                                 val time = if (preset.mode == "stopwatch") "Stopwatch" else "${preset.mode.replaceFirstChar { it.uppercase() }} · ${preset.durationMinutes} min"
                                 Text("$time · $blocks app block(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            FilledTonalButton(onClick = { applyPreset(preset) }) {
+                            FilledTonalButton(onClick = {
+                                viewModel.applyPreset(preset)
+                                onApplyPreset()
+                            }) {
                                 Icon(Icons.Filled.PlayArrow, contentDescription = null)
                                 Spacer(Modifier.width(4.dp))
                                 Text("Use")
                             }
-                            IconButton(onClick = { presetToDelete = preset }) {
+                            IconButton(onClick = { viewModel.setPresetToDelete(preset) }) {
                                 Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete ${preset.name}", tint = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -293,16 +195,19 @@ fun FocusPresetsScreen(
 
     presetToDelete?.let { preset ->
         AlertDialog(
-            onDismissRequest = { presetToDelete = null },
+            onDismissRequest = { viewModel.setPresetToDelete(null) },
             title = { Text("Delete preset?") },
             text = { Text("Remove “${preset.name}” from your saved focus presets?") },
             confirmButton = {
-                TextButton(onClick = {
-                    scope.launch { database.focusPresetDao().delete(preset) }
-                    presetToDelete = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = { viewModel.deletePreset(preset) }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
             },
-            dismissButton = { TextButton(onClick = { presetToDelete = null }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { viewModel.setPresetToDelete(null) }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
