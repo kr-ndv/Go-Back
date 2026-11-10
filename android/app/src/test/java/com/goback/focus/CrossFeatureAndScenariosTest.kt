@@ -2,6 +2,7 @@ package com.goback.focus
 
 import org.junit.Assert.*
 import org.junit.Test
+import com.goback.focus.logic.*
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -19,12 +20,12 @@ class CrossFeatureAndScenariosTest {
         val presetBlocked = setOf("com.reddit.frontpage", "com.twitter.android")
 
         // 1. In-flight session with preset-blocked packages
-        val session = FocusTimerAndPomodoroTest.FocusEngine.recoverSession(
+        val session = FocusEngine.recoverSession(
             sessionId = "session-preset-1",
             minutes = 45,
             endAtMs = endAtMs,
-            mode = FocusTimerAndPomodoroTest.FocusMode.TIMER,
-            sessionType = FocusTimerAndPomodoroTest.PomodoroSessionType.FOCUS,
+            mode = FocusMode.TIMER,
+            sessionType = PomodoroSessionType.FOCUS,
             accumulatedElapsed = 900,
             stopwatchRunStartedAtMs = null,
             pomodoroRounds = 0,
@@ -62,12 +63,12 @@ class CrossFeatureAndScenariosTest {
         )
 
         // 2. Later: Session expires
-        val expiredSession = FocusTimerAndPomodoroTest.FocusEngine.recoverSession(
+        val expiredSession = FocusEngine.recoverSession(
             sessionId = "session-preset-1",
             minutes = 45,
             endAtMs = endAtMs,
-            mode = FocusTimerAndPomodoroTest.FocusMode.TIMER,
-            sessionType = FocusTimerAndPomodoroTest.PomodoroSessionType.FOCUS,
+            mode = FocusMode.TIMER,
+            sessionType = PomodoroSessionType.FOCUS,
             accumulatedElapsed = 2700,
             stopwatchRunStartedAtMs = null,
             pomodoroRounds = 0,
@@ -96,19 +97,19 @@ class CrossFeatureAndScenariosTest {
 
         // Strict mode active: user cannot exit manually without challenge phrase
         val challengeAttempt = "I want to stop"
-        assertFalse(FocusTimerAndPomodoroTest.FocusEngine.validateStrictChallenge(challengeAttempt))
+        assertFalse(FocusEngine.validateStrictChallenge(challengeAttempt))
 
         val challengeSuccess = "I choose to break my focus"
-        assertTrue(FocusTimerAndPomodoroTest.FocusEngine.validateStrictChallenge(challengeSuccess))
+        assertTrue(FocusEngine.validateStrictChallenge(challengeSuccess))
 
         // When the timer completes naturally, next phase transitions WITHOUT challenge
-        val nextPhase = FocusTimerAndPomodoroTest.FocusEngine.nextPomodoroPhase(
-            FocusTimerAndPomodoroTest.PomodoroSessionType.FOCUS,
+        val nextPhase = FocusEngine.nextPomodoroPhase(
+            PomodoroSessionType.FOCUS,
             focusRounds
         )
 
         // 4th completed round transitions to Long Break (15 mins)
-        assertEquals(FocusTimerAndPomodoroTest.PomodoroSessionType.LONG_BREAK, nextPhase.sessionType)
+        assertEquals(PomodoroSessionType.LONG_BREAK, nextPhase.sessionType)
         assertEquals(15, nextPhase.minutes)
         assertEquals(4, nextPhase.completedFocusRounds)
     }
@@ -201,24 +202,24 @@ class CrossFeatureAndScenariosTest {
             )
 
             // Transition phase
-            val phase = FocusTimerAndPomodoroTest.FocusEngine.nextPomodoroPhase(
-                FocusTimerAndPomodoroTest.PomodoroSessionType.FOCUS,
+            val phase = FocusEngine.nextPomodoroPhase(
+                PomodoroSessionType.FOCUS,
                 rounds
             )
             rounds = phase.completedFocusRounds
 
             if (round < 4) {
-                assertEquals(FocusTimerAndPomodoroTest.PomodoroSessionType.SHORT_BREAK, phase.sessionType)
+                assertEquals(PomodoroSessionType.SHORT_BREAK, phase.sessionType)
                 assertEquals(5, phase.minutes)
                 // Return to focus after short break
-                val resumePhase = FocusTimerAndPomodoroTest.FocusEngine.nextPomodoroPhase(
-                    FocusTimerAndPomodoroTest.PomodoroSessionType.SHORT_BREAK,
+                val resumePhase = FocusEngine.nextPomodoroPhase(
+                    PomodoroSessionType.SHORT_BREAK,
                     rounds
                 )
-                assertEquals(FocusTimerAndPomodoroTest.PomodoroSessionType.FOCUS, resumePhase.sessionType)
+                assertEquals(PomodoroSessionType.FOCUS, resumePhase.sessionType)
             } else {
                 // 4th round earns Long Break!
-                assertEquals(FocusTimerAndPomodoroTest.PomodoroSessionType.LONG_BREAK, phase.sessionType)
+                assertEquals(PomodoroSessionType.LONG_BREAK, phase.sessionType)
                 assertEquals(15, phase.minutes)
             }
         }
@@ -289,7 +290,7 @@ class CrossFeatureAndScenariosTest {
 
         // 3. At 19:15, student impulsively tries to give up -> strict challenge intercepts!
         val attempt1 = "quit now"
-        assertFalse(FocusTimerAndPomodoroTest.FocusEngine.validateStrictChallenge(attempt1))
+        assertFalse(FocusEngine.validateStrictChallenge(attempt1))
 
         // Student tries opening Settings to force-stop Go Back -> Settings protection blocks it!
         val blockingConfig = BlockingConfigurationTest.BlockingConfig(

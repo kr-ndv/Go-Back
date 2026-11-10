@@ -94,7 +94,15 @@ object ScheduleEvaluationEngine {
             for (i in 0 until arr.length()) {
                 set.add(arr.getInt(i))
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            // JVM unit test fallback when android.jar org.json is a stub
+            try {
+                val cleaned = daysJson.trim().removePrefix("[").removeSuffix("]").trim()
+                if (cleaned.isNotEmpty()) {
+                    cleaned.split(',').mapNotNull { it.trim().toIntOrNull() }.forEach { set.add(it) }
+                }
+            } catch (_: Exception) {}
+        }
         return set
     }
 
@@ -113,7 +121,15 @@ object ScheduleEvaluationEngine {
             for (i in 0 until arr.length()) {
                 set.add(arr.getString(i))
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            // JVM unit test fallback when android.jar org.json is a stub
+            try {
+                val cleaned = skipDatesJson.trim().removePrefix("[").removeSuffix("]").trim()
+                if (cleaned.isNotEmpty()) {
+                    cleaned.split(',').map { it.trim().removeSurrounding("\"").removeSurrounding("'") }.filter { it.isNotEmpty() }.forEach { set.add(it) }
+                }
+            } catch (_: Exception) {}
+        }
         return set
     }
 

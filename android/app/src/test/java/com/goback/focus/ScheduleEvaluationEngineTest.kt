@@ -81,27 +81,24 @@ class ScheduleEvaluationEngineTest {
             createdAt = "2026-01-01"
         )
 
-        // Monday (Calendar.MONDAY = 2, so dayIndex = 1) at 10:30 AM -> Active
+        // Monday at 10:30 AM -> Active
         val activeCal = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 30)
+            set(2026, Calendar.MAY, 4, 10, 30, 0)
+            set(Calendar.MILLISECOND, 0)
         }
         assertTrue(ScheduleEvaluationEngine.isScheduleActive(schedule, activeCal))
 
         // Monday at 11:30 AM -> Inactive (ended at 11:00)
         val afterCal = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            set(Calendar.HOUR_OF_DAY, 11)
-            set(Calendar.MINUTE, 30)
+            set(2026, Calendar.MAY, 4, 11, 30, 0)
+            set(Calendar.MILLISECOND, 0)
         }
         assertFalse(ScheduleEvaluationEngine.isScheduleActive(schedule, afterCal))
 
         // Sunday at 10:30 AM -> Inactive (Sunday is not weekday)
         val weekendCal = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-            set(Calendar.HOUR_OF_DAY, 10)
-            set(Calendar.MINUTE, 30)
+            set(2026, Calendar.MAY, 3, 10, 30, 0)
+            set(Calendar.MILLISECOND, 0)
         }
         assertFalse(ScheduleEvaluationEngine.isScheduleActive(schedule, weekendCal))
 
