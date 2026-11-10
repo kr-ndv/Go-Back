@@ -60,7 +60,8 @@ data class TodayUiState(
     val nextExamFormattedDate: String? = null,
     val nextExamDaysRemaining: Int? = null,
     val totalNotes: Int = 0,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val loadError: String? = null
 )
 
 class TodayViewModel(
@@ -166,6 +167,19 @@ class TodayViewModel(
         }
         .flowOn(Dispatchers.IO)
         .onEach { newState -> _uiState.value = newState }
+        .catch { error ->
+            // A Room open/migration/query failure must not crash the launcher activity.
+            // Keep the dashboard available and retain the exception in logcat for diagnosis.
+            android.util.Log.e(
+                "TodayViewModel",
+                "Unable to load dashboard data from the local database",
+                error
+            )
+            _uiState.value = TodayUiState(
+                isLoading = false,
+                loadError = "Your local data could not be loaded. The app is still available; your stored data has not been intentionally cleared."
+            )
+        }
         .launchIn(viewModelScope)
     }
 
