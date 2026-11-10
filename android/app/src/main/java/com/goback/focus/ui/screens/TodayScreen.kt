@@ -74,20 +74,6 @@ fun TodayScreen(
             .padding(bottom = 84.dp), // Clearance for floating navigation dock
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        state.loadError?.let { message ->
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text(
-                    text = message,
-                    modifier = Modifier.padding(14.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-
         // 1. Top Header & Welcome Greeting
         TopHeaderSection(
             profileName = state.profileName,
