@@ -7,7 +7,10 @@ import org.junit.Test
 class NavTabTest {
 
     @Test
-    fun itemsAreFullyInitializedOnFirstAccess() {
+    fun itemsAreFullyInitializedAfterHomeRouteIsAccessedFirst() {
+        // Mirrors GoBackMainApp: the initial route reads Home before the tab registry.
+        assertEquals("home", NavTab.Home.route)
+
         val tabs = NavTab.items
 
         assertEquals(5, tabs.size)
