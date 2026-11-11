@@ -277,58 +277,69 @@ fun SyllabusScreen(
     var subjectToDelete by remember { mutableStateOf<UiSubject?>(null) }
     var chapterToEdit by remember { mutableStateOf<Pair<UiSubject, UiChapter>?>(null) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Syllabus tracker",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "EVERY CHAPTER COUNTS",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.3.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddSubjectDialog = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Subject", fontWeight = FontWeight.Bold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-    ) { innerPadding ->
+    var newSubjectTitle by remember { mutableStateOf("") }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Overall Progress Card
+            // 1. Top Bar matching 08-exam-planner.jpg (Syllabus tracker)
+            item(key = "top_bar") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onNavigateBack() },
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Syllabus tracker",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.size(40.dp))
+                }
+            }
+
+            // 2. Eyebrow
+            item(key = "eyebrow") {
+                Text(
+                    text = "EVERY CHAPTER COUNTS",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.3.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // 3. Overall Progress Card
             item(key = "overall_progress") {
                 OverallProgressCard(
                     doneChapters = state.doneChapters,
@@ -338,96 +349,132 @@ fun SyllabusScreen(
                 )
             }
 
-            // 2. Section Header
-            item(key = "subjects_header") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            // 4. Inline Add Subject Input Row
+            item(key = "add_subject_row") {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface
                 ) {
-                    Text(
-                        text = "Subjects & modules",
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "${state.subjects.size} subjects",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextField(
+                            value = newSubjectTitle,
+                            onValueChange = { newSubjectTitle = it },
+                            placeholder = {
+                                Text(
+                                    text = "Add a subject...",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        IconButton(
+                            onClick = {
+                                val clean = newSubjectTitle.trim()
+                                if (clean.isNotEmpty()) {
+                                    viewModel.addSubject(clean)
+                                    newSubjectTitle = ""
+                                }
+                            },
+                            enabled = newSubjectTitle.isNotBlank(),
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (newSubjectTitle.isNotBlank())
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = "Add subject",
+                                tint = if (newSubjectTitle.isNotBlank())
+                                    MaterialTheme.colorScheme.onPrimary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
-            // 3. Empty State
+            // 5. Empty State or Subjects List
             if (state.subjects.isEmpty() && !state.isLoading) {
                 item(key = "empty_state") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = CardShape,
+                        shape = RoundedCornerShape(20.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         Column(
                             modifier = Modifier
                                 .padding(28.dp)
                                 .fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Book,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Outlined.Book,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
                             Text(
-                                text = "Build your syllabus checklist",
+                                text = "Build your syllabus checklist.",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Add your academic subjects, then list each chapter. Your completion percentage updates automatically as you check them off.",
+                                text = "Add a subject, then add chapters. Your percentage updates automatically as you tick them off.",
                                 fontSize = 12.sp,
                                 lineHeight = 17.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Button(
-                                onClick = { showAddSubjectDialog = true },
-                                shape = PillShape
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Add first subject", fontWeight = FontWeight.Bold)
-                            }
                         }
                     }
                 }
-            }
 
-            // 4. Subjects List
-            items(state.subjects, key = { it.id }) { subject ->
-                SubjectCard(
-                    subject = subject,
-                    onToggleChapter = { chId -> viewModel.toggleChapterDone(subject.id, chId) },
-                    onAddChapter = { title -> viewModel.addChapter(subject.id, title) },
-                    onEditChapter = { ch -> chapterToEdit = Pair(subject, ch) },
-                    onDeleteChapter = { chId -> viewModel.deleteChapter(subject.id, chId) },
-                    onRenameSubject = { subjectToRename = subject },
-                    onDeleteSubject = { subjectToDelete = subject }
-                )
+                item(key = "footer_tip") {
+                    Text(
+                        text = "Tip: use the subject menu to rename or delete a subject. Edit a chapter with the pencil, or remove it with the delete icon. Everything stays on this device.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                }
+            } else {
+                items(state.subjects, key = { it.id }) { subject ->
+                    SubjectCard(
+                        subject = subject,
+                        onToggleChapter = { chId -> viewModel.toggleChapterDone(subject.id, chId) },
+                        onAddChapter = { title -> viewModel.addChapter(subject.id, title) },
+                        onEditChapter = { ch -> chapterToEdit = Pair(subject, ch) },
+                        onDeleteChapter = { chId -> viewModel.deleteChapter(subject.id, chId) },
+                        onRenameSubject = { subjectToRename = subject },
+                        onDeleteSubject = { subjectToDelete = subject }
+                    )
+                }
             }
         }
     }
@@ -586,9 +633,9 @@ fun OverallProgressCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -650,9 +697,9 @@ fun SubjectCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier.padding(18.dp),

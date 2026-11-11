@@ -243,91 +243,357 @@ fun ExamsScreen(
     viewModel: ExamsViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    var showAddDialog by remember { mutableStateOf(false) }
     var examToDelete by remember { mutableStateOf<UiExamItem?>(null) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Exam planner",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Keep the date in sight",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Exam", fontWeight = FontWeight.Bold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-    ) { innerPadding ->
+    // Inline "Add an exam" form state matching 09-syllabus-tracker.jpg (Exam planner)
+    var inlineSubject by remember { mutableStateOf("") }
+    var inlineDetails by remember { mutableStateOf("") }
+    var showSubjectDropdown by remember { mutableStateOf(false) }
+
+    val defaultCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }
+    var selectedCal by remember { mutableStateOf(defaultCal) }
+    val formattedDisplayDate = remember(selectedCal) {
+        SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()).format(selectedCal.time)
+    }
+    val formattedIsoDate = remember(selectedCal) {
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(selectedCal.time)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Hero Card: UP NEXT
-            state.nextUpcomingExam?.let { nextExam ->
-                item(key = "up_next_hero") {
-                    UpNextHeroCard(exam = nextExam)
+            // 1. Top Bar matching 09-syllabus-tracker.jpg (Exam planner)
+            item(key = "top_bar") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onNavigateBack() },
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Exam planner",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.size(40.dp))
                 }
-            } ?: item(key = "no_upcoming_hero") {
-                NoUpcomingHeroCard(onAddClick = { showAddDialog = true })
             }
 
-            // 2. Upcoming Exams Section
-            if (state.upcomingExams.isNotEmpty()) {
-                item(key = "upcoming_header") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            // 2. Eyebrow
+            item(key = "eyebrow") {
+                Text(
+                    text = "KEEP THE DATE IN SIGHT",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.3.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // 3. Hero Card: Your next milestone starts here.
+            item(key = "hero_card") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarMonth,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
                         Text(
-                            text = "Upcoming timetable",
-                            fontSize = 17.sp,
+                            text = "Your next milestone starts here.",
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+
                         Text(
-                            text = "${state.upcomingExams.size} scheduled",
+                            text = "Add your exams to see countdowns and keep the timetable in one place.",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
+                            lineHeight = 17.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
+            }
 
+            // 4. Section: Add an exam (Inline Form)
+            item(key = "add_exam_section") {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Add an exam",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Select subject field
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Book,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        TextField(
+                                            value = inlineSubject,
+                                            onValueChange = { inlineSubject = it },
+                                            placeholder = {
+                                                Text(
+                                                    text = "Select subject",
+                                                    fontSize = 14.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            },
+                                            singleLine = true,
+                                            colors = TextFieldDefaults.colors(
+                                                focusedContainerColor = Color.Transparent,
+                                                unfocusedContainerColor = Color.Transparent,
+                                                focusedIndicatorColor = Color.Transparent,
+                                                unfocusedIndicatorColor = Color.Transparent
+                                            ),
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (state.syllabusSubjects.isNotEmpty()) {
+                                            IconButton(onClick = { showSubjectDropdown = !showSubjectDropdown }) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.KeyboardArrowDown,
+                                                    contentDescription = "Choose from syllabus",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                DropdownMenu(
+                                    expanded = showSubjectDropdown,
+                                    onDismissRequest = { showSubjectDropdown = false }
+                                ) {
+                                    state.syllabusSubjects.forEach { subj ->
+                                        DropdownMenuItem(
+                                            text = { Text(subj) },
+                                            onClick = {
+                                                inlineSubject = subj
+                                                showSubjectDropdown = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Choose exam date field
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+                                    .clickable {
+                                        android.app.DatePickerDialog(
+                                            context,
+                                            { _, y, m, d ->
+                                                val newCal = Calendar.getInstance().apply {
+                                                    set(y, m, d)
+                                                }
+                                                selectedCal = newCal
+                                            },
+                                            selectedCal.get(Calendar.YEAR),
+                                            selectedCal.get(Calendar.MONTH),
+                                            selectedCal.get(Calendar.DAY_OF_MONTH)
+                                        ).show()
+                                    },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CalendarMonth,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = formattedDisplayDate,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Filled.KeyboardArrowDown,
+                                        contentDescription = "Choose date",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Time / room / notes (optional)
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                TextField(
+                                    value = inlineDetails,
+                                    onValueChange = { inlineDetails = it },
+                                    placeholder = {
+                                        Text(
+                                            text = "Time / room / notes (optional)",
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+
+                            // + Add to timetable Button
+                            Button(
+                                onClick = {
+                                    val cleanSubj = inlineSubject.trim()
+                                    if (cleanSubj.isNotEmpty()) {
+                                        viewModel.addExam(cleanSubj, formattedIsoDate, inlineDetails.trim())
+                                        inlineSubject = ""
+                                        inlineDetails = ""
+                                    }
+                                },
+                                enabled = inlineSubject.isNotBlank(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Add to timetable",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Section: Your timetable
+            item(key = "timetable_header") {
+                Text(
+                    text = "Your timetable",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            if (state.upcomingExams.isEmpty()) {
+                item(key = "empty_timetable") {
+                    Text(
+                        text = "No exams added yet.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            } else {
                 items(state.upcomingExams, key = { it.id }) { exam ->
                     ExamCard(
                         exam = exam,
@@ -336,7 +602,7 @@ fun ExamsScreen(
                 }
             }
 
-            // 3. Past Exams Section
+            // 6. Past Exams Section if any
             if (state.pastExams.isNotEmpty()) {
                 item(key = "past_header") {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -356,18 +622,6 @@ fun ExamsScreen(
                 }
             }
         }
-    }
-
-    // Add Exam Dialog
-    if (showAddDialog) {
-        AddExamDialog(
-            syllabusSubjects = state.syllabusSubjects,
-            onDismiss = { showAddDialog = false },
-            onSave = { title, date, details ->
-                viewModel.addExam(title, date, details)
-                showAddDialog = false
-            }
-        )
     }
 
     // Delete Confirmation Dialog
@@ -534,9 +788,9 @@ fun ExamCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = CardShape,
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier

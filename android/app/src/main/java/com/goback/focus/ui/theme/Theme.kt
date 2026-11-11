@@ -16,19 +16,37 @@ import androidx.compose.ui.platform.LocalContext
 import com.goback.focus.data.db.GoBackDatabase
 import kotlinx.coroutines.flow.catch
 
-private val PaletteColors = mapOf(
-    "Forest" to Color(0xFF365C32),
-    "Blue" to Color(0xFF2563EB),
-    "Violet" to Color(0xFF7C3AED),
-    "Amber" to Color(0xFFD97706),
-    "Rose" to Color(0xFFE11D48),
-    "Teal" to Color(0xFF0D9488),
-    "Berry" to Color(0xFF9333EA),
-    "Sakura" to Color(0xFFEC4899),
-    "Graphite" to Color(0xFF4B5563),
-    "Coral" to Color(0xFFEA580C),
-    "Lavender" to Color(0xFF8B5CF6),
-    "Crimson" to Color(0xFFDC2626)
+data class PaletteColorsDef(
+    val light: Color,
+    val dark: Color,
+    val secondary: Color
+)
+
+val ThemePalettes = mapOf(
+    "Forest" to PaletteColorsDef(Color(0xFF365C32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
+    "Forest Lime" to PaletteColorsDef(Color(0xFF365C32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
+    "Blue" to PaletteColorsDef(Color(0xFF245CA8), Color(0xFF91C2FF), Color(0xFFC4DDFF)),
+    "Ocean Blue" to PaletteColorsDef(Color(0xFF245CA8), Color(0xFF91C2FF), Color(0xFFC4DDFF)),
+    "Violet" to PaletteColorsDef(Color(0xFF6542A6), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
+    "Violet Pulse" to PaletteColorsDef(Color(0xFF6542A6), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
+    "Amber" to PaletteColorsDef(Color(0xFF875000), Color(0xFFFFD18A), Color(0xFFFFE3BA)),
+    "Sunset Amber" to PaletteColorsDef(Color(0xFF875000), Color(0xFFFFD18A), Color(0xFFFFE3BA)),
+    "Rose" to PaletteColorsDef(Color(0xFFA33D62), Color(0xFFFFB1C8), Color(0xFFFFD9E3)),
+    "Rose Quartz" to PaletteColorsDef(Color(0xFFA33D62), Color(0xFFFFB1C8), Color(0xFFFFD9E3)),
+    "Teal" to PaletteColorsDef(Color(0xFF006A68), Color(0xFF72DAD5), Color(0xFFB9F1EC)),
+    "Arctic Teal" to PaletteColorsDef(Color(0xFF006A68), Color(0xFF72DAD5), Color(0xFFB9F1EC)),
+    "Berry" to PaletteColorsDef(Color(0xFF8A3478), Color(0xFFF6A9E8), Color(0xFFFAD7F1)),
+    "Midnight Berry" to PaletteColorsDef(Color(0xFF8A3478), Color(0xFFF6A9E8), Color(0xFFFAD7F1)),
+    "Sakura" to PaletteColorsDef(Color(0xFFA33B78), Color(0xFFFFB0D8), Color(0xFFFFD8E9)),
+    "Sakura Pink" to PaletteColorsDef(Color(0xFFA33B78), Color(0xFFFFB0D8), Color(0xFFFFD8E9)),
+    "Graphite" to PaletteColorsDef(Color(0xFF42665A), Color(0xFFA8DCC8), Color(0xFFD1F0E3)),
+    "Graphite Mint" to PaletteColorsDef(Color(0xFF42665A), Color(0xFFA8DCC8), Color(0xFFD1F0E3)),
+    "Coral" to PaletteColorsDef(Color(0xFFB44732), Color(0xFFFFB4A3), Color(0xFFFFDAD2)),
+    "Coral Bloom" to PaletteColorsDef(Color(0xFFB44732), Color(0xFFFFB4A3), Color(0xFFFFDAD2)),
+    "Lavender" to PaletteColorsDef(Color(0xFF5758A5), Color(0xFFC4C3FF), Color(0xFFE3E1FF)),
+    "Lavender Sky" to PaletteColorsDef(Color(0xFF5758A5), Color(0xFFC4C3FF), Color(0xFFE3E1FF)),
+    "Crimson" to PaletteColorsDef(Color(0xFFA42D3A), Color(0xFFFFB3B8), Color(0xFFFFDADB)),
+    "Crimson Ember" to PaletteColorsDef(Color(0xFFA42D3A), Color(0xFFFFB3B8), Color(0xFFFFDADB))
 )
 
 @Composable
@@ -42,7 +60,7 @@ fun GoBackTheme(
         context.getSharedPreferences("go_back_preferences", Context.MODE_PRIVATE)
     }
     val initialMode = remember(prefs) { prefs.getString("theme.mode", "system") ?: "system" }
-    val initialPalette = remember(prefs) { prefs.getString("theme.palette", "Forest") ?: "Forest" }
+    val initialPalette = remember(prefs) { prefs.getString("theme.palette", "Forest Lime") ?: "Forest Lime" }
 
     val database = remember(context) {
         runCatching { GoBackDatabase.getDatabase(context) }.getOrNull()
@@ -65,21 +83,22 @@ fun GoBackTheme(
         "dark" -> true
         else -> darkTheme
     }
-    val accent = PaletteColors.entries.firstOrNull { it.key.equals(savedPalette, ignoreCase = true) }?.value
-        ?: PaletteColors.getValue("Forest")
-    val onAccent = if (accent.luminance() > 0.48f) Color(0xFF171717) else Color.White
+    val paletteDef = ThemePalettes.entries.firstOrNull { it.key.equals(savedPalette, ignoreCase = true) }?.value
+        ?: ThemePalettes.getValue("Forest")
+    val accent = if (useDarkTheme) paletteDef.dark else paletteDef.light
+    val onAccent = if (accent.luminance() > 0.48f) Color(0xFF10201B) else Color.White
 
     val colorScheme = if (useDarkTheme) {
         darkColorScheme(
             primary = accent,
             onPrimary = onAccent,
-            primaryContainer = accent.copy(alpha = 0.28f),
-            onPrimaryContainer = Color.White,
-            secondary = accent,
-            onSecondary = onAccent,
+            primaryContainer = accent.copy(alpha = 0.20f),
+            onPrimaryContainer = accent,
+            secondary = paletteDef.secondary,
+            onSecondary = Color(0xFF10201B),
             background = ForestBackgroundDark,
             surface = ForestSurfaceDark,
-            surfaceVariant = ForestBorderDark,
+            surfaceVariant = ForestSurfaceElevatedDark,
             onSurface = ForestTextDark,
             onSurfaceVariant = ForestMutedDark,
             outline = ForestBorderDark
@@ -88,13 +107,13 @@ fun GoBackTheme(
         lightColorScheme(
             primary = accent,
             onPrimary = onAccent,
-            primaryContainer = accent.copy(alpha = 0.16f),
+            primaryContainer = paletteDef.secondary,
             onPrimaryContainer = accent,
-            secondary = accent,
-            onSecondary = onAccent,
+            secondary = paletteDef.secondary,
+            onSecondary = Color(0xFF10201B),
             background = ForestBackgroundLight,
             surface = ForestSurfaceLight,
-            surfaceVariant = ForestBorderLight,
+            surfaceVariant = ForestSurfaceElevatedLight,
             onSurface = ForestTextLight,
             onSurfaceVariant = ForestMutedLight,
             outline = ForestBorderLight
