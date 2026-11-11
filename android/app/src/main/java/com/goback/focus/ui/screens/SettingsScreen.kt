@@ -36,6 +36,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.R
 import com.goback.focus.service.FocusTileService
 import com.goback.focus.ui.components.ProfileAvatar
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
+import com.canhub.cropper.CropImageView
 import com.goback.focus.ui.components.PinModalMode
 import com.goback.focus.ui.components.SecurityPinDialog
 import com.goback.focus.ui.theme.CardShape
@@ -90,6 +94,14 @@ fun SettingsScreen(
     val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
     val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
 
+    val profileCropper = rememberLauncherForActivityResult(
+        contract = CropImageContract()
+    ) { result ->
+        if (result.isSuccessful) {
+            result.uriContent?.let { viewModel.saveProfileImageUri(it.toString()) }
+        }
+    }
+
     val profilePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -97,7 +109,17 @@ fun SettingsScreen(
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            viewModel.saveProfileImageUri(uri.toString())
+            profileCropper.launch(
+                CropImageContractOptions(
+                    uri = uri,
+                    cropImageOptions = CropImageOptions(
+                        fixAspectRatio = true,
+                        aspectRatioX = 1,
+                        aspectRatioY = 1,
+                        cropShape = CropImageView.CropShape.OVAL
+                    )
+                )
+            )
         }
     }
 
@@ -345,15 +367,29 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Profile", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text("Add a display name below", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            OutlinedButton(
-                                onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
-                                shape = PillShape,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Icon(Icons.Outlined.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Add profile photo", fontSize = 12.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
+                                    shape = PillShape,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Outlined.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (profileImageUri.isNullOrBlank()) "Add photo" else "Change photo", fontSize = 12.sp)
+                                }
+                                if (!profileImageUri.isNullOrBlank()) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.removeProfileImage() },
+                                        shape = PillShape,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.65f)),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Remove", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             }
                         }
                     }
