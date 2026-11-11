@@ -612,26 +612,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun postCelebrationNotification(goalMinutes: Int) {
-        val context = getApplication<Application>()
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
-        val openIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("route", "focus")
-        }
-        val pending = PendingIntent.getActivity(
-            context,
-            9103,
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        GoBackApplication.postGoalCelebrationNotification(
+            getApplication<Application>(),
+            goalMinutes
         )
-        val notif = NotificationCompat.Builder(context, GoBackApplication.CHANNEL_GOAL_COMPLETED)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("🎉 Daily Focus Goal Completed!")
-            .setContentText("You conquered your ${goalMinutes}-minute focus goal today. Outstanding work!")
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pending)
-            .build()
-        manager.notify(9103, notif)
     }
 }

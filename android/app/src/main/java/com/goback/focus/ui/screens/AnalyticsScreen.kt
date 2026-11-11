@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.theme.CardShape
@@ -58,7 +61,7 @@ fun AnalyticsScreen(
         factory = AnalyticsViewModelFactory(LocalContext.current)
     )
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedTab by remember(initialTab, lockTab) { mutableStateOf(lockTab ?: initialTab) }
     var dailyGoalMinutes by remember { mutableStateOf(120) }
@@ -66,6 +69,20 @@ fun AnalyticsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .pointerInput(selectedTab, lockTab) {
+                if (lockTab == null) {
+                    var horizontalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, amount -> horizontalDrag += amount },
+                        onDragEnd = {
+                            if (horizontalDrag < -72f) selectedTab = AnalyticsViewTab.HISTORY
+                            else if (horizontalDrag > 72f) selectedTab = AnalyticsViewTab.USAGE
+                            horizontalDrag = 0f
+                        },
+                        onDragCancel = { horizontalDrag = 0f }
+                    )
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -115,9 +132,7 @@ fun AnalyticsScreen(
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable {
-                                // Trigger refresh by toggling period
-                                val p = state.period
-                                viewModel.setPeriod(p)
+                                viewModel.refresh()
                             },
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
@@ -237,6 +252,17 @@ fun AnalyticsScreen(
                 }
             }
 
+            // Usage data loading indicator
+            if (state.isLoading) {
+                item {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().clip(PillShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
+
             // Total Over X Days Card
             item {
                 val totalMins = state.screenTimeMs / 60000L
@@ -268,7 +294,11 @@ fun AnalyticsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = if (state.hasUsageAccess) totalStr else "0m",
+                            text = when {
+                            state.isLoading -> "Loading…"
+                            !state.hasUsageAccess -> "0m"
+                            else -> totalStr
+                        },
                             fontSize = 38.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface

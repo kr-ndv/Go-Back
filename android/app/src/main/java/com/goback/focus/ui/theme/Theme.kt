@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import com.goback.focus.data.db.GoBackDatabase
 import kotlinx.coroutines.flow.catch
@@ -124,22 +125,38 @@ fun GoBackTheme(
         val accent = if (useDarkTheme) paletteDef.dark else paletteDef.light
         val onAccent = if (accent.luminance() > 0.48f) Color(0xFF10201B) else Color.White
 
+        // Tint the full Material surface system with the selected palette. Keeping the
+        // tint subtle preserves the premium dark/light neutrals while making dialogs,
+        // menus, sheets, cards and navigation surfaces feel like one coherent theme.
         if (useDarkTheme) {
+            val background = lerp(ForestBackgroundDark, accent, 0.055f)
+            val surface = lerp(ForestSurfaceDark, accent, 0.075f)
+            val elevatedSurface = lerp(ForestSurfaceElevatedDark, accent, 0.12f)
+            val outline = lerp(ForestBorderDark, accent, 0.22f)
             darkColorScheme(
                 primary = accent,
                 onPrimary = onAccent,
-                primaryContainer = accent.copy(alpha = 0.20f),
+                primaryContainer = lerp(Color(0xFF1A342B), accent, 0.28f),
                 onPrimaryContainer = accent,
                 secondary = paletteDef.secondary,
                 onSecondary = Color(0xFF10201B),
-                background = ForestBackgroundDark,
-                surface = ForestSurfaceDark,
-                surfaceVariant = ForestSurfaceElevatedDark,
+                tertiary = paletteDef.secondary,
+                onTertiary = Color(0xFF10201B),
+                background = background,
+                surface = surface,
+                surfaceVariant = elevatedSurface,
                 onSurface = ForestTextDark,
                 onSurfaceVariant = ForestMutedDark,
-                outline = ForestBorderDark
+                outline = outline,
+                outlineVariant = lerp(ForestBorderDark, accent, 0.12f),
+                surfaceTint = accent,
+                inversePrimary = paletteDef.light
             )
         } else {
+            val background = lerp(ForestBackgroundLight, accent, 0.025f)
+            val surface = lerp(ForestSurfaceLight, accent, 0.018f)
+            val elevatedSurface = lerp(ForestSurfaceElevatedLight, accent, 0.045f)
+            val outline = lerp(ForestBorderLight, accent, 0.10f)
             lightColorScheme(
                 primary = accent,
                 onPrimary = onAccent,
@@ -147,12 +164,17 @@ fun GoBackTheme(
                 onPrimaryContainer = accent,
                 secondary = paletteDef.secondary,
                 onSecondary = Color(0xFF10201B),
-                background = ForestBackgroundLight,
-                surface = ForestSurfaceLight,
-                surfaceVariant = ForestSurfaceElevatedLight,
+                tertiary = paletteDef.secondary,
+                onTertiary = Color(0xFF10201B),
+                background = background,
+                surface = surface,
+                surfaceVariant = elevatedSurface,
                 onSurface = ForestTextLight,
                 onSurfaceVariant = ForestMutedLight,
-                outline = ForestBorderLight
+                outline = outline,
+                outlineVariant = lerp(ForestBorderLight, accent, 0.06f),
+                surfaceTint = accent,
+                inversePrimary = paletteDef.dark
             )
         }
     }

@@ -71,6 +71,11 @@ class TodayViewModel(
     private val _uiState = MutableStateFlow(TodayUiState())
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
 
+    // UsageStatsManager queries are relatively expensive. Reuse the dashboard snapshot
+    // briefly when unrelated Room tables (notes, profile, syllabus) emit updates.
+    private var cachedUsageSnapshot: Pair<Long, Int>? = null
+    private var cachedUsageSnapshotAt: Long = 0L
+
     init {
         observeDatabaseAndUsage()
     }
@@ -206,7 +211,12 @@ class TodayViewModel(
     }
 
     private fun queryUsageAndUnlocks(): Pair<Long, Int> {
-        return try {
+        val now = System.currentTimeMillis()
+        cachedUsageSnapshot?.let { cached ->
+            if (now - cachedUsageSnapshotAt < 30_000L) return cached
+        }
+
+        val result = try {
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -214,41 +224,37 @@ class TodayViewModel(
                 set(Calendar.MILLISECOND, 0)
             }
             val startOfDay = calendar.timeInMillis
-            val now = System.currentTimeMillis()
 
-            val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return Pair(0L, 0)
+            val manager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                ?: return Pair(0L, 0)
 
-            // 1. Screen Time Sum
             var screenTimeMs = 0L
-            try {
-                manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startOfDay, now)?.forEach { stat ->
-                    if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
-                        screenTimeMs += stat.totalTimeInForeground
-                    }
+            manager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startOfDay, now)?.forEach { stat ->
+                if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
+                    screenTimeMs += stat.totalTimeInForeground
                 }
-            } catch (_: Throwable) {}
+            }
 
-            // 2. Unlocks via UsageEvents (KEYGUARD_HIDDEN = 18)
             var unlockCount = 0
             try {
                 val events = manager.queryEvents(startOfDay, now)
                 val event = UsageEvents.Event()
                 while (events.hasNextEvent()) {
                     events.getNextEvent(event)
-                    if (event.eventType == 18) { // KEYGUARD_HIDDEN
-                        unlockCount++
-                    }
+                    if (event.eventType == 18) unlockCount++
                 }
             } catch (_: Throwable) {}
 
-            val prefs = context.getSharedPreferences("go_back_unlocks", 0)
-            val fallback = prefs.getInt("today_unlocks", 0)
-            val finalUnlocks = if (unlockCount > 0) unlockCount else fallback
-
-            Pair(screenTimeMs, finalUnlocks)
+            val fallback = context.getSharedPreferences("go_back_unlocks", 0)
+                .getInt("today_unlocks", 0)
+            Pair(screenTimeMs, if (unlockCount > 0) unlockCount else fallback)
         } catch (_: Throwable) {
             Pair(0L, 0)
         }
+
+        cachedUsageSnapshot = result
+        cachedUsageSnapshotAt = now
+        return result
     }
 
     private fun syncWidgetSnapshot(

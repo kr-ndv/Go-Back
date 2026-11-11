@@ -1,6 +1,9 @@
 name: Build standalone Android APK
 
 on:
+  push:
+    branches:
+      - fix/notes-description-icon-build
   workflow_dispatch:
     inputs:
       run_unit_tests:

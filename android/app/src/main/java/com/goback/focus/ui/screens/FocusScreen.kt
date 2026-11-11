@@ -37,6 +37,7 @@ import com.goback.focus.ui.components.M3CircularProgress
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.FocusViewModel
+import com.goback.focus.ui.viewmodel.SettingsViewModel
 
 @Composable
 fun FocusScreen(
@@ -48,6 +49,8 @@ fun FocusScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val selectedAlarmSound by settingsViewModel.selectedAlarmSound.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -457,6 +460,37 @@ fun FocusScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Session finish sound",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = FINISH_ALARM_SOUNDS.find { it.first == selectedAlarmSound }?.second ?: "System default",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                val current = FINISH_ALARM_SOUNDS.indexOfFirst { it.first == selectedAlarmSound }
+                                val next = FINISH_ALARM_SOUNDS[(current + 1).mod(FINISH_ALARM_SOUNDS.size)]
+                                settingsViewModel.setAlarmSound(next.first)
+                            }
+                        ) {
+                            Icon(Icons.Outlined.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Change")
+                        }
+                    }
                 }
             }
         }

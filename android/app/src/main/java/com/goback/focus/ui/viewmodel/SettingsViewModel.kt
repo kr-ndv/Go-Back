@@ -3,6 +3,8 @@ package com.goback.focus.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.media.MediaPlayer
+import android.net.Uri
+import java.io.File
 import android.media.RingtoneManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -91,12 +93,43 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun saveProfileImageUri(uriString: String) {
         viewModelScope.launch {
             runCatching {
-                db.settingDao().setValue(SettingEntity("profile.imageUri", uriString))
-            }.onSuccess {
-                _profileImageUri.value = uriString
+                withContext(Dispatchers.IO) {
+                    val source = Uri.parse(uriString)
+                    val input = if (source.scheme == "file") {
+                        source.path?.let { File(it).inputStream() }
+                    } else {
+                        getApplication<Application>().contentResolver.openInputStream(source)
+                    } ?: error("Unable to open selected image")
+                    val profileDir = File(getApplication<Application>().filesDir, "profile").apply { mkdirs() }
+                    val destination = File(profileDir, "profile_photo.jpg")
+                    input.use { sourceStream ->
+                        destination.outputStream().use { target -> sourceStream.copyTo(target) }
+                    }
+                    destination.toURI().toString()
+                }.also { storedUri ->
+                    db.settingDao().setValue(SettingEntity("profile.imageUri", storedUri))
+                }
+            }.onSuccess { storedUri ->
+                _profileImageUri.value = storedUri
                 _feedbackMessage.value = "Profile photo saved on this device."
             }.onFailure {
                 _feedbackMessage.value = "Profile photo could not be saved."
+            }
+        }
+    }
+
+    fun removeProfileImage() {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    File(getApplication<Application>().filesDir, "profile/profile_photo.jpg").delete()
+                }
+                db.settingDao().delete("profile.imageUri")
+            }.onSuccess {
+                _profileImageUri.value = null
+                _feedbackMessage.value = "Profile photo removed."
+            }.onFailure {
+                _feedbackMessage.value = "Profile photo could not be removed."
             }
         }
     }

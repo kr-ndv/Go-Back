@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.components.ProfileAvatar
@@ -58,7 +58,7 @@ fun TodayScreen(
         factory = TodayViewModelFactory(LocalContext.current)
     )
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
 
     Column(
@@ -283,6 +283,39 @@ private fun HeroFocusCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
+            }
+
+            // Animated daily-goal progress: keeps the existing hero card layout,
+            // while giving today's focus total a clear visual sense of momentum.
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "DAILY FOCUS GOAL",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = contentColor.copy(alpha = 0.78f)
+                    )
+                    Text(
+                        text = "${(state.goalProgress * 100).toInt()}%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
+                    )
+                }
+                M3SquigglyProgress(
+                    progress = state.goalProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 12.dp,
+                    strokeWidth = 3.dp,
+                    amplitude = 2.5.dp,
+                    color = contentColor,
+                    trackColor = Color.Black.copy(alpha = 0.20f)
+                )
             }
 
             HorizontalDivider(

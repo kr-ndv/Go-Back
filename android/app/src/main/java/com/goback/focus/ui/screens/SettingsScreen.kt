@@ -36,8 +36,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.R
 import com.goback.focus.service.FocusTileService
 import com.goback.focus.ui.components.ProfileAvatar
-import com.goback.focus.ui.components.PinModalMode
-import com.goback.focus.ui.components.SecurityPinDialog
+import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
+import com.canhub.cropper.CropImageOptions
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.SettingsViewModel
@@ -84,11 +85,15 @@ fun SettingsScreen(
     val dailyGoalMinutes by viewModel.dailyGoalMinutes.collectAsStateWithLifecycle()
     val selectedThemeMode by viewModel.selectedThemeMode.collectAsStateWithLifecycle()
     val selectedPaletteName by viewModel.selectedPaletteName.collectAsStateWithLifecycle()
-    val selectedAlarmSound by viewModel.selectedAlarmSound.collectAsStateWithLifecycle()
-    val storedPinHash by viewModel.storedPinHash.collectAsStateWithLifecycle()
     val feedbackMessage by viewModel.feedbackMessage.collectAsStateWithLifecycle()
-    val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
-    val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
+
+    val profileCropper = rememberLauncherForActivityResult(
+        contract = CropImageContract()
+    ) { result ->
+        if (result.isSuccessful) {
+            result.uriContent?.let { viewModel.saveProfileImageUri(it.toString()) }
+        }
+    }
 
     val profilePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -97,7 +102,16 @@ fun SettingsScreen(
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            viewModel.saveProfileImageUri(uri.toString())
+            profileCropper.launch(
+                CropImageContractOptions(
+                    uri = uri,
+                    cropImageOptions = CropImageOptions(
+                        fixAspectRatio = true,
+                        aspectRatioX = 1,
+                        aspectRatioY = 1
+                    )
+                )
+            )
         }
     }
 
@@ -345,15 +359,29 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Profile", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text("Add a display name below", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            OutlinedButton(
-                                onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
-                                shape = PillShape,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Icon(Icons.Outlined.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Add profile photo", fontSize = 12.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
+                                    shape = PillShape,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Outlined.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (profileImageUri.isNullOrBlank()) "Add photo" else "Change photo", fontSize = 12.sp)
+                                }
+                                if (!profileImageUri.isNullOrBlank()) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.removeProfileImage() },
+                                        shape = PillShape,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.65f)),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.error)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Remove", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             }
                         }
                     }
@@ -383,58 +411,7 @@ fun SettingsScreen(
             }
         }
 
-        // 5. Controls Hub (Finish Alarm & PIN Protection)
-        item {
-            Text("Controls & Alerts", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column {
-                    SettingsNavRow(
-                        icon = Icons.Outlined.NotificationsActive,
-                        title = "Focus Finish Sound",
-                        desc = FINISH_ALARM_SOUNDS.find { it.first == selectedAlarmSound }?.second ?: "System default",
-                        onClick = {
-                            val nextIdx = (FINISH_ALARM_SOUNDS.indexOfFirst { it.first == selectedAlarmSound } + 1) % FINISH_ALARM_SOUNDS.size
-                            val next = FINISH_ALARM_SOUNDS[nextIdx]
-                            viewModel.setAlarmSound(next.first)
-                        }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.Lock,
-                        title = "Security PIN Protection",
-                        desc = if (!storedPinHash.isNullOrEmpty()) "Protected against impulse changes" else "Not set",
-                        onClick = {
-                            viewModel.setPinModalMode(PinModalMode.SET)
-                            viewModel.setPinModalVisible(true)
-                        }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.Shield,
-                        title = "App & Content Blocking",
-                        desc = "Shorts, Reels, Spotlight & adult sites",
-                        onClick = onNavigateToBlocking
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.HourglassBottom,
-                        title = "Screen-Time Limits",
-                        desc = "App quotas and usage boundaries",
-                        onClick = onNavigateToUsageLimits
-                    )
-                }
-            }
-        }
-
-        // 6. Backup & restore Section
+        // 5. Backup & restore Section
         item {
             Text("Backup & restore", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(6.dp))
@@ -659,19 +636,6 @@ fun SettingsScreen(
         }
     }
 
-    // Security PIN Dialog
-    if (pinModalVisible) {
-        SecurityPinDialog(
-            mode = pinModalMode,
-            storedPinHash = storedPinHash,
-            onSuccess = { newPin ->
-                viewModel.onPinSuccess(newPin)
-            },
-            onDismiss = {
-                viewModel.setPinModalVisible(false)
-            }
-        )
-    }
 }
 
 @Composable
