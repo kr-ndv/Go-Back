@@ -2,6 +2,8 @@ package com.goback.focus
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,10 +21,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.luminance
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,6 +56,29 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             GoBackTheme {
+                val systemBarColor = MaterialTheme.colorScheme.background
+                val useLightSystemBarIcons = systemBarColor.luminance() > 0.5f
+                SideEffect {
+                    window.statusBarColor = systemBarColor.toArgb()
+                    window.navigationBarColor = systemBarColor.toArgb()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        window.isStatusBarContrastEnforced = false
+                        window.isNavigationBarContrastEnforced = false
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        window.decorView.systemUiVisibility = if (useLightSystemBarIcons) {
+                            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                        } else {
+                            0
+                        }
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        window.decorView.systemUiVisibility = if (useLightSystemBarIcons) {
+                            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                        } else {
+                            0
+                        }
+                    }
+                }
                 GoBackMainApp(navigationTarget = targetRoute.value)
             }
         }
