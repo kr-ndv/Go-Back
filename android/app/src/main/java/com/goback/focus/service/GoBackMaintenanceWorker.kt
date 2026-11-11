@@ -156,7 +156,7 @@ class GoBackMaintenanceWorker(
                 }
                 val pending = PendingIntent.getActivity(
                     context,
-                    7300 + index,
+                    7300 + (limit.packageName.hashCode() and 0x7FFF),
                     launchIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
@@ -165,13 +165,24 @@ class GoBackMaintenanceWorker(
                     .setSmallIcon(android.R.drawable.ic_dialog_alert)
                     .setContentTitle(title)
                     .setContentText(text)
+                    .setSubText("Go Back · Daily app limit")
+                    .setStyle(
+                        NotificationCompat.BigTextStyle().bigText(
+                            "$text Your limit is ${limit.warningPercent}% warning / ${limit.limitMinutes} minutes per day. " +
+                                if (nextState == 2) "Go Back will return you to the home screen when this app is opened."
+                                else "You are approaching the boundary you set."
+                        )
+                    )
+                    .setProgress(limit.limitMinutes.coerceAtLeast(1), usedMinutes.coerceAtLeast(0).coerceAtMost(limit.limitMinutes), false)
+                    .setCategory(NotificationCompat.CATEGORY_REMINDER)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setContentIntent(pending)
                     .setAutoCancel(true)
                     .build()
 
+                val notificationId = 7300 + (limit.packageName.hashCode() and 0x7FFF)
                 (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                    .notify(7300 + index, notification)
+                    .notify(notificationId, notification)
 
                 sent.put(limit.packageName, nextState)
                 changed = true
