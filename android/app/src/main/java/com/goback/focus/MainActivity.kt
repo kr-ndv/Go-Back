@@ -5,16 +5,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -63,139 +68,167 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GoBackMainApp(navigationTarget: NavigationTarget? = null) {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: NavTab.Home.route
-    val isTopLevelDestination = NavTab.items.any { it.route == currentRoute }
+    var showSplash by remember { mutableStateOf(navigationTarget == null) }
 
-    LaunchedEffect(navigationTarget) {
-        val route = navigationTarget?.route
-        if (!route.isNullOrEmpty() && route != NavTab.Home.route) {
-            navController.navigate(route) {
-                popUpTo(NavTab.Home.route) {
-                    saveState = true
+    if (showSplash) {
+        SplashScreen(
+            onSplashFinished = { showSplash = false }
+        )
+    } else {
+        val navController = rememberNavController()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route ?: NavTab.Home.route
+        val isTopLevelDestination = NavTab.items.any { it.route == currentRoute }
+
+        LaunchedEffect(navigationTarget) {
+            val route = navigationTarget?.route
+            if (!route.isNullOrEmpty() && route != NavTab.Home.route) {
+                navController.navigate(route) {
+                    popUpTo(NavTab.Home.route) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
                 }
-                launchSingleTop = true
             }
         }
-    }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        NavHost(
-            navController = navController,
-            startDestination = NavTab.Home.route,
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            composable(NavTab.Home.route) {
-                TodayScreen(
-                    onNavigateToFocus = { navController.navigate(NavTab.Focus.route) },
-                    onNavigateToSyllabus = { navController.navigate("syllabus") },
-                    onNavigateToExams = { navController.navigate("exams") },
-                    onNavigateToAnalytics = { navController.navigate(NavTab.Analytics.route) },
-                    onNavigateToBlocking = { navController.navigate("blocking") },
-                    onNavigateToUsageLimits = { navController.navigate("usage_limits") },
-                    onNavigateToSchedules = { navController.navigate("schedules") },
-                    onNavigateToNotes = { navController.navigate(NavTab.Notes.route) },
-                    onNavigateToSettings = { navController.navigate(NavTab.Settings.route) }
-                )
-            }
-            composable(NavTab.Focus.route) {
-                FocusScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToPresets = { navController.navigate("focus_presets") },
-                    onNavigateToHistory = { navController.navigate(NavTab.Analytics.route) },
-                    onNavigateToSchedules = { navController.navigate("schedules") }
-                )
-            }
-            composable("focus_presets") {
-                FocusPresetsScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onApplyPreset = { navController.popBackStack() }
-                )
-            }
-            composable("backup_restore") {
-                BackupRestoreScreen(onNavigateBack = { navController.popBackStack() })
-            }
-            composable(NavTab.Analytics.route) {
-                AnalyticsScreen()
-            }
-            composable(NavTab.Notes.route) {
-                NotesScreen(
-                    onNavigateToEditor = { noteId ->
-                        navController.navigate("note_editor/$noteId")
-                    }
-                )
-            }
-            composable(
-                route = "note_editor/{noteId}",
-                arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val noteId = backStackEntry.arguments?.getString("noteId").orEmpty()
-                NoteEditorScreen(
-                    noteId = noteId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable(NavTab.Settings.route) {
-                SettingsScreen(
-                    onNavigateToBlocking = { navController.navigate("blocking") },
-                    onNavigateToUsageLimits = { navController.navigate("usage_limits") },
-                    onNavigateToSchedules = { navController.navigate("schedules") },
-                    onNavigateToExams = { navController.navigate("exams") },
-                    onNavigateToFocusPresets = { navController.navigate("focus_presets") },
-                    onNavigateToBackupRestore = { navController.navigate("backup_restore") }
-                )
-            }
-            composable("syllabus") {
-                SyllabusScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable("exams") {
-                ExamsScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable("schedules") {
-                SchedulesScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable("blocking") {
-                BlockingScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable("usage_limits") {
-                UsageLimitsScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-        }
-
-        if (isTopLevelDestination) {
-            FloatingNavigationBar(
-                currentRoute = currentRoute,
-                onTabSelected = { tab ->
-                    if (currentRoute != tab.route) {
-                        navController.navigate(tab.route) {
-                            popUpTo(NavTab.Home.route) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
+            NavHost(
+                navController = navController,
+                startDestination = NavTab.Home.route,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            )
+                    .fillMaxSize()
+                    .statusBarsPadding(),
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
+            ) {
+                composable(NavTab.Home.route) {
+                    TodayScreen(
+                        onNavigateToFocus = { navController.navigate(NavTab.Focus.route) },
+                        onNavigateToSyllabus = { navController.navigate("syllabus") },
+                        onNavigateToExams = { navController.navigate("exams") },
+                        onNavigateToAnalytics = { navController.navigate("screen_time") },
+                        onNavigateToBlocking = { navController.navigate("blocking") },
+                        onNavigateToUsageLimits = { navController.navigate("usage_limits") },
+                        onNavigateToSchedules = { navController.navigate("schedules") },
+                        onNavigateToNotes = { navController.navigate(NavTab.Notes.route) },
+                        onNavigateToSettings = { navController.navigate(NavTab.Settings.route) }
+                    )
+                }
+                composable(NavTab.Focus.route) {
+                    FocusScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToPresets = { navController.navigate("focus_presets") },
+                        onNavigateToHistory = { navController.navigate("session_history") },
+                        onNavigateToSchedules = { navController.navigate("schedules") }
+                    )
+                }
+                composable("focus_presets") {
+                    FocusPresetsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onApplyPreset = { navController.popBackStack() }
+                    )
+                }
+                composable("backup_restore") {
+                    BackupRestoreScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(NavTab.Analytics.route) {
+                    AnalyticsScreen()
+                }
+                composable("screen_time") {
+                    AnalyticsScreen(
+                        initialTab = AnalyticsViewTab.USAGE,
+                        lockTab = AnalyticsViewTab.USAGE,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable("session_history") {
+                    AnalyticsScreen(
+                        initialTab = AnalyticsViewTab.HISTORY,
+                        lockTab = AnalyticsViewTab.HISTORY,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavTab.Notes.route) {
+                    NotesScreen(
+                        onNavigateToEditor = { noteId ->
+                            navController.navigate("note_editor/$noteId")
+                        }
+                    )
+                }
+                composable(
+                    route = "note_editor/{noteId}",
+                    arguments = listOf(navArgument("noteId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val noteId = backStackEntry.arguments?.getString("noteId").orEmpty()
+                    NoteEditorScreen(
+                        noteId = noteId,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable(NavTab.Settings.route) {
+                    SettingsScreen(
+                        onNavigateToBlocking = { navController.navigate("blocking") },
+                        onNavigateToUsageLimits = { navController.navigate("usage_limits") },
+                        onNavigateToSchedules = { navController.navigate("schedules") },
+                        onNavigateToExams = { navController.navigate("exams") },
+                        onNavigateToFocusPresets = { navController.navigate("focus_presets") },
+                        onNavigateToBackupRestore = { navController.navigate("backup_restore") }
+                    )
+                }
+                composable("syllabus") {
+                    SyllabusScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable("exams") {
+                    ExamsScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable("schedules") {
+                    SchedulesScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable("blocking") {
+                    BlockingScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+                composable("usage_limits") {
+                    UsageLimitsScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+            }
+
+            if (isTopLevelDestination) {
+                FloatingNavigationBar(
+                    currentRoute = currentRoute,
+                    onTabSelected = { tab ->
+                        if (currentRoute != tab.route) {
+                            navController.navigate(tab.route) {
+                                popUpTo(NavTab.Home.route) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
         }
     }
 }

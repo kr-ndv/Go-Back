@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.components.ProfileAvatar
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
@@ -38,7 +39,7 @@ import com.goback.focus.ui.viewmodel.TodayViewModelFactory
  * TodayScreen — Main dashboard screen of Go Back.
  * Faithful implementation matching screenshot:
  * Header (YOUR SPACE / Go Back.), Hero Focus Card (Vivid Lime / Accent),
- * Today's progress (Tasks & Syllabus side-by-side), Your tools (Unified card list),
+ * Today's progress (Syllabus progress), Your tools (Unified card list),
  * and footer (YOUR TIME. YOUR TERMS.).
  */
 @Composable
@@ -82,24 +83,22 @@ fun TodayScreen(
             onHistoryClick = onNavigateToAnalytics
         )
 
-        // 3. Today's Progress Section (Tasks & Syllabus side-by-side)
+        // 3. Today's Progress Section (Syllabus progress with squiggly waves)
         TodayProgressSection(
             state = state,
-            onTasksClick = onNavigateToSyllabus,
             onSyllabusClick = onNavigateToSyllabus
         )
 
-        // 4. Your Tools Section (Unified card with 8 quick-access tool rows)
+        // 4. Your Tools Section (Unified card with quick-access tools)
         YourToolsSection(
             state = state,
-            onTasksClick = onNavigateToSyllabus,
             onSyllabusClick = onNavigateToSyllabus,
             onExamsClick = onNavigateToExams,
-            onHabitsClick = onNavigateToFocus,
-            onGoalsClick = onNavigateToFocus,
             onNotesClick = onNavigateToNotes,
             onUsageClick = onNavigateToAnalytics,
-            onBlockingClick = onNavigateToBlocking
+            onBlockingClick = onNavigateToBlocking,
+            onSchedulesClick = onNavigateToSchedules,
+            onUsageLimitsClick = onNavigateToUsageLimits
         )
 
         // 5. Calm Footer
@@ -336,7 +335,6 @@ private fun HeroFocusCard(
 @Composable
 private fun TodayProgressSection(
     state: TodayUiState,
-    onTasksClick: () -> Unit,
     onSyllabusClick: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -348,128 +346,82 @@ private fun TodayProgressSection(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Based on your saved tasks and syllabus",
+                text = "Based on your saved syllabus progress",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // Syllabus Card with Expressive Squiggly Wave Indicator
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(CardShape)
+                .clickable { onSyllabusClick() },
+            shape = CardShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            // Tasks Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(CardShape)
-                    .clickable { onTasksClick() },
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CheckCircleOutline,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "TASKS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Text(
-                        text = "${state.chaptersDone} / ${state.chaptersTotal}",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { state.syllabusProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(PillShape),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    Text(
-                        text = "${(state.syllabusProgress * 100).toInt()}% complete",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Syllabus Card
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(CardShape)
-                    .clickable { onSyllabusClick() },
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Book,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Book,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         Text(
                             text = "SYLLABUS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 1.sp
                         )
                     }
 
                     Text(
-                        text = "${state.chaptersDone} / ${state.chaptersTotal}",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { state.syllabusProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(PillShape),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    Text(
                         text = "${(state.syllabusProgress * 100).toInt()}% complete",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
+
+                Text(
+                    text = "${state.chaptersDone} / ${state.chaptersTotal} chapters done",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                M3SquigglyProgress(
+                    progress = state.syllabusProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 14.dp,
+                    strokeWidth = 3.5.dp,
+                    amplitude = 3.5.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
     }
@@ -478,14 +430,13 @@ private fun TodayProgressSection(
 @Composable
 private fun YourToolsSection(
     state: TodayUiState,
-    onTasksClick: () -> Unit,
     onSyllabusClick: () -> Unit,
     onExamsClick: () -> Unit,
-    onHabitsClick: () -> Unit,
-    onGoalsClick: () -> Unit,
     onNotesClick: () -> Unit,
     onUsageClick: () -> Unit,
-    onBlockingClick: () -> Unit
+    onBlockingClick: () -> Unit,
+    onSchedulesClick: () -> Unit = {},
+    onUsageLimitsClick: () -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Column {
@@ -527,13 +478,6 @@ private fun YourToolsSection(
 
         val toolItems = listOf(
             ToolRow(
-                icon = Icons.Outlined.CheckCircleOutline,
-                title = "Tasks",
-                detail = "tasks completed",
-                trailing = "${state.chaptersDone}/${state.chaptersTotal}",
-                onClick = onTasksClick
-            ),
-            ToolRow(
                 icon = Icons.Outlined.Book,
                 title = "Syllabus",
                 detail = "chapters complete",
@@ -548,20 +492,6 @@ private fun YourToolsSection(
                 onClick = onExamsClick
             ),
             ToolRow(
-                icon = Icons.Outlined.Spa,
-                title = "Habits",
-                detail = "done today",
-                trailing = "0/0",
-                onClick = onHabitsClick
-            ),
-            ToolRow(
-                icon = Icons.Outlined.Flag,
-                title = "Goals",
-                detail = "goals completed",
-                trailing = "0/0",
-                onClick = onGoalsClick
-            ),
-            ToolRow(
                 icon = Icons.Outlined.Description,
                 title = "Notes",
                 detail = "saved notes",
@@ -569,8 +499,15 @@ private fun YourToolsSection(
                 onClick = onNotesClick
             ),
             ToolRow(
+                icon = Icons.Outlined.Schedule,
+                title = "Focus schedules",
+                detail = "automatic focus routines",
+                trailing = "Schedules",
+                onClick = onSchedulesClick
+            ),
+            ToolRow(
                 icon = Icons.Outlined.ShowChart,
-                title = "Usage",
+                title = "Screen time",
                 detail = "phone usage · today",
                 trailing = usageText,
                 onClick = onUsageClick
@@ -581,6 +518,13 @@ private fun YourToolsSection(
                 detail = "apps and video limits",
                 trailing = "Blocking rules",
                 onClick = onBlockingClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.HourglassTop,
+                title = "Usage limits",
+                detail = "daily app timeouts",
+                trailing = "Limits",
+                onClick = onUsageLimitsClick
             )
         )
 

@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -20,11 +18,17 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/**
+ * Material 3 Expressive Linear Squiggly / Wavy Progress Indicator.
+ * Conforms to the Material 3 Expressive specifications with dynamic spring
+ * physics and continuous sinusoidal wave propagation.
+ */
 @Composable
 fun M3SquigglyProgress(
-    progress: Float,
+    progress: Float = 1f,
     modifier: Modifier = Modifier,
     active: Boolean = true,
+    indeterminate: Boolean = false,
     color: Color = MaterialTheme.colorScheme.primary,
     trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
     height: Dp = 16.dp,
@@ -63,20 +67,20 @@ fun M3SquigglyProgress(
         val ampPx = amplitude.toPx()
         val waveLenPx = wavelength.toPx()
         val centerY = size.height / 2f
-        val activeWidth = size.width * animatedProgress
+        val activeWidth = if (indeterminate) size.width else size.width * animatedProgress
 
         // 1. Draw inactive baseline track
         drawLine(
-            color = trackColor,
+            color = trackColor.copy(alpha = 0.6f),
             start = Offset(0f, centerY),
             end = Offset(size.width, centerY),
-            strokeWidth = strokePx,
+            strokeWidth = strokePx * 0.75f,
             cap = StrokeCap.Round
         )
 
         // 2. Draw active squiggly wave (clipped to active width)
         if (activeWidth > 0f) {
-            val phasePx = if (active) -phaseOffset * waveLenPx else 0f
+            val phasePx = if (active || indeterminate) -phaseOffset * waveLenPx else 0f
             clipRect(left = 0f, top = 0f, right = activeWidth, bottom = size.height) {
                 val path = Path().apply {
                     val half = waveLenPx / 2f

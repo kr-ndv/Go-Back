@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.AnalyticsPeriod
@@ -50,6 +51,7 @@ enum class AnalyticsViewTab(val label: String) {
 @Composable
 fun AnalyticsScreen(
     initialTab: AnalyticsViewTab = AnalyticsViewTab.USAGE,
+    lockTab: AnalyticsViewTab? = null,
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     viewModel: AnalyticsViewModel = viewModel(
@@ -58,7 +60,7 @@ fun AnalyticsScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var selectedTab by remember { mutableStateOf(initialTab) }
+    var selectedTab by remember(initialTab, lockTab) { mutableStateOf(lockTab ?: initialTab) }
     var dailyGoalMinutes by remember { mutableStateOf(120) }
 
     LazyColumn(
@@ -132,34 +134,36 @@ fun AnalyticsScreen(
                     }
                 }
 
-                // Sub-tab switcher row: [ Screen time ]  [ Session history ]
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(PillShape)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, PillShape)
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    AnalyticsViewTab.values().forEach { tab ->
-                        val isTabSelected = selectedTab == tab
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(34.dp)
-                                .clip(PillShape)
-                                .clickable { selectedTab = tab },
-                            color = if (isTabSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = PillShape
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = tab.label,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isTabSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                // Sub-tab switcher row (shown only when tab is not locked to a single option)
+                if (lockTab == null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(PillShape)
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, PillShape)
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        AnalyticsViewTab.values().forEach { tab ->
+                            val isTabSelected = selectedTab == tab
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(PillShape)
+                                    .clickable { selectedTab = tab },
+                                color = if (isTabSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = PillShape
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = tab.label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isTabSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -406,7 +410,7 @@ fun AnalyticsScreen(
         }
 
         // =========================================================================
-        // VIEW TAB: SESSION HISTORY (Matches 06-goals.jpg)
+        // VIEW TAB: SESSION HISTORY
         // =========================================================================
         if (selectedTab == AnalyticsViewTab.HISTORY) {
             // Header / Subtitle
@@ -492,13 +496,13 @@ fun AnalyticsScreen(
                             )
                         }
 
-                        // Progress Bar
-                        LinearProgressIndicator(
-                            progress = { goalProgressFraction },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(PillShape),
+                        // Expressive Squiggly Progress Bar
+                        M3SquigglyProgress(
+                            progress = goalProgressFraction,
+                            modifier = Modifier.fillMaxWidth(),
+                            height = 14.dp,
+                            strokeWidth = 3.5.dp,
+                            amplitude = 3.dp,
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -776,7 +780,7 @@ fun AnalyticsScreen(
                 }
             }
 
-            // Session List Items matching 06-goals.jpg
+            // Session List Items
             if (state.filteredSessions.isEmpty()) {
                 item {
                     Surface(
@@ -930,13 +934,13 @@ private fun AppUsageCard(
                 )
             }
 
-            // Horizontal Progress Bar in Lime Green
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(5.dp)
-                    .clip(PillShape),
+            // Expressive Squiggly Progress Bar
+            M3SquigglyProgress(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth(),
+                height = 12.dp,
+                strokeWidth = 3.dp,
+                amplitude = 2.5.dp,
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )

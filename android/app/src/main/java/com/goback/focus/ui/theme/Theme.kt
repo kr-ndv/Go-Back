@@ -8,7 +8,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -22,31 +21,32 @@ data class PaletteColorsDef(
     val secondary: Color
 )
 
+// Uplifting, vibrant color palettes matching Material 3 Expressive guidelines
 val ThemePalettes = mapOf(
-    "Forest" to PaletteColorsDef(Color(0xFF365C32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
-    "Forest Lime" to PaletteColorsDef(Color(0xFF365C32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
-    "Blue" to PaletteColorsDef(Color(0xFF245CA8), Color(0xFF91C2FF), Color(0xFFC4DDFF)),
-    "Ocean Blue" to PaletteColorsDef(Color(0xFF245CA8), Color(0xFF91C2FF), Color(0xFFC4DDFF)),
-    "Violet" to PaletteColorsDef(Color(0xFF6542A6), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
-    "Violet Pulse" to PaletteColorsDef(Color(0xFF6542A6), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
-    "Amber" to PaletteColorsDef(Color(0xFF875000), Color(0xFFFFD18A), Color(0xFFFFE3BA)),
-    "Sunset Amber" to PaletteColorsDef(Color(0xFF875000), Color(0xFFFFD18A), Color(0xFFFFE3BA)),
-    "Rose" to PaletteColorsDef(Color(0xFFA33D62), Color(0xFFFFB1C8), Color(0xFFFFD9E3)),
-    "Rose Quartz" to PaletteColorsDef(Color(0xFFA33D62), Color(0xFFFFB1C8), Color(0xFFFFD9E3)),
-    "Teal" to PaletteColorsDef(Color(0xFF006A68), Color(0xFF72DAD5), Color(0xFFB9F1EC)),
-    "Arctic Teal" to PaletteColorsDef(Color(0xFF006A68), Color(0xFF72DAD5), Color(0xFFB9F1EC)),
-    "Berry" to PaletteColorsDef(Color(0xFF8A3478), Color(0xFFF6A9E8), Color(0xFFFAD7F1)),
-    "Midnight Berry" to PaletteColorsDef(Color(0xFF8A3478), Color(0xFFF6A9E8), Color(0xFFFAD7F1)),
-    "Sakura" to PaletteColorsDef(Color(0xFFA33B78), Color(0xFFFFB0D8), Color(0xFFFFD8E9)),
-    "Sakura Pink" to PaletteColorsDef(Color(0xFFA33B78), Color(0xFFFFB0D8), Color(0xFFFFD8E9)),
-    "Graphite" to PaletteColorsDef(Color(0xFF42665A), Color(0xFFA8DCC8), Color(0xFFD1F0E3)),
-    "Graphite Mint" to PaletteColorsDef(Color(0xFF42665A), Color(0xFFA8DCC8), Color(0xFFD1F0E3)),
-    "Coral" to PaletteColorsDef(Color(0xFFB44732), Color(0xFFFFB4A3), Color(0xFFFFDAD2)),
-    "Coral Bloom" to PaletteColorsDef(Color(0xFFB44732), Color(0xFFFFB4A3), Color(0xFFFFDAD2)),
-    "Lavender" to PaletteColorsDef(Color(0xFF5758A5), Color(0xFFC4C3FF), Color(0xFFE3E1FF)),
-    "Lavender Sky" to PaletteColorsDef(Color(0xFF5758A5), Color(0xFFC4C3FF), Color(0xFFE3E1FF)),
-    "Crimson" to PaletteColorsDef(Color(0xFFA42D3A), Color(0xFFFFB3B8), Color(0xFFFFDADB)),
-    "Crimson Ember" to PaletteColorsDef(Color(0xFFA42D3A), Color(0xFFFFB3B8), Color(0xFFFFDADB))
+    "Forest" to PaletteColorsDef(Color(0xFF2E7D32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
+    "Forest Lime" to PaletteColorsDef(Color(0xFF2E7D32), Color(0xFFB8F36B), Color(0xFFD9F7B5)),
+    "Blue" to PaletteColorsDef(Color(0xFF1565C0), Color(0xFF82B1FF), Color(0xFFC4DDFF)),
+    "Ocean Blue" to PaletteColorsDef(Color(0xFF1565C0), Color(0xFF82B1FF), Color(0xFFC4DDFF)),
+    "Violet" to PaletteColorsDef(Color(0xFF7B1FA2), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
+    "Violet Pulse" to PaletteColorsDef(Color(0xFF7B1FA2), Color(0xFFD0B8FF), Color(0xFFE5D8FF)),
+    "Amber" to PaletteColorsDef(Color(0xFFE65100), Color(0xFFFFD180), Color(0xFFFFE3BA)),
+    "Sunset Amber" to PaletteColorsDef(Color(0xFFE65100), Color(0xFFFFD180), Color(0xFFFFE3BA)),
+    "Rose" to PaletteColorsDef(Color(0xFFC2185B), Color(0xFFFF80AB), Color(0xFFFFD9E3)),
+    "Rose Quartz" to PaletteColorsDef(Color(0xFFC2185B), Color(0xFFFF80AB), Color(0xFFFFD9E3)),
+    "Teal" to PaletteColorsDef(Color(0xFF00897B), Color(0xFF64FFDA), Color(0xFFB9F1EC)),
+    "Arctic Teal" to PaletteColorsDef(Color(0xFF00897B), Color(0xFF64FFDA), Color(0xFFB9F1EC)),
+    "Berry" to PaletteColorsDef(Color(0xFF8E24AA), Color(0xFFFF80DF), Color(0xFFFAD7F1)),
+    "Midnight Berry" to PaletteColorsDef(Color(0xFF8E24AA), Color(0xFFFF80DF), Color(0xFFFAD7F1)),
+    "Sakura" to PaletteColorsDef(Color(0xFFD81B60), Color(0xFFFF85C0), Color(0xFFFFD8E9)),
+    "Sakura Pink" to PaletteColorsDef(Color(0xFFD81B60), Color(0xFFFF85C0), Color(0xFFFFD8E9)),
+    "Graphite" to PaletteColorsDef(Color(0xFF00796B), Color(0xFFA7FFEB), Color(0xFFD1F0E3)),
+    "Graphite Mint" to PaletteColorsDef(Color(0xFF00796B), Color(0xFFA7FFEB), Color(0xFFD1F0E3)),
+    "Coral" to PaletteColorsDef(Color(0xFFD84315), Color(0xFFFF8A80), Color(0xFFFFDAD2)),
+    "Coral Bloom" to PaletteColorsDef(Color(0xFFD84315), Color(0xFFFF8A80), Color(0xFFFFDAD2)),
+    "Lavender" to PaletteColorsDef(Color(0xFF3949AB), Color(0xFFB388FF), Color(0xFFE3E1FF)),
+    "Lavender Sky" to PaletteColorsDef(Color(0xFF3949AB), Color(0xFFB388FF), Color(0xFFE3E1FF)),
+    "Crimson" to PaletteColorsDef(Color(0xFFC62828), Color(0xFFFF8A80), Color(0xFFFFDADB)),
+    "Crimson Ember" to PaletteColorsDef(Color(0xFFC62828), Color(0xFFFF8A80), Color(0xFFFFDADB))
 )
 
 @Composable
@@ -78,46 +78,83 @@ fun GoBackTheme(
     val savedMode = savedModeState?.value ?: initialMode
     val savedPalette = savedPaletteState?.value ?: initialPalette
 
+    val isMonochrome = savedMode.equals("monochrome", ignoreCase = true)
     val useDarkTheme = when (savedMode) {
         "light" -> false
         "dark" -> true
+        "monochrome" -> darkTheme
         else -> darkTheme
     }
-    val paletteDef = ThemePalettes.entries.firstOrNull { it.key.equals(savedPalette, ignoreCase = true) }?.value
-        ?: ThemePalettes.getValue("Forest")
-    val accent = if (useDarkTheme) paletteDef.dark else paletteDef.light
-    val onAccent = if (accent.luminance() > 0.48f) Color(0xFF10201B) else Color.White
 
-    val colorScheme = if (useDarkTheme) {
-        darkColorScheme(
-            primary = accent,
-            onPrimary = onAccent,
-            primaryContainer = accent.copy(alpha = 0.20f),
-            onPrimaryContainer = accent,
-            secondary = paletteDef.secondary,
-            onSecondary = Color(0xFF10201B),
-            background = ForestBackgroundDark,
-            surface = ForestSurfaceDark,
-            surfaceVariant = ForestSurfaceElevatedDark,
-            onSurface = ForestTextDark,
-            onSurfaceVariant = ForestMutedDark,
-            outline = ForestBorderDark
-        )
+    val colorScheme = if (isMonochrome) {
+        if (useDarkTheme) {
+            darkColorScheme(
+                primary = MonoPrimaryDark,
+                onPrimary = MonoOnPrimaryDark,
+                primaryContainer = Color(0xFF2A2A2A),
+                onPrimaryContainer = MonoPrimaryDark,
+                secondary = Color(0xFF9E9E9E),
+                onSecondary = Color(0xFF121212),
+                background = MonoBackgroundDark,
+                surface = MonoSurfaceDark,
+                surfaceVariant = MonoSurfaceElevatedDark,
+                onSurface = MonoTextDark,
+                onSurfaceVariant = MonoMutedDark,
+                outline = MonoBorderDark
+            )
+        } else {
+            lightColorScheme(
+                primary = MonoPrimaryLight,
+                onPrimary = MonoOnPrimaryLight,
+                primaryContainer = Color(0xFFE0E0E0),
+                onPrimaryContainer = MonoPrimaryLight,
+                secondary = Color(0xFF616161),
+                onSecondary = Color(0xFFFFFFFF),
+                background = MonoBackgroundLight,
+                surface = MonoSurfaceLight,
+                surfaceVariant = MonoSurfaceElevatedLight,
+                onSurface = MonoTextLight,
+                onSurfaceVariant = MonoMutedLight,
+                outline = MonoBorderLight
+            )
+        }
     } else {
-        lightColorScheme(
-            primary = accent,
-            onPrimary = onAccent,
-            primaryContainer = paletteDef.secondary,
-            onPrimaryContainer = accent,
-            secondary = paletteDef.secondary,
-            onSecondary = Color(0xFF10201B),
-            background = ForestBackgroundLight,
-            surface = ForestSurfaceLight,
-            surfaceVariant = ForestSurfaceElevatedLight,
-            onSurface = ForestTextLight,
-            onSurfaceVariant = ForestMutedLight,
-            outline = ForestBorderLight
-        )
+        val paletteDef = ThemePalettes.entries.firstOrNull { it.key.equals(savedPalette, ignoreCase = true) }?.value
+            ?: ThemePalettes.getValue("Forest")
+        val accent = if (useDarkTheme) paletteDef.dark else paletteDef.light
+        val onAccent = if (accent.luminance() > 0.48f) Color(0xFF10201B) else Color.White
+
+        if (useDarkTheme) {
+            darkColorScheme(
+                primary = accent,
+                onPrimary = onAccent,
+                primaryContainer = accent.copy(alpha = 0.20f),
+                onPrimaryContainer = accent,
+                secondary = paletteDef.secondary,
+                onSecondary = Color(0xFF10201B),
+                background = ForestBackgroundDark,
+                surface = ForestSurfaceDark,
+                surfaceVariant = ForestSurfaceElevatedDark,
+                onSurface = ForestTextDark,
+                onSurfaceVariant = ForestMutedDark,
+                outline = ForestBorderDark
+            )
+        } else {
+            lightColorScheme(
+                primary = accent,
+                onPrimary = onAccent,
+                primaryContainer = paletteDef.secondary,
+                onPrimaryContainer = accent,
+                secondary = paletteDef.secondary,
+                onSecondary = Color(0xFF10201B),
+                background = ForestBackgroundLight,
+                surface = ForestSurfaceLight,
+                surfaceVariant = ForestSurfaceElevatedLight,
+                onSurface = ForestTextLight,
+                onSurfaceVariant = ForestMutedLight,
+                outline = ForestBorderLight
+            )
+        }
     }
 
     MaterialTheme(

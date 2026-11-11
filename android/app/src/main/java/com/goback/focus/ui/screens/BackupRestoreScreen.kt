@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.viewmodel.BackupRestoreViewModel
 import java.time.LocalDate
 
@@ -144,7 +145,15 @@ fun BackupRestoreScreen(
                     }
                 }
             }
-            if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            if (busy) item {
+                M3SquigglyProgress(
+                    indeterminate = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 14.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
             status?.let { message ->
                 item {
                     Text(message, color = if (message.contains("failed", true) || message.contains("could not", true)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)

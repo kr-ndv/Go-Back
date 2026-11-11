@@ -90,8 +90,6 @@ fun SettingsScreen(
     val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
     val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
 
-    var expressiveStyling by remember { mutableStateOf(true) }
-
     val profilePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -144,7 +142,8 @@ fun SettingsScreen(
                 listOf(
                     Triple("system", "System default", "Follow your device appearance"),
                     Triple("light", "Light theme", "Bright, calm and clear"),
-                    Triple("dark", "Dark theme", "Deep forest, easier on the eyes")
+                    Triple("dark", "Dark theme", "Deep forest, easier on the eyes"),
+                    Triple("monochrome", "Monochrome theme", "Clean, high-contrast black, gray & white")
                 ).forEach { (mode, title, desc) ->
                     val isSelected = selectedThemeMode == mode
                     Surface(
@@ -174,6 +173,7 @@ fun SettingsScreen(
                                     imageVector = when (mode) {
                                         "system" -> Icons.Outlined.Smartphone
                                         "light" -> Icons.Outlined.LightMode
+                                        "monochrome" -> Icons.Outlined.Contrast
                                         else -> Icons.Outlined.DarkMode
                                     },
                                     contentDescription = null,
@@ -322,117 +322,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Live Preview Card
-            Surface(
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "LIVE PREVIEW",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Your space, your palette",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Backgrounds, cards, borders, icons and buttons update together.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(width = 64.dp, height = 54.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(8.dp),
-                            verticalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(36.dp)
-                                    .height(5.dp)
-                                    .clip(PillShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(22.dp)
-                                    .height(5.dp)
-                                    .clip(PillShape)
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.primary))
-                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)))
-                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Expressive Styling Toggle
-            Surface(
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(PillShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Expressive styling", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Use bolder shapes, stronger hierarchy and springier touch feedback.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = expressiveStyling,
-                        onCheckedChange = { expressiveStyling = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
         }
 
         // 4. Local Profile Section
@@ -489,20 +378,6 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
                         Text("Save profile", fontWeight = FontWeight.Bold)
-                    }
-
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Local Go Back ID · not connected to social features yet",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "GB_MVNW6UER_LPFWF99N · Share",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }

@@ -291,7 +291,7 @@ fun SchedulesScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var scheduleToDelete by remember { mutableStateOf<UiScheduleItem?>(null) }
 
-    // Inline reminder creation state matching 07-daily-habits.jpg
+    // Inline reminder creation state
     var inlinePlanTitle by remember { mutableStateOf("") }
     var inlineStartTime by remember { mutableStateOf("18:00") }
     var inlineDuration by remember { mutableStateOf(25) }
@@ -327,7 +327,7 @@ fun SchedulesScreen(
             contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Top Bar matching 07-daily-habits.jpg
+            // 1. Top Bar
             item(key = "top_bar") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

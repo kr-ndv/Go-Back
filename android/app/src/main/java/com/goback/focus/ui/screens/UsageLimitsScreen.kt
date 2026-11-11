@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.goback.focus.data.db.GoBackDatabase
 import com.goback.focus.data.entity.UsageLimitEntity
+import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.components.PinModalMode
 import com.goback.focus.ui.components.SecurityPinDialog
 import com.goback.focus.ui.components.SecurityPinUtil
@@ -440,9 +441,12 @@ fun UsageLimitsScreen(
                             // Progress Bar if limit exists
                             if (limit != null) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    LinearProgressIndicator(
-                                        progress = { fraction },
-                                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(PillShape),
+                                    M3SquigglyProgress(
+                                        progress = fraction,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        height = 14.dp,
+                                        strokeWidth = 3.5.dp,
+                                        amplitude = 3.dp,
                                         color = if (isExceeded) MaterialTheme.colorScheme.error
                                         else if (isWarning) Color(0xFFF59E0B)
                                         else MaterialTheme.colorScheme.primary,
