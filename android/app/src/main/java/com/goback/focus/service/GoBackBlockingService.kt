@@ -2,6 +2,7 @@ package com.goback.focus.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -12,6 +13,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Calendar
 import java.util.Locale
 
 class GoBackBlockingService : AccessibilityService() {
@@ -20,6 +22,8 @@ class GoBackBlockingService : AccessibilityService() {
     private var lastActionAt = 0L
     private var lastContentCheckAt = 0L
     private var lastSplitScreenCheckAt = 0L
+    private val lastUsageLimitChecks = mutableMapOf<String, Long>()
+    private val usageLimitResults = mutableMapOf<String, Boolean>()
 
     // In-memory configuration cache
     @Volatile
@@ -74,6 +78,16 @@ class GoBackBlockingService : AccessibilityService() {
         val config = cachedConfig
         val focusActive = isFocusActive()
         val focusOnly = config.blockOnlyDuringFocus
+
+        // Check a configured app quota on foreground events as well as the periodic
+        // WorkManager pass, so a 15-minute maintenance interval cannot leave an app
+        // usable long after its daily limit has been crossed.
+        val configuredLimit = config.usageLimitMinutesByPackage[pkg]
+        if (configuredLimit != null && isUsageLimitExceeded(pkg, configuredLimit)) {
+            recordAction("daily usage limit exceeded: $rawPkg")
+            sendHome()
+            return
+        }
 
         // 0. Usage limit exceeded apps (immediate termination at 100% daily limit)
         if (config.usageLimitBlockedPackages.contains(pkg)) {
@@ -215,6 +229,54 @@ class GoBackBlockingService : AccessibilityService() {
     override fun onInterrupt() {}
 
     /**
+     * Refreshes one app's daily foreground total at most once every 10 seconds.
+     * UsageStatsManager is queried only for packages that actually have a configured quota.
+     */
+    private fun isUsageLimitExceeded(packageName: String, limitMinutes: Int): Boolean {
+        if (limitMinutes <= 0) return false
+        val now = System.currentTimeMillis()
+        val lastCheck = lastUsageLimitChecks[packageName] ?: 0L
+        if (now - lastCheck < USAGE_LIMIT_CHECK_THROTTLE_MS) {
+            return usageLimitResults[packageName] ?: false
+        }
+        lastUsageLimitChecks[packageName] = now
+
+        val exceeded = try {
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val manager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                ?: return false
+            val stats = manager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                calendar.timeInMillis,
+                now
+            )
+            val usedMs = stats.orEmpty()
+                .asSequence()
+                .filter { it.packageName.equals(packageName, ignoreCase = true) }
+                .sumOf { it.totalTimeInForeground.coerceAtLeast(0L) }
+            usedMs >= limitMinutes.toLong() * 60_000L
+        } catch (_: Exception) {
+            false
+        }
+
+        usageLimitResults[packageName] = exceeded
+        val current = cachedConfig
+        cachedConfig = current.copy(
+            usageLimitBlockedPackages = if (exceeded) {
+                current.usageLimitBlockedPackages + packageName
+            } else {
+                current.usageLimitBlockedPackages - packageName
+            }
+        )
+        return exceeded
+    }
+
+    /**
      * Checks in-memory if a focus session is active and valid, without reading disk or parsing JSON.
      * If an active countdown timer has expired, updates in-memory state immediately and
      * schedules persistent disk cleanup asynchronously via Handler.
@@ -287,6 +349,21 @@ class GoBackBlockingService : AccessibilityService() {
                 }
             }
 
+            val usageLimitMinutesByPackage = mutableMapOf<String, Int>()
+            val limitsJson = getSharedPreferences("go_back_usage_limits", Context.MODE_PRIVATE)
+                .getString("limits", "[]")
+            try {
+                val limitsArray = JSONArray(limitsJson ?: "[]")
+                for (index in 0 until limitsArray.length()) {
+                    val item = limitsArray.optJSONObject(index) ?: continue
+                    val packageName = item.optString("packageName").trim().lowercase(Locale.ROOT)
+                    val minutes = item.optInt("limitMinutes", 0)
+                    if (packageName.isNotEmpty() && minutes > 0) {
+                        usageLimitMinutesByPackage[packageName] = minutes
+                    }
+                }
+            } catch (_: Exception) {}
+
             cachedConfig = BlockingConfig(
                 blockOnlyDuringFocus = configObj?.optBoolean("blockOnlyDuringFocus", false)
                     ?: prefs.getBoolean("block_only_during_focus", false),
@@ -298,6 +375,7 @@ class GoBackBlockingService : AccessibilityService() {
                     ?: prefs.getBoolean("block_split_screen", false),
                 blockedPackages = blockedPkgs,
                 usageLimitBlockedPackages = usageLimitBlockedPkgs,
+                usageLimitMinutesByPackage = usageLimitMinutesByPackage,
                 scheduledBlockingActive = prefs.getBoolean("scheduled_blocking_active", false),
                 blockAdultSites = configObj?.optBoolean("blockAdultSites", false)
                     ?: prefs.getBoolean("block_adult", false),
@@ -587,6 +665,7 @@ class GoBackBlockingService : AccessibilityService() {
         val blockSplitScreen: Boolean = false,
         val blockedPackages: Set<String> = emptySet(),
         val usageLimitBlockedPackages: Set<String> = emptySet(),
+        val usageLimitMinutesByPackage: Map<String, Int> = emptyMap(),
         val scheduledBlockingActive: Boolean = false,
         val blockAdultSites: Boolean = false,
         val blockShorts: Boolean = false,
@@ -613,6 +692,7 @@ class GoBackBlockingService : AccessibilityService() {
         private const val CONTENT_CHANGE_THROTTLE_MS = 250L
         private const val SPLIT_SCREEN_THROTTLE_MS = 500L
         private const val ACTION_RATE_LIMIT_MS = 300L
+        private const val USAGE_LIMIT_CHECK_THROTTLE_MS = 10_000L
 
         private const val MAX_TRAVERSAL_DEPTH = 4
         private const val MAX_TRAVERSAL_NODES = 50
