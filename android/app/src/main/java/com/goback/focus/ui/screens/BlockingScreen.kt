@@ -470,7 +470,7 @@ fun BlockingScreen(
                 }
             }
 
-            // App Items
+            // App Items — bounded nested list keeps the screen compact even with many installed apps.
             if (filteredApps.isEmpty()) {
                 item {
                     Box(
@@ -487,63 +487,72 @@ fun BlockingScreen(
                     }
                 }
             } else {
-                items(filteredApps, key = { it.packageName }) { app ->
-                    val isBlocked = config.blockedPackages.contains(app.packageName)
-                    Surface(
+                item {
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                        shape = CardShape,
-                        color = MaterialTheme.colorScheme.surface
+                            .height(360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
+                        items(filteredApps, key = { it.packageName }) { app ->
+                        val isBlocked = config.blockedPackages.contains(app.packageName)
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.toggleBlockedPackage(app.packageName) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
+                            shape = CardShape,
+                            color = MaterialTheme.colorScheme.surface
                         ) {
-                            Box(
+                            Row(
                                 modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isBlocked) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surfaceVariant
-                                    ),
-                                contentAlignment = Alignment.Center
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleBlockedPackage(app.packageName) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.PhoneAndroid,
-                                    contentDescription = null,
-                                    tint = if (isBlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isBlocked) MaterialTheme.colorScheme.primaryContainer
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PhoneAndroid,
+                                        contentDescription = null,
+                                        tint = if (isBlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+    
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = app.appName,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = app.packageName,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+    
+                                Switch(
+                                    checked = isBlocked,
+                                    onCheckedChange = { viewModel.toggleBlockedPackage(app.packageName) }
                                 )
                             }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = app.appName,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = app.packageName,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            Switch(
-                                checked = isBlocked,
-                                onCheckedChange = { viewModel.toggleBlockedPackage(app.packageName) }
-                            )
+                        }
                         }
                     }
                 }
