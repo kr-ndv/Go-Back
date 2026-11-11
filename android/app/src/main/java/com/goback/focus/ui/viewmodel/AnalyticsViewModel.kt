@@ -107,6 +107,7 @@ class AnalyticsViewModel(
     private val _period = MutableStateFlow(AnalyticsPeriod.WEEK)
     private val _appSearchQuery = MutableStateFlow("")
     private val _historyFilter = MutableStateFlow(SessionHistoryFilter.ALL)
+    private val _refreshToken = MutableStateFlow(0L)
     private val _uiState = MutableStateFlow(AnalyticsUiState())
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
 
@@ -123,8 +124,9 @@ class AnalyticsViewModel(
             settingDao.observeValue("usage.categories"),
             _period,
             _appSearchQuery,
-            _historyFilter
-        ) { sessions, categoriesJson, period, searchQuery, historyFilter ->
+            _historyFilter,
+            _refreshToken
+        ) { sessions, categoriesJson, period, searchQuery, historyFilter, _ ->
             calculateAnalytics(sessions, categoriesJson, period, searchQuery, historyFilter)
         }
         .flowOn(Dispatchers.IO)
@@ -185,18 +187,21 @@ class AnalyticsViewModel(
             try {
                 val usageManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
                 if (usageManager != null) {
-                    // Day-by-day query for chart points & total screen time
-                    for (offset in (period.days - 1) downTo 0) {
-                        val dayStart = startOfDayTimestamp(-offset)
-                        val dayEnd = if (offset == 0) now else startOfDayTimestamp(-offset + 1)
-                        val dateKey = dateFormat.format(Date(dayStart))
-
-                        usageManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd)?.forEach { stat ->
-                            if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
-                                usageByDay[dateKey] = (usageByDay[dateKey] ?: 0L) + stat.totalTimeInForeground
-                                currentUsageMs += stat.totalTimeInForeground
-                                appUsageAggregated[stat.packageName] = (appUsageAggregated[stat.packageName] ?: 0L) + stat.totalTimeInForeground
-                            }
+                    // Fetch the selected period in one UsageStatsManager query rather than
+                    // issuing one Binder query per calendar day.
+                    usageManager.queryUsageStats(
+                        UsageStatsManager.INTERVAL_DAILY,
+                        currentStartMs,
+                        now
+                    )?.forEach { stat ->
+                        if (stat.packageName != context.packageName && stat.totalTimeInForeground > 0L) {
+                            val bucketTime = stat.firstTimeStamp.takeIf { it in currentStartMs..now }
+                                ?: stat.lastTimeUsed.coerceIn(currentStartMs, now)
+                            val dateKey = dateFormat.format(Date(bucketTime))
+                            usageByDay[dateKey] = (usageByDay[dateKey] ?: 0L) + stat.totalTimeInForeground
+                            currentUsageMs += stat.totalTimeInForeground
+                            appUsageAggregated[stat.packageName] =
+                                (appUsageAggregated[stat.packageName] ?: 0L) + stat.totalTimeInForeground
                         }
                     }
 
@@ -432,6 +437,11 @@ class AnalyticsViewModel(
 
     fun setPeriod(period: AnalyticsPeriod) {
         _period.value = period
+    }
+
+    fun refresh() {
+        _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+        _refreshToken.value = _refreshToken.value + 1L
     }
 
     fun setAppSearch(query: String) {
