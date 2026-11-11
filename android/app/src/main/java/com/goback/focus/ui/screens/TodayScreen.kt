@@ -9,15 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.HourglassBottom
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,13 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.goback.focus.ui.components.M3CircularProgress
 import com.goback.focus.ui.components.ProfileAvatar
-import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.TodayUiState
@@ -44,8 +36,10 @@ import com.goback.focus.ui.viewmodel.TodayViewModelFactory
 
 /**
  * TodayScreen — Main dashboard screen of Go Back.
- * Fully bound to live Room Database (FocusSessionDao, ExamDao, SubjectDao, SettingDao)
- * and native UsageStatsManager for daily screen time & phone unlock count.
+ * Faithful implementation matching screenshot:
+ * Header (YOUR SPACE / Go Back.), Hero Focus Card (Vivid Lime / Accent),
+ * Today's progress (Tasks & Syllabus side-by-side), Your tools (Unified card list),
+ * and footer (YOUR TIME. YOUR TERMS.).
  */
 @Composable
 fun TodayScreen(
@@ -71,8 +65,8 @@ fun TodayScreen(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = 20.dp, vertical = 16.dp)
-            .padding(bottom = 84.dp), // Clearance for floating navigation dock
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(bottom = 100.dp), // Clearance for floating navigation dock
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // 1. Top Header & Welcome Greeting
         TopHeaderSection(
@@ -81,47 +75,44 @@ fun TodayScreen(
             onProfileClick = onNavigateToSettings
         )
 
-        // 2. Hero Focus Card with Daily Goal Progress Ring & Streak Badge
+        // 2. Hero Focus Card (Vivid Lime / Accent container)
         HeroFocusCard(
             state = state,
-            onCardClick = onNavigateToFocus
+            onStartFocus = onNavigateToFocus,
+            onHistoryClick = onNavigateToAnalytics
         )
 
-        // 3. Screen Time & Phone Unlocks Glance Card
-        ScreenTimeGlanceCard(
+        // 3. Today's Progress Section (Tasks & Syllabus side-by-side)
+        TodayProgressSection(
             state = state,
-            onCardClick = onNavigateToAnalytics
+            onTasksClick = onNavigateToSyllabus,
+            onSyllabusClick = onNavigateToSyllabus
         )
 
-        // 4. Study Milestones Section (Syllabus & Upcoming Exam)
-        MilestonesSection(
+        // 4. Your Tools Section (Unified card with 8 quick-access tool rows)
+        YourToolsSection(
             state = state,
-            onSyllabusClick = onNavigateToSyllabus,
-            onExamsClick = onNavigateToExams
-        )
-
-        // 5. Focus & Study Tools Quick Access
-        ToolsListSection(
-            state = state,
-            onBlockingClick = onNavigateToBlocking,
-            onLimitsClick = onNavigateToUsageLimits,
-            onSchedulesClick = onNavigateToSchedules,
+            onTasksClick = onNavigateToSyllabus,
             onSyllabusClick = onNavigateToSyllabus,
             onExamsClick = onNavigateToExams,
-            onNotesClick = onNavigateToNotes
+            onHabitsClick = onNavigateToFocus,
+            onGoalsClick = onNavigateToFocus,
+            onNotesClick = onNavigateToNotes,
+            onUsageClick = onNavigateToAnalytics,
+            onBlockingClick = onNavigateToBlocking
         )
 
-        // 6. Calm Footer
+        // 5. Calm Footer
         Text(
-            text = "100% LOCAL-FIRST · REGAIN YOUR TIME",
-            fontSize = 9.sp,
+            text = "YOUR TIME. YOUR TERMS.",
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 1.8.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            letterSpacing = 2.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -132,55 +123,77 @@ private fun TopHeaderSection(
     profileImageUri: String,
     onProfileClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = "FOCUS & REGAIN YOUR TIME",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
                 Text(
-                    text = "Go Back",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "YOUR SPACE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = ".",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Go Back",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = ".",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
-            Text(
-                text = if (profileName.isNotBlank()) "Welcome back, $profileName." else "Welcome back.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            // Profile Avatar Button
+            Surface(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(PillShape)
+                    .clickable { onProfileClick() },
+                shape = PillShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                if (profileImageUri.isNotBlank()) {
+                    ProfileAvatar(
+                        name = profileName,
+                        imageUri = profileImageUri,
+                        modifier = Modifier.fillMaxSize(),
+                        contentDescription = "Open profile settings"
+                    )
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = "Open profile settings",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
         }
 
-        // Profile Avatar Button
-        Surface(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(PillShape)
-                .clickable { onProfileClick() },
-            shape = PillShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            ProfileAvatar(
-                name = profileName,
-                imageUri = profileImageUri,
-                modifier = Modifier.fillMaxSize(),
-                contentDescription = "Open profile settings"
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = if (profileName.isNotBlank()) "Welcome back, $profileName." else "Welcome back.",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "A clear view of what you've done today.",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -189,22 +202,26 @@ private fun TopHeaderSection(
 @Composable
 private fun HeroFocusCard(
     state: TodayUiState,
-    onCardClick: () -> Unit
+    onStartFocus: () -> Unit,
+    onHistoryClick: () -> Unit
 ) {
+    val containerColor = MaterialTheme.colorScheme.primary
+    val contentColor = MaterialTheme.colorScheme.onPrimary
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(CardShape)
-            .clickable { onCardClick() },
-        color = MaterialTheme.colorScheme.primary,
+            .clickable { onStartFocus() },
+        color = containerColor,
         shape = CardShape,
         shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Header Row: Label, Streak Badge & 1-day Shield
+            // Top Row: Timer Icon, Focus Time Today, and Arrow in circle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -212,169 +229,102 @@ private fun HeroFocusCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "TODAY'S FOCUS",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                        letterSpacing = 1.sp
-                    )
-
-                    // Streak Pill
-                    if (state.currentStreak > 0) {
-                        Surface(
-                            shape = PillShape,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = "🔥 ${state.currentStreak}d streak · ${state.streakBadge} ${state.streakLabel}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(PillShape)
+                            .background(Color.Black.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Timer,
+                            contentDescription = null,
+                            tint = contentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
 
-                    // 1-Day Streak Shield Indicator
-                    if (state.streakShieldActive) {
-                        Surface(
-                            shape = PillShape,
-                            color = Color(0xFF1E3A8A).copy(alpha = 0.85f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "🛡️ Shield Active",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Icon(
-                    imageVector = Icons.Filled.ArrowForward,
-                    contentDescription = "Start Focus",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            // Dual Representation: Daily Focus Goal Progress Ring + Text Stats
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Circular Progress Ring
-                M3CircularProgress(
-                    progress = state.goalProgress,
-                    size = 94.dp,
-                    strokeWidth = 8.dp,
-                    active = state.focusMinutesToday > 0,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.28f)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column {
                         Text(
-                            text = "${(state.goalProgress * 100).toInt()}%",
-                            fontSize = 16.sp,
+                            text = "FOCUS TIME TODAY",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor.copy(alpha = 0.82f),
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "${state.focusMinutesToday} min",
+                            fontSize = 32.sp,
                             fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = contentColor
                         )
                         Text(
-                            text = "of goal",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            text = "Completed sessions · saved history",
+                            fontSize = 12.sp,
+                            color = contentColor.copy(alpha = 0.78f)
                         )
                     }
                 }
 
-                // Focus Stats Details
-                Column(modifier = Modifier.weight(1f)) {
-                    val focusText = if (state.focusMinutesToday >= 60) {
-                        "${state.focusMinutesToday / 60}h ${state.focusMinutesToday % 60}m"
-                    } else {
-                        "${state.focusMinutesToday}m"
-                    }
-                    val goalText = if (state.dailyGoalMinutes >= 60) {
-                        "${state.dailyGoalMinutes / 60}h ${state.dailyGoalMinutes % 60}m goal"
-                    } else {
-                        "${state.dailyGoalMinutes}m goal"
-                    }
-
-                    Text(
-                        text = "$focusText / $goalText",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = if (state.goalProgress >= 1f) {
-                            "🎉 Daily goal achieved! Keep your momentum going."
-                        } else {
-                            "${(state.goalProgress * 100).toInt()}% of daily focus goal completed"
-                        },
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                // Arrow circle button
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(PillShape)
+                        .border(1.5.dp, contentColor.copy(alpha = 0.6f), PillShape)
+                        .clickable { onHistoryClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowForward,
+                        contentDescription = "Session history",
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            // M3 Squiggly Wave Linear Progress
-            M3SquigglyProgress(
-                progress = state.goalProgress,
-                active = state.focusMinutesToday > 0,
-                color = MaterialTheme.colorScheme.onPrimary,
-                trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f),
-                height = 14.dp,
-                strokeWidth = 3.5.dp
+            HorizontalDivider(
+                color = contentColor.copy(alpha = 0.15f),
+                thickness = 1.dp
             )
 
-            // Bottom Action Bar: CTA button
+            // Bottom Row: Message and Pill Start Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (state.focusMinutesToday == 0) "Ready to start your first session" else "Focus session active on device",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                    text = "Make room for one more session",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = contentColor.copy(alpha = 0.9f)
                 )
 
                 Surface(
                     shape = PillShape,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = Color(0xFF10201B),
+                    modifier = Modifier.clickable { onStartFocus() }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.PlayArrow,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(15.dp)
+                            tint = containerColor,
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "Start focus",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = containerColor
                         )
                     }
                 }
@@ -384,355 +334,331 @@ private fun HeroFocusCard(
 }
 
 @Composable
-private fun ScreenTimeGlanceCard(
+private fun TodayProgressSection(
     state: TodayUiState,
-    onCardClick: () -> Unit
+    onTasksClick: () -> Unit,
+    onSyllabusClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(CardShape)
-            .clickable { onCardClick() }
-            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-        color = MaterialTheme.colorScheme.surface,
-        shape = CardShape
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(PillShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PhoneAndroid,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "SCREEN TIME TODAY",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
-                )
-
-                val screenTimeText = if (state.hasUsageAccess) {
-                    val minutes = (state.screenTimeTodayMs / 60000L).toInt()
-                    val h = minutes / 60
-                    val m = minutes % 60
-                    val timeStr = if (h > 0) "${h}h ${m}m" else "${m}m"
-                    val unlocksStr = if (state.unlocksToday > 0) "${state.unlocksToday} unlocks" else "Unlock tracking ready"
-                    "$timeStr · $unlocksStr"
-                } else {
-                    "Tap to enable Usage Access · Privacy First"
-                }
-
-                Text(
-                    text = screenTimeText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Icon(
-                imageVector = Icons.Filled.ArrowForward,
-                contentDescription = "Details",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column {
+            Text(
+                text = "Today's progress",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Based on your saved tasks and syllabus",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
 
-@Composable
-private fun MilestonesSection(
-    state: TodayUiState,
-    onSyllabusClick: () -> Unit,
-    onExamsClick: () -> Unit
-) {
-    Text(
-        text = "Study milestones",
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-    )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 1. Syllabus Progress Card
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .clip(CardShape)
-                .clickable { onSyllabusClick() }
-                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-            color = MaterialTheme.colorScheme.surface,
-            shape = CardShape
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Tasks Card
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(CardShape)
+                    .clickable { onTasksClick() },
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Book,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "SYLLABUS",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Text(
-                    text = "${state.chaptersDone} / ${state.chaptersTotal}",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                M3SquigglyProgress(
-                    progress = state.syllabusProgress,
-                    active = state.chaptersDone > 0,
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    height = 12.dp,
-                    strokeWidth = 3.dp
-                )
-
-                Text(
-                    text = "${(state.syllabusProgress * 100).toInt()}% chapters done",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // 2. Next Exam Card
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .clip(CardShape)
-                .clickable { onExamsClick() }
-                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-            color = MaterialTheme.colorScheme.surface,
-            shape = CardShape
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.School,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "NEXT EXAM",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Text(
-                    text = state.nextExamTitle ?: "No exam planned",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                val daysRemainingText = when (val days = state.nextExamDaysRemaining) {
-                    null -> "Add timetable"
-                    0 -> "Today"
-                    1 -> "Tomorrow"
-                    else -> if (days < 0) "Completed" else "$days days to go"
-                }
-
-                Text(
-                    text = daysRemainingText,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Text(
-                    text = state.nextExamFormattedDate ?: "Tap to add",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ToolsListSection(
-    state: TodayUiState,
-    onBlockingClick: () -> Unit,
-    onLimitsClick: () -> Unit,
-    onSchedulesClick: () -> Unit,
-    onSyllabusClick: () -> Unit,
-    onExamsClick: () -> Unit,
-    onNotesClick: () -> Unit
-) {
-    Text(
-        text = "Focus & Study Tools",
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
-    )
-
-    data class ToolItem(
-        val icon: ImageVector,
-        val title: String,
-        val detail: String,
-        val metric: String,
-        val onClick: () -> Unit
-    )
-
-    val tools = listOf(
-        ToolItem(
-            icon = Icons.Filled.Shield,
-            title = "App & Content Blocking",
-            detail = "Shorts, Reels, Spotlight & adult sites",
-            metric = "Rules active",
-            onClick = onBlockingClick
-        ),
-        ToolItem(
-            icon = Icons.Filled.HourglassBottom,
-            title = "Screen-time limits",
-            detail = "Gentle alerts before time slips away",
-            metric = "Boundaries",
-            onClick = onLimitsClick
-        ),
-        ToolItem(
-            icon = Icons.Filled.CalendarMonth,
-            title = "Focus schedule",
-            detail = "Repeating weekly study blocks",
-            metric = "Weekly routine",
-            onClick = onSchedulesClick
-        ),
-        ToolItem(
-            icon = Icons.Filled.Book,
-            title = "Syllabus tracker",
-            detail = "Chapters and topics completed",
-            metric = "${state.chaptersDone}/${state.chaptersTotal}",
-            onClick = onSyllabusClick
-        ),
-        ToolItem(
-            icon = Icons.Filled.School,
-            title = "Exam timetable",
-            detail = state.nextExamTitle ?: "Countdown timetable",
-            metric = state.nextExamFormattedDate ?: "Exams",
-            onClick = onExamsClick
-        ),
-        ToolItem(
-            icon = Icons.Filled.Description,
-            title = "Personal notes",
-            detail = "Local Markdown & quick notes",
-            metric = "${state.totalNotes} notes",
-            onClick = onNotesClick
-        )
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(CardShape)
-            .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-        color = MaterialTheme.colorScheme.surface,
-        shape = CardShape
-    ) {
-        Column {
-            tools.forEachIndexed { index, tool ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { tool.onClick() }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(PillShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = tool.icon,
+                            imageVector = Icons.Outlined.CheckCircleOutline,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = tool.title,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = tool.detail,
+                            text = "TASKS",
                             fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     Text(
-                        text = tool.metric,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "${state.chaptersDone} / ${state.chaptersTotal}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Icon(
-                        imageVector = Icons.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(16.dp)
+                    LinearProgressIndicator(
+                        progress = { state.syllabusProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(PillShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+
+                    Text(
+                        text = "${(state.syllabusProgress * 100).toInt()}% complete",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
 
-                if (index < tools.size - 1) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        thickness = 1.dp,
-                        modifier = Modifier.padding(horizontal = 14.dp)
+            // Syllabus Card
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(CardShape)
+                    .clickable { onSyllabusClick() },
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Book,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "SYLLABUS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = "${state.chaptersDone} / ${state.chaptersTotal}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    LinearProgressIndicator(
+                        progress = { state.syllabusProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(PillShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+
+                    Text(
+                        text = "${(state.syllabusProgress * 100).toInt()}% complete",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun YourToolsSection(
+    state: TodayUiState,
+    onTasksClick: () -> Unit,
+    onSyllabusClick: () -> Unit,
+    onExamsClick: () -> Unit,
+    onHabitsClick: () -> Unit,
+    onGoalsClick: () -> Unit,
+    onNotesClick: () -> Unit,
+    onUsageClick: () -> Unit,
+    onBlockingClick: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column {
+            Text(
+                text = "Your tools",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "More details and controls below",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        data class ToolRow(
+            val icon: ImageVector,
+            val title: String,
+            val detail: String,
+            val trailing: String,
+            val onClick: () -> Unit
+        )
+
+        val usageText = if (state.hasUsageAccess) {
+            val minutes = (state.screenTimeTodayMs / 60000L).toInt()
+            val h = minutes / 60
+            val m = minutes % 60
+            if (h > 0) "${h}h ${m}m today" else "${m}m today"
+        } else {
+            "Usage access"
+        }
+
+        val examTrailing = if (state.nextExamDaysRemaining != null) {
+            "${state.nextExamDaysRemaining}d left"
+        } else {
+            "Add an exam date"
+        }
+
+        val toolItems = listOf(
+            ToolRow(
+                icon = Icons.Outlined.CheckCircleOutline,
+                title = "Tasks",
+                detail = "tasks completed",
+                trailing = "${state.chaptersDone}/${state.chaptersTotal}",
+                onClick = onTasksClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.Book,
+                title = "Syllabus",
+                detail = "chapters complete",
+                trailing = "${state.chaptersDone}/${state.chaptersTotal}",
+                onClick = onSyllabusClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.CalendarMonth,
+                title = "Exams",
+                detail = state.nextExamTitle ?: "No upcoming exam",
+                trailing = examTrailing,
+                onClick = onExamsClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.Spa,
+                title = "Habits",
+                detail = "done today",
+                trailing = "0/0",
+                onClick = onHabitsClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.Flag,
+                title = "Goals",
+                detail = "goals completed",
+                trailing = "0/0",
+                onClick = onGoalsClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.Description,
+                title = "Notes",
+                detail = "saved notes",
+                trailing = "${state.totalNotes}",
+                onClick = onNotesClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.ShowChart,
+                title = "Usage",
+                detail = "phone usage · today",
+                trailing = usageText,
+                onClick = onUsageClick
+            ),
+            ToolRow(
+                icon = Icons.Outlined.Shield,
+                title = "App blocking",
+                detail = "apps and video limits",
+                trailing = "Blocking rules",
+                onClick = onBlockingClick
+            )
+        )
+
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(CardShape),
+            shape = CardShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column {
+                toolItems.forEachIndexed { index, tool ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { tool.onClick() }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = tool.icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tool.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = tool.detail,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = tool.trailing,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    if (index < toolItems.size - 1) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             }
         }

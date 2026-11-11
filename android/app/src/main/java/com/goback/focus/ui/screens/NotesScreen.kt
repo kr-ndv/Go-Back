@@ -230,12 +230,13 @@ fun NotesScreen(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Description,
+                        imageVector = Icons.Outlined.Description,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
@@ -255,8 +256,8 @@ fun NotesScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(22.dp)),
-                shape = RoundedCornerShape(22.dp),
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
@@ -390,7 +391,7 @@ fun NotesScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
                     shape = CardShape,
                     color = MaterialTheme.colorScheme.surface
                 ) {
@@ -425,7 +426,7 @@ fun NotesScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
                     shape = CardShape,
                     color = MaterialTheme.colorScheme.surface
                 ) {

@@ -291,56 +291,104 @@ fun SchedulesScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var scheduleToDelete by remember { mutableStateOf<UiScheduleItem?>(null) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
+    // Inline reminder creation state matching 07-daily-habits.jpg
+    var inlinePlanTitle by remember { mutableStateOf("") }
+    var inlineStartTime by remember { mutableStateOf("18:00") }
+    var inlineDuration by remember { mutableStateOf(25) }
+    var inlineDays by remember { mutableStateOf(setOf(2, 3, 4, 5, 6)) } // Mon-Fri default
+
+    val dayNames = listOf(
+        1 to "Sun",
+        2 to "Mon",
+        3 to "Tue",
+        4 to "Wed",
+        5 to "Thu",
+        6 to "Fri",
+        7 to "Sat"
+    )
+
+    val daysSummary = when {
+        inlineDays.size == 7 -> "Every day"
+        inlineDays == setOf(2, 3, 4, 5, 6) -> "Weekdays"
+        inlineDays == setOf(1, 7) -> "Weekends"
+        inlineDays.isEmpty() -> "Select days"
+        else -> "${inlineDays.size} days a week"
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(bottom = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Top Bar matching 07-daily-habits.jpg
+            item(key = "top_bar") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onNavigateBack() },
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Focus schedules",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            text = "Focus schedule",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Automated distraction-free study blocks",
+                            text = "A gentle reminder for your plan",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showCreateDialog = true },
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = "Refresh",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreateDialog = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("New Schedule", fontWeight = FontWeight.Bold) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // 1. Active Focus Block Banner
+                }
+            }
+
+            // 2. Active Focus Block Banner if active
             if (state.isAnyScheduleActiveNow) {
                 item(key = "active_banner") {
                     ActiveScheduleLiveBanner(
@@ -350,52 +398,313 @@ fun SchedulesScreen(
                 }
             }
 
-            // 2. Info / Hero Card
+            // 3. Hero Card: Make time for what matters.
             item(key = "hero_card") {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = CardShape,
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Schedule,
+                                imageVector = Icons.Outlined.Schedule,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Column(modifier = Modifier.weight(1f)) {
+
+                        Text(
+                            text = "Make time for what matters.",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        Text(
+                            text = "Create a repeating weekly reminder to begin a focus session. Go Back will notify you at the chosen time; it will not start the timer or block other apps automatically.",
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            // 4. Create a weekly reminder Card (Inline Form)
+            item(key = "create_reminder_card") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            text = "Create a weekly reminder",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        // What are you planning?
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Build steady study habits",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = "Scheduled focus blocks automatically activate blocking at set times and send audible reminders.",
+                                text = "What are you planning?",
                                 fontSize = 12.sp,
-                                lineHeight = 17.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                TextField(
+                                    value = inlinePlanTitle,
+                                    onValueChange = { inlinePlanTitle = it },
+                                    placeholder = {
+                                        Text(
+                                            text = "e.g. Evening revision",
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+                        }
+
+                        // Row: Start time + Session length
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Start Time
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Start time (24-hour)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    TextField(
+                                        value = inlineStartTime,
+                                        onValueChange = { inlineStartTime = it },
+                                        singleLine = true,
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.Transparent,
+                                            unfocusedContainerColor = Color.Transparent,
+                                            focusedIndicatorColor = Color.Transparent,
+                                            unfocusedIndicatorColor = Color.Transparent
+                                        )
+                                    )
+                                }
+                                Text(
+                                    text = formatTo12Hour(inlineStartTime),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            // Session length
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Session length",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                ) {
+                                    TextField(
+                                        value = inlineDuration.toString(),
+                                        onValueChange = { str ->
+                                            str.filter { it.isDigit() }.toIntOrNull()?.let {
+                                                inlineDuration = it.coerceIn(5, 360)
+                                            }
+                                        },
+                                        singleLine = true,
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.Transparent,
+                                            unfocusedContainerColor = Color.Transparent,
+                                            focusedIndicatorColor = Color.Transparent,
+                                            unfocusedIndicatorColor = Color.Transparent
+                                        )
+                                    )
+                                }
+                                // Preset length pills: 15m, 25m, 45m, 60m
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    listOf(15, 25, 45, 60).forEach { mins ->
+                                        val isSel = inlineDuration == mins
+                                        Surface(
+                                            modifier = Modifier
+                                                .clip(PillShape)
+                                                .clickable { inlineDuration = mins },
+                                            shape = PillShape,
+                                            color = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                            border = BorderStroke(
+                                                1.dp,
+                                                if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            )
+                                        ) {
+                                            Text(
+                                                text = "${mins}m",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Repeat on Section
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Repeat on",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                dayNames.forEach { (dayCode, name) ->
+                                    val isDaySelected = inlineDays.contains(dayCode)
+                                    Surface(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(38.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                inlineDays = if (isDaySelected) {
+                                                    inlineDays - dayCode
+                                                } else {
+                                                    inlineDays + dayCode
+                                                }
+                                            },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isDaySelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isDaySelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                        )
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = name,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isDaySelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isDaySelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = daysSummary,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Save weekly reminder Button
+                        Button(
+                            onClick = {
+                                val title = inlinePlanTitle.ifBlank { "Focus Reminder" }
+                                val days = if (inlineDays.isEmpty()) setOf(2, 3, 4, 5, 6) else inlineDays
+                                viewModel.saveSchedule(
+                                    title = title,
+                                    startTime = inlineStartTime,
+                                    durationMinutes = inlineDuration,
+                                    days = days,
+                                    routineType = "Deep Study",
+                                    reminderMinutes = 5,
+                                    blockedPackages = emptySet()
+                                )
+                                inlinePlanTitle = ""
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Save weekly reminder",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
                         }
                     }
                 }
             }
 
-            // 3. Section Header
+            // 5. Your schedules Section
             item(key = "schedules_header") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -403,83 +712,108 @@ fun SchedulesScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Your weekly routines",
-                        fontSize = 17.sp,
+                        text = "Your schedules",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${state.schedules.size} routines",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "${state.schedules.size}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            // 4. Empty State
-            if (state.schedules.isEmpty() && !state.isLoading) {
+            // 6. Empty State or Schedule list
+            if (state.schedules.isEmpty()) {
                 item(key = "empty_state") {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = CardShape,
+                        shape = RoundedCornerShape(20.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                     ) {
                         Column(
                             modifier = Modifier
-                                .padding(32.dp)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.DateRange,
+                                imageVector = Icons.Outlined.Schedule,
                                 contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
                             )
                             Text(
-                                text = "No focus schedules yet",
+                                text = "Your week, your rhythm.",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Add a recurring focus block, such as Weekday Evenings (18:00 – 19:00). Go Back will alert you and block distractions.",
+                                text = "Your weekly reminders will appear here. Start with one study block and adjust it as your routine changes.",
                                 fontSize = 12.sp,
-                                lineHeight = 17.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Button(
-                                onClick = { showCreateDialog = true },
-                                shape = PillShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Create routine", fontWeight = FontWeight.Bold)
-                            }
                         }
                     }
                 }
+
+                item(key = "no_reminders_pill") {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "No reminders are active.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(state.schedules, key = { it.id }) { schedule ->
+                    ScheduleCard(
+                        schedule = schedule,
+                        onToggleEnabled = { enabled ->
+                            viewModel.toggleSchedule(schedule.id, enabled)
+                        },
+                        onDelete = {
+                            scheduleToDelete = schedule
+                        }
+                    )
+                }
             }
 
-            // 5. Schedules List
-            items(state.schedules, key = { it.id }) { schedule ->
-                ScheduleCard(
-                    schedule = schedule,
-                    onToggleEnabled = { enabled ->
-                        viewModel.toggleSchedule(schedule.id, enabled)
-                    },
-                    onDelete = {
-                        scheduleToDelete = schedule
-                    }
+            // 7. Footer disclaimer
+            item(key = "disclaimer") {
+                Text(
+                    text = "Reminders use your device's local time and Android notification settings. Battery restrictions, OS updates or notification permission changes may affect delivery. Schedules and reminder configuration stay on this device.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
         }
@@ -1124,5 +1458,21 @@ fun AppSelectionDialog(
                 }
             }
         }
+    }
+}
+
+private fun formatTo12Hour(time24: String): String {
+    return try {
+        val parts = time24.split(":")
+        val h = parts[0].toInt()
+        val m = parts[1].toInt()
+        val amPm = if (h >= 12) "PM" else "AM"
+        val h12 = when (h % 12) {
+            0 -> 12
+            else -> h % 12
+        }
+        String.format("%d:%02d %s", h12, m, amPm)
+    } catch (_: Exception) {
+        time24
     }
 }

@@ -5,14 +5,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -75,31 +80,15 @@ fun GoBackMainApp(navigationTarget: NavigationTarget? = null) {
         }
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (isTopLevelDestination) {
-                FloatingNavigationBar(
-                    currentRoute = currentRoute,
-                    onTabSelected = { tab ->
-                        if (currentRoute != tab.route) {
-                            navController.navigate(tab.route) {
-                                popUpTo(NavTab.Home.route) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
-    ) { innerPadding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         NavHost(
             navController = navController,
             startDestination = NavTab.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(NavTab.Home.route) {
                 TodayScreen(
@@ -117,7 +106,9 @@ fun GoBackMainApp(navigationTarget: NavigationTarget? = null) {
             composable(NavTab.Focus.route) {
                 FocusScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onNavigateToPresets = { navController.navigate("focus_presets") }
+                    onNavigateToPresets = { navController.navigate("focus_presets") },
+                    onNavigateToHistory = { navController.navigate(NavTab.Analytics.route) },
+                    onNavigateToSchedules = { navController.navigate("schedules") }
                 )
             }
             composable("focus_presets") {
@@ -184,6 +175,27 @@ fun GoBackMainApp(navigationTarget: NavigationTarget? = null) {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+        }
+
+        if (isTopLevelDestination) {
+            FloatingNavigationBar(
+                currentRoute = currentRoute,
+                onTabSelected = { tab ->
+                    if (currentRoute != tab.route) {
+                        navController.navigate(tab.route) {
+                            popUpTo(NavTab.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
         }
     }
 }
