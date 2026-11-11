@@ -85,10 +85,16 @@ class GoBackMaintenanceWorker(
     }
 
     private suspend fun checkUsageLimits() {
-        if (!hasUsageAccess()) return
         val db = GoBackDatabase.getDatabase(context)
         val limits = db.usageLimitDao().getEnabledLimitsSync()
-        if (limits.isEmpty()) return
+        if (limits.isEmpty()) {
+            context.getSharedPreferences("go_back_usage_limits", Context.MODE_PRIVATE)
+                .edit().putString("limits", "[]").apply()
+            context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
+                .edit().putStringSet("usage_limit_blocked_packages", emptySet()).apply()
+            return
+        }
+        if (!hasUsageAccess()) return
 
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
