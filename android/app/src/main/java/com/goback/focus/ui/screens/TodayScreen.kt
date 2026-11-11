@@ -285,6 +285,39 @@ private fun HeroFocusCard(
                 }
             }
 
+            // Animated daily-goal progress: keeps the existing hero card layout,
+            // while giving today's focus total a clear visual sense of momentum.
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "DAILY FOCUS GOAL",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = contentColor.copy(alpha = 0.78f)
+                    )
+                    Text(
+                        text = "${(state.goalProgress * 100).toInt()}%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
+                    )
+                }
+                M3SquigglyProgress(
+                    progress = state.goalProgress,
+                    modifier = Modifier.fillMaxWidth(),
+                    height = 12.dp,
+                    strokeWidth = 3.dp,
+                    amplitude = 2.5.dp,
+                    color = contentColor,
+                    trackColor = Color.Black.copy(alpha = 0.20f)
+                )
+            }
+
             HorizontalDivider(
                 color = contentColor.copy(alpha = 0.15f),
                 thickness = 1.dp
