@@ -119,15 +119,21 @@ class AnalyticsViewModel(
     }
 
     private fun observeAndCalculate() {
-        combine(
-            sessionDao.getAll(),
-            settingDao.observeValue("usage.categories"),
+        val analyticsFilters = combine(
             _period,
             _appSearchQuery,
             _historyFilter,
             _refreshToken
-        ) { sessions, categoriesJson, period, searchQuery, historyFilter, _ ->
-            calculateAnalytics(sessions, categoriesJson, period, searchQuery, historyFilter)
+        ) { period, searchQuery, historyFilter, _ ->
+            Triple(period, searchQuery, historyFilter)
+        }
+
+        combine(
+            sessionDao.getAll(),
+            settingDao.observeValue("usage.categories"),
+            analyticsFilters
+        ) { sessions, categoriesJson, filters ->
+            calculateAnalytics(sessions, categoriesJson, filters.first, filters.second, filters.third)
         }
         .flowOn(Dispatchers.IO)
         .onEach { newState -> _uiState.value = newState }
