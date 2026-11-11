@@ -195,11 +195,10 @@ class GoBackMaintenanceWorker(
 
         val blockingPrefs = context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
         val currentBlocked = blockingPrefs.getStringSet("usage_limit_blocked_packages", emptySet()) ?: emptySet()
-        if (currentBlocked != exceededPackages) {
-            blockingPrefs.edit()
-                .putStringSet("usage_limit_blocked_packages", exceededPackages)
-                .apply()
-        }
+        blockingPrefs.edit()
+            .putStringSet("usage_limit_blocked_packages", exceededPackages)
+            .putLong("usage_limits_updated_at", now)
+            .apply()
     }
 
     private fun checkStableRelease() {
