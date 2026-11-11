@@ -91,7 +91,10 @@ class GoBackMaintenanceWorker(
             context.getSharedPreferences("go_back_usage_limits", Context.MODE_PRIVATE)
                 .edit().putString("limits", "[]").apply()
             context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
-                .edit().putStringSet("usage_limit_blocked_packages", emptySet()).apply()
+                .edit()
+                .putStringSet("usage_limit_blocked_packages", emptySet())
+                .putLong("usage_limits_updated_at", System.currentTimeMillis())
+                .apply()
             return
         }
         if (!hasUsageAccess()) return
@@ -194,7 +197,6 @@ class GoBackMaintenanceWorker(
         }
 
         val blockingPrefs = context.getSharedPreferences("go_back_blocking", Context.MODE_PRIVATE)
-        val currentBlocked = blockingPrefs.getStringSet("usage_limit_blocked_packages", emptySet()) ?: emptySet()
         blockingPrefs.edit()
             .putStringSet("usage_limit_blocked_packages", exceededPackages)
             .putLong("usage_limits_updated_at", now)
