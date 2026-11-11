@@ -197,6 +197,7 @@ class BlockingViewModel(application: Application) : AndroidViewModel(application
     fun updateConfig(transform: (BlockingConfigState) -> BlockingConfigState) {
         _config.value = transform(_config.value)
         _hasUnsavedChanges.value = true
+        saveRules()
     }
 
     fun addChannel() {
@@ -213,11 +214,13 @@ class BlockingViewModel(application: Application) : AndroidViewModel(application
         _config.value = _config.value.copy(allowedChannels = _config.value.allowedChannels + clean)
         _channelInputText.value = ""
         _hasUnsavedChanges.value = true
+        saveRules()
     }
 
     fun removeChannel(channel: String) {
         _config.value = _config.value.copy(allowedChannels = _config.value.allowedChannels - channel)
         _hasUnsavedChanges.value = true
+        saveRules()
     }
 
     fun toggleBlockedPackage(pkg: String) {
@@ -225,6 +228,7 @@ class BlockingViewModel(application: Application) : AndroidViewModel(application
         if (current.contains(pkg)) {
             _config.value = _config.value.copy(blockedPackages = current - pkg)
             _hasUnsavedChanges.value = true
+            saveRules()
         } else {
             if (current.size >= 100) {
                 _statusMessage.value = "Whole-app block limit reached (max 100 apps)."
@@ -232,6 +236,7 @@ class BlockingViewModel(application: Application) : AndroidViewModel(application
             }
             _config.value = _config.value.copy(blockedPackages = current + pkg)
             _hasUnsavedChanges.value = true
+            saveRules()
         }
     }
 
