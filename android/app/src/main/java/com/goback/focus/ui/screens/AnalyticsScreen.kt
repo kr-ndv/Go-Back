@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.goback.focus.ui.components.M3SquigglyProgress
 import com.goback.focus.ui.theme.CardShape
@@ -60,7 +61,7 @@ fun AnalyticsScreen(
         factory = AnalyticsViewModelFactory(LocalContext.current)
     )
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectedTab by remember(initialTab, lockTab) { mutableStateOf(lockTab ?: initialTab) }
     var dailyGoalMinutes by remember { mutableStateOf(120) }
@@ -131,9 +132,7 @@ fun AnalyticsScreen(
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable {
-                                // Trigger refresh by toggling period
-                                val p = state.period
-                                viewModel.setPeriod(p)
+                                viewModel.refresh()
                             },
                         color = MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
