@@ -351,10 +351,13 @@ class GoBackApplication : Application() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            val goalMessage = "You completed your ${goalMinutes}-minute daily focus target. Your effort is saved locally in Session History. Take a mindful break, then decide what deserves your attention next."
             val notification = NotificationCompat.Builder(context, CHANNEL_GOAL_COMPLETED)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("🎉 Daily Focus Goal Completed!")
-                .setContentText("You conquered your ${goalMinutes}-minute focus goal today. Outstanding work!")
+                .setContentTitle("🎉 Daily Focus Goal Completed")
+                .setContentText("Your ${goalMinutes}-minute focus goal is complete.")
+                .setSubText("Go Back · Daily progress")
+                .setStyle(NotificationCompat.BigTextStyle().bigText(goalMessage))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_EVENT)
                 .setAutoCancel(true)
@@ -444,15 +447,25 @@ class GoBackApplication : Application() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val notification = NotificationCompat.Builder(context, CHANNEL_SCHEDULE)
+            val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_SCHEDULE)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(title)
                 .setContentText(body)
+                .setSubText("Go Back · Focus schedule")
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
-                .build()
+
+            if (minutesUntilStart > 0) {
+                val startAt = System.currentTimeMillis() + minutesUntilStart * 60_000L
+                notificationBuilder
+                    .setWhen(startAt)
+                    .setUsesChronometer(true)
+                    .setChronometerCountDown(true)
+            }
+            val notification = notificationBuilder.build()
 
             manager.notify(notifId, notification)
         }
