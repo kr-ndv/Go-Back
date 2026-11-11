@@ -513,7 +513,7 @@ fun FocusScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Text(
-                            text = FocusEngine.STRICT_MODE_PHRASE,
+                            text = FocusEngine.COMMITMENT_PHRASE,
                             fontWeight = FontWeight.Black,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center,
@@ -543,7 +543,7 @@ fun FocusScreen(
                             Text("Keep Focusing")
                         }
                         Button(
-                            onClick = { viewModel.verifyChallengeAndStop() },
+                            onClick = { viewModel.confirmStrictChallenge() },
                             modifier = Modifier.weight(1f),
                             shape = PillShape,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
