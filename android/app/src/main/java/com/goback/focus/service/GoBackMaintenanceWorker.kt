@@ -113,6 +113,20 @@ class GoBackMaintenanceWorker(
         var changed = false
         val exceededPackages = mutableSetOf<String>()
 
+        val limitsJson = JSONArray()
+        limits.forEach { limit ->
+            limitsJson.put(JSONObject().apply {
+                put("packageName", limit.packageName)
+                put("appName", limit.appName)
+                put("limitMinutes", limit.limitMinutes)
+                put("warningPercent", limit.warningPercent)
+            })
+        }
+        context.getSharedPreferences("go_back_usage_limits", Context.MODE_PRIVATE)
+            .edit()
+            .putString("limits", limitsJson.toString())
+            .apply()
+
         limits.forEachIndexed { index, limit ->
             val usedMinutes = ((totals[limit.packageName] ?: 0L) / 60000L).toInt()
             val state = sent.optInt(limit.packageName, 0)
