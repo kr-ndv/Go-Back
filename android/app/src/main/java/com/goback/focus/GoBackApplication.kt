@@ -82,7 +82,7 @@ class GoBackApplication : Application() {
     private fun scheduleMaintenanceWorker() {
         try {
             val workRequest = PeriodicWorkRequestBuilder<GoBackMaintenanceWorker>(
-                30, TimeUnit.MINUTES
+                15, TimeUnit.MINUTES
             ).build()
 
             WorkManager.getInstance(this).enqueueUniquePeriodicWork(
