@@ -1,6 +1,8 @@
 package com.goback.focus.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +42,8 @@ import com.goback.focus.ui.viewmodel.FocusViewModel
 fun FocusScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToPresets: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToSchedules: () -> Unit = {},
     viewModel: FocusViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -65,14 +70,7 @@ fun FocusScreen(
     val phaseLabel = when (state.sessionType) {
         PomodoroSessionType.SHORT_BREAK -> "SHORT BREAK"
         PomodoroSessionType.LONG_BREAK -> "LONG BREAK"
-        else -> if (state.mode == FocusMode.POMODORO) "POMODORO FOCUS" else if (state.mode == FocusMode.STOPWATCH) "STOPWATCH" else "FOCUS SESSION"
-    }
-
-    val subtitle = when {
-        state.mode == FocusMode.STOPWATCH -> "ELAPSED TIME"
-        state.isRunning -> "YOU'RE DOING GREAT"
-        state.mode == FocusMode.POMODORO -> "ROUND ${if (state.sessionType == PomodoroSessionType.FOCUS) kotlin.math.min(4, state.pomodoroRounds + 1) else kotlin.math.max(1, state.pomodoroRounds)} OF 4"
-        else -> "MINUTES OF INTENTION"
+        else -> if (state.mode == FocusMode.POMODORO) "POMODORO FOCUS" else if (state.mode == FocusMode.STOPWATCH) "STOPWATCH" else "READY WHEN YOU ARE"
     }
 
     Column(
@@ -80,232 +78,267 @@ fun FocusScreen(
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(horizontal = 20.dp, vertical = 16.dp)
-            .padding(bottom = 84.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Top Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = {
-                    if (state.isRunning || state.isPaused) {
-                        viewModel.requestStop()
-                    } else {
-                        onNavigateBack()
-                    }
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Close",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
+        // 1. Top Header
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = "FOCUS MODE",
+                text = "MAKE SPACE FOR WHAT MATTERS",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.8.sp,
+                letterSpacing = 1.6.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!state.isRunning && !state.isPaused) {
-                TextButton(onClick = onNavigateToPresets) {
-                    Text("Presets", fontWeight = FontWeight.Bold)
-                }
-            } else {
-                Spacer(modifier = Modifier.size(48.dp))
-            }
-        }
-
-        if (state.presetName.isNotBlank()) {
             Text(
-                text = "Preset · ${state.presetName}",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth()
+                text = "Focus mode",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "One thing at a time is enough.",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        // Hero Circular Progress Ring
-        M3CircularProgress(
-            progress = progress,
-            size = 240.dp,
-            strokeWidth = 12.dp,
-            active = state.isRunning,
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+        // Preset indicator if active
+        if (state.presetName.isNotBlank()) {
+            Surface(
+                shape = PillShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.align(Alignment.Start)
             ) {
                 Text(
-                    text = if (state.isRunning) "STAY IN THE MOMENT" else phaseLabel,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = formattedTime,
-                    fontSize = 46.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-1.5).sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Mode Switching Tabs (Timer, Pomodoro, Stopwatch)
-        if (!state.isRunning && !state.isPaused) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(PillShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                listOf(
-                    FocusMode.TIMER to "Timer",
-                    FocusMode.POMODORO to "Pomodoro",
-                    FocusMode.STOPWATCH to "Stopwatch"
-                ).forEach { (m, label) ->
-                    val selected = state.mode == m
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(PillShape)
-                            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                            .clickable { viewModel.setMode(m) }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Countdown Timer Presets & Custom Input
-            if (state.mode == FocusMode.TIMER) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FocusEngine.PRESET_MINUTES.forEach { mins ->
-                        val selected = state.selectedMinutes == mins && state.customMinutesInput.isEmpty()
-                        Button(
-                            onClick = { viewModel.choosePreset(mins) },
-                            modifier = Modifier.weight(1f),
-                            shape = PillShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        ) {
-                            Text(text = "${mins}m", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-                }
-
-                // Custom duration row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = state.customMinutesInput,
-                        onValueChange = { viewModel.setCustomMinutes(it) },
-                        placeholder = { Text("Custom (1-180m)", fontSize = 12.sp) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        shape = PillShape
-                    )
-                    Button(
-                        onClick = { viewModel.applyCustomMinutes() },
-                        shape = PillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text("Set", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            // Pomodoro Explanation Card
-            if (state.mode == FocusMode.POMODORO) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CardShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Repeat,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "25m focus · 5m short break",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Every 4th completed focus round grants a 15-minute long break. You initiate when each phase begins.",
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Stopwatch Info
-            if (state.mode == FocusMode.STOPWATCH) {
-                Text(
-                    text = "Measure a study session without a countdown. Pause whenever needed; elapsed time is preserved.",
+                    text = "Preset · ${state.presetName}",
                     fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
         }
 
-        // Collapsible Session Tag & Notes
+        // 2. Hero Focus Card with Circular Ring
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = CardShape,
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Circular Ring
+                M3CircularProgress(
+                    progress = progress,
+                    size = 230.dp,
+                    strokeWidth = 10.dp,
+                    active = state.isRunning,
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.HourglassBottom,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formattedTime,
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-1.2).sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (state.isRunning) "YOU'RE DOING GREAT" else phaseLabel,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Main CTA Button
+                Button(
+                    onClick = {
+                        if (state.isRunning) {
+                            viewModel.pause()
+                        } else {
+                            viewModel.start()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = PillShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (state.isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (state.isRunning) "Pause session" else if (state.isPaused) "Resume session" else "Open focus timer",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Stop / End early button
+                if (state.isRunning || state.isPaused) {
+                    TextButton(onClick = { viewModel.requestStop() }) {
+                        Text(
+                            text = if (state.mode == FocusMode.STOPWATCH) "Finish and save session" else "End session early",
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // 3. Choose how you focus Section
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = "Choose how you focus",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Use a flexible countdown, a guided Pomodoro cycle, or a stopwatch to track open-ended study sessions.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Card 1: Session history
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(CardShape)
+                    .clickable { onNavigateToHistory() },
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(PillShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Session history",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Review saved sessions, tags, notes and weekly focus time.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Card 2: Focus schedule
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(CardShape)
+                    .clickable { onNavigateToSchedules() },
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(PillShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CalendarMonth,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Focus schedule",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Plan repeating reminders for your weekly study routine.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // 4. Timer Controls & Presets Drawer
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = CardShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -318,25 +351,17 @@ fun FocusScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Label,
+                            imageVector = Icons.Outlined.Tune,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Session Tag & Notes",
+                            text = "Timer settings & mode",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        if (state.tag.isNotEmpty() || state.notes.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(PillShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
-                        }
                     }
                     Icon(
                         imageVector = if (state.detailsOpen) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -345,8 +370,76 @@ fun FocusScreen(
                     )
                 }
 
-                if (state.detailsOpen) {
-                    Spacer(modifier = Modifier.height(10.dp))
+                if (state.detailsOpen || state.isRunning) {
+                    // Mode Switching Tabs
+                    if (!state.isRunning && !state.isPaused) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf(
+                                FocusMode.TIMER to "Timer",
+                                FocusMode.POMODORO to "Pomodoro",
+                                FocusMode.STOPWATCH to "Stopwatch"
+                            ).forEach { (m, label) ->
+                                val selected = state.mode == m
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(PillShape)
+                                        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .clickable { viewModel.setMode(m) }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        // Presets
+                        if (state.mode == FocusMode.TIMER) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FocusEngine.PRESET_MINUTES.forEach { mins ->
+                                    val selected = state.selectedMinutes == mins && state.customMinutesInput.isEmpty()
+                                    Button(
+                                        onClick = { viewModel.choosePreset(mins) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = PillShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                            contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        ),
+                                        contentPadding = PaddingValues(vertical = 4.dp)
+                                    ) {
+                                        Text(text = "${mins}m", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+
+                            // Presets screen link
+                            TextButton(
+                                onClick = onNavigateToPresets,
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Custom presets & app rules >", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+
+                    // Session Tag & Notes
                     OutlinedTextField(
                         value = state.tag,
                         onValueChange = { viewModel.setTag(it) },
@@ -355,61 +448,16 @@ fun FocusScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.notes,
                         onValueChange = { viewModel.setNotes(it) },
                         placeholder = { Text("What are you working on? (max 300 chars)", fontSize = 12.sp) },
                         minLines = 2,
-                        maxLines = 4,
+                        maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
-            }
-        }
-
-        // Action Button: Start / Pause / Resume
-        Button(
-            onClick = {
-                if (state.isRunning) {
-                    viewModel.pause()
-                } else {
-                    viewModel.start()
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = CardShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Icon(
-                imageVector = if (state.isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = null
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = if (state.isRunning) "Pause session" else if (state.isPaused) "Resume session" else "Start session",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        // End / Finish Session Button
-        if (state.isRunning || state.isPaused) {
-            TextButton(
-                onClick = { viewModel.requestStop() }
-            ) {
-                Text(
-                    text = if (state.mode == FocusMode.STOPWATCH) "Finish and save session" else "End session early",
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
             }
         }
     }
@@ -448,36 +496,36 @@ fun FocusScreen(
                     Text(
                         text = "Strict Mode Active",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(
-                        text = "Strict mode protects your focus commitment. To end early, type this exact phrase:",
-                        fontSize = 12.sp,
+                        text = "To end your session early, type this confirmation phrase exactly:",
+                        fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant
                     ) {
                         Text(
-                            text = FocusEngine.COMMITMENT_PHRASE,
-                            modifier = Modifier.padding(10.dp),
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.Bold,
+                            text = FocusEngine.STRICT_MODE_PHRASE,
+                            fontWeight = FontWeight.Black,
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(10.dp),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
 
                     OutlinedTextField(
                         value = state.challengeInput,
                         onValueChange = { viewModel.setChallengeInput(it) },
-                        placeholder = { Text("Type phrase here...", fontSize = 12.sp) },
+                        placeholder = { Text("Type phrase here", fontSize = 12.sp) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -492,69 +540,19 @@ fun FocusScreen(
                             modifier = Modifier.weight(1f),
                             shape = PillShape
                         ) {
-                            Text("Stay in focus", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Keep Focusing")
                         }
-
-                        val canQuit = FocusEngine.validateStrictChallenge(state.challengeInput)
                         Button(
-                            onClick = { viewModel.confirmStrictChallenge() },
-                            enabled = canQuit,
+                            onClick = { viewModel.verifyChallengeAndStop() },
                             modifier = Modifier.weight(1f),
                             shape = PillShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError,
-                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                            )
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
-                            Text("End session", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Give Up", color = Color.White)
                         }
                     }
                 }
             }
         }
-    }
-
-    // Daily Goal Celebration Dialog Modal
-    if (state.celebrationVisible) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissCelebration() },
-            title = {
-                Text("🎉 Daily Focus Goal Completed!", fontWeight = FontWeight.Black)
-            },
-            text = {
-                Text("You conquered your ${state.celebrationGoalMinutes}-minute focus goal today. Outstanding perseverance!")
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.dismissCelebration() },
-                    shape = PillShape
-                ) {
-                    Text("Awesome!", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    // Completion / Phase Transition Dialog Modal
-    if (state.completionDialogVisible) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissCompletionDialog() },
-            title = {
-                Text("Session Completed", fontWeight = FontWeight.Black)
-            },
-            text = {
-                Text(state.completionDialogMessage)
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.dismissCompletionDialog() },
-                    shape = PillShape
-                ) {
-                    Text("Got it", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
     }
 }

@@ -38,7 +38,7 @@ sealed class NavTab(
     object Focus : NavTab("focus", "Focus", Icons.Filled.Timer, Icons.Outlined.Timer)
     object Analytics : NavTab("analytics", "Analytics", Icons.Filled.PieChart, Icons.Outlined.PieChart)
     object Notes : NavTab("notes", "Notes", Icons.Filled.Description, Icons.Outlined.Description)
-    object Settings : NavTab("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
+    object Settings : NavTab("settings", "Settings", Icons.Filled.Tune, Icons.Outlined.Tune)
 
     companion object {
         val items = listOf(Home, Focus, Analytics, Notes, Settings)
@@ -54,13 +54,12 @@ fun FloatingNavigationBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
             .height(64.dp),
         shape = PillShape,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+        shadowElevation = 12.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -83,10 +82,7 @@ fun FloatingNavigationBar(
                         .fillMaxHeight()
                         .scale(scale)
                         .clip(PillShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                            else androidx.compose.ui.graphics.Color.Transparent
-                        )
+                        .background(androidx.compose.ui.graphics.Color.Transparent)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null

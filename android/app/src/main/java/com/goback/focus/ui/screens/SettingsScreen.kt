@@ -4,9 +4,11 @@ import android.app.StatusBarManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,18 +45,18 @@ import com.goback.focus.ui.viewmodel.SettingsViewModel
 data class ThemeColorOption(val name: String, val color: Color)
 
 val THEME_PALETTES = listOf(
-    ThemeColorOption("Forest", Color(0xFF365C32)),
-    ThemeColorOption("Blue", Color(0xFF2563EB)),
-    ThemeColorOption("Violet", Color(0xFF7C3AED)),
-    ThemeColorOption("Amber", Color(0xFFD97706)),
-    ThemeColorOption("Rose", Color(0xFFE11D48)),
-    ThemeColorOption("Teal", Color(0xFF0D9488)),
-    ThemeColorOption("Berry", Color(0xFF9333EA)),
-    ThemeColorOption("Sakura", Color(0xFFEC4899)),
-    ThemeColorOption("Graphite", Color(0xFF4B5563)),
-    ThemeColorOption("Coral", Color(0xFFEA580C)),
-    ThemeColorOption("Lavender", Color(0xFF8B5CF6)),
-    ThemeColorOption("Crimson", Color(0xFFDC2626))
+    ThemeColorOption("Forest Lime", Color(0xFFB8F36B)),
+    ThemeColorOption("Ocean Blue", Color(0xFF91C2FF)),
+    ThemeColorOption("Violet Pulse", Color(0xFFD0B8FF)),
+    ThemeColorOption("Sunset Amber", Color(0xFFFFD18A)),
+    ThemeColorOption("Rose Quartz", Color(0xFFFFB1C8)),
+    ThemeColorOption("Arctic Teal", Color(0xFF72DAD5)),
+    ThemeColorOption("Midnight Berry", Color(0xFFF6A9E8)),
+    ThemeColorOption("Sakura Pink", Color(0xFFFFB0D8)),
+    ThemeColorOption("Graphite Mint", Color(0xFFA8DCC8)),
+    ThemeColorOption("Coral Bloom", Color(0xFFFFB4A3)),
+    ThemeColorOption("Lavender Sky", Color(0xFFC4C3FF)),
+    ThemeColorOption("Crimson Ember", Color(0xFFFFB3B8))
 )
 
 val FINISH_ALARM_SOUNDS = listOf(
@@ -64,7 +66,6 @@ val FINISH_ALARM_SOUNDS = listOf(
     Pair("focus_digital.wav", "Digital alert")
 )
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     onNavigateToBlocking: () -> Unit = {},
@@ -89,6 +90,8 @@ fun SettingsScreen(
     val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
     val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
 
+    var expressiveStyling by remember { mutableStateOf(true) }
+
     val profilePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -104,13 +107,14 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        contentPadding = PaddingValues(bottom = 96.dp),
+        contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // 1. Header
         item {
             Column {
                 Text(
-                    text = "PREFERENCES & PRIVACY",
+                    text = "MAKE IT YOURS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.6.sp,
@@ -123,41 +127,559 @@ fun SettingsScreen(
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Text(
+                    text = "A calmer space, tuned to you.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        // Local-First Badge
+        // 2. Appearance Section
         item {
+            Text("Appearance", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("system", "System default", "Follow your device appearance"),
+                    Triple("light", "Light theme", "Bright, calm and clear"),
+                    Triple("dark", "Dark theme", "Deep forest, easier on the eyes")
+                ).forEach { (mode, title, desc) ->
+                    val isSelected = selectedThemeMode == mode
+                    Surface(
+                        shape = CardShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.setThemeMode(mode) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(PillShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = when (mode) {
+                                        "system" -> Icons.Outlined.Smartphone
+                                        "light" -> Icons.Outlined.LightMode
+                                        else -> Icons.Outlined.DarkMode
+                                    },
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Filled.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Theme Studio Section
+        item {
+            Text("Theme Studio", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                "Choose a complete colour personality. Your selection applies across Go Back and stays on this device.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 12 Palettes in 2-column grid
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (i in THEME_PALETTES.indices step 2) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val pal1 = THEME_PALETTES[i]
+                        val isSelected1 = selectedPaletteName.equals(pal1.name, ignoreCase = true) ||
+                                (selectedPaletteName.equals("Forest", ignoreCase = true) && pal1.name == "Forest Lime")
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                width = if (isSelected1) 1.5.dp else 1.dp,
+                                color = if (isSelected1) pal1.color else MaterialTheme.colorScheme.outline
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { viewModel.setThemePalette(pal1.name) }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(pal1.color)
+                                    )
+                                    Text(
+                                        text = pal1.name,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected1) FontWeight.Bold else FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                if (isSelected1) {
+                                    Icon(
+                                        imageVector = Icons.Filled.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = pal1.color,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (i + 1 < THEME_PALETTES.size) {
+                            val pal2 = THEME_PALETTES[i + 1]
+                            val isSelected2 = selectedPaletteName.equals(pal2.name, ignoreCase = true) ||
+                                    (selectedPaletteName.equals("Blue", ignoreCase = true) && pal2.name == "Ocean Blue")
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    width = if (isSelected2) 1.5.dp else 1.dp,
+                                    color = if (isSelected2) pal2.color else MaterialTheme.colorScheme.outline
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { viewModel.setThemePalette(pal2.name) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                            .background(pal2.color)
+                                        )
+                                        Text(
+                                            text = pal2.name,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected2) FontWeight.Bold else FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    if (isSelected2) {
+                                        Icon(
+                                            imageVector = Icons.Filled.CheckCircle,
+                                            contentDescription = "Selected",
+                                            tint = pal2.color,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Live Preview Card
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
                 shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "LIVE PREVIEW",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Your space, your palette",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Backgrounds, cards, borders, icons and buttons update together.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(width = 64.dp, height = 54.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(8.dp),
+                            verticalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(36.dp)
+                                    .height(5.dp)
+                                    .clip(PillShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(22.dp)
+                                    .height(5.dp)
+                                    .clip(PillShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.primary))
+                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)))
+                                Box(modifier = Modifier.size(8.dp).clip(PillShape).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Expressive Styling Toggle
+            Surface(
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Security,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(PillShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Expressive styling", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Use bolder shapes, stronger hierarchy and springier touch feedback.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = expressiveStyling,
+                        onCheckedChange = { expressiveStyling = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
                     )
+                }
+            }
+        }
+
+        // 4. Local Profile Section
+        item {
+            Text("Local profile", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        ProfileAvatar(name = profileName, imageUri = profileImageUri, modifier = Modifier.size(54.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Profile", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Add a display name below", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(
+                                onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
+                                shape = PillShape,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(Icons.Outlined.CameraAlt, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Add profile photo", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    Text("Display name", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(
+                        value = profileName,
+                        onValueChange = { viewModel.setProfileName(it.take(60)) },
+                        placeholder = { Text("Your name (optional)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+
+                    Button(
+                        onClick = { viewModel.saveProfileName() },
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
+                    ) {
+                        Text("Save profile", fontWeight = FontWeight.Bold)
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Local Go Back ID · not connected to social features yet",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "GB_MVNW6UER_LPFWF99N · Share",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+
+        // 5. Controls Hub (Finish Alarm & PIN Protection)
+        item {
+            Text("Controls & Alerts", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column {
+                    SettingsNavRow(
+                        icon = Icons.Outlined.NotificationsActive,
+                        title = "Focus Finish Sound",
+                        desc = FINISH_ALARM_SOUNDS.find { it.first == selectedAlarmSound }?.second ?: "System default",
+                        onClick = {
+                            val nextIdx = (FINISH_ALARM_SOUNDS.indexOfFirst { it.first == selectedAlarmSound } + 1) % FINISH_ALARM_SOUNDS.size
+                            val next = FINISH_ALARM_SOUNDS[nextIdx]
+                            viewModel.setAlarmSound(next.first)
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Lock,
+                        title = "Security PIN Protection",
+                        desc = if (!storedPinHash.isNullOrEmpty()) "Protected against impulse changes" else "Not set",
+                        onClick = {
+                            viewModel.setPinModalMode(PinModalMode.SET)
+                            viewModel.setPinModalVisible(true)
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Shield,
+                        title = "App & Content Blocking",
+                        desc = "Shorts, Reels, Spotlight & adult sites",
+                        onClick = onNavigateToBlocking
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                    SettingsNavRow(
+                        icon = Icons.Outlined.HourglassBottom,
+                        title = "Screen-Time Limits",
+                        desc = "App quotas and usage boundaries",
+                        onClick = onNavigateToUsageLimits
+                    )
+                }
+            }
+        }
+
+        // 6. Backup & restore Section
+        item {
+            Text("Backup & restore", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Your data stays on your device",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Export a portable JSON backup or restore one. Restoring replaces the current local dataset.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Shield,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Backup files are not encrypted. Anyone with the file may be able to read its contents. Keep it private and store it somewhere you trust.",
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Button(
+                            onClick = onNavigateToBackupRestore,
+                            shape = PillShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export", fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = onNavigateToBackupRestore,
+                            shape = PillShape,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Restore")
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. Privacy Section
+        item {
+            Text("Privacy", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Surface(
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(PillShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "100% Local-First by Default",
-                            fontSize = 15.sp,
+                            text = "Your data stays on your device",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Your syllabus, notes, focus history, and app rules never leave your device. Zero cloud tracking.",
+                            text = "This starter uses local SQLite storage. No AI, ads, analytics, or cloud account is configured.",
                             fontSize = 12.sp,
-                            lineHeight = 16.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -165,365 +687,84 @@ fun SettingsScreen(
             }
         }
 
-        // Feature Navigation Hub
+        // 8. About Section
         item {
-            Text("Distraction & Routine Controls", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            Text("About", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column {
-                    SettingsNavRow(
-                        icon = Icons.Filled.Shield,
-                        title = "App & Content Blocking",
-                        desc = "Whole-app blocker, YouTube Shorts, Reels, Spotlight & adult sites",
-                        onClick = onNavigateToBlocking
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    SettingsNavRow(
-                        icon = Icons.Filled.HourglassBottom,
-                        title = "Daily Screen-Time Limits",
-                        desc = "App quotas with advance alerts at 80% and blocking at 100%",
-                        onClick = onNavigateToUsageLimits
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    SettingsNavRow(
-                        icon = Icons.Filled.CalendarMonth,
-                        title = "Weekly Focus Schedules",
-                        desc = "Recurring weekly study blocks and routine pre-reminders",
-                        onClick = onNavigateToSchedules
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    SettingsNavRow(
-                        icon = Icons.Filled.School,
-                        title = "Exam Timetable Planner",
-                        desc = "Countdown to exams with 3-stage reminders",
-                        onClick = onNavigateToExams
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    SettingsNavRow(
-                        icon = Icons.Filled.Tune,
-                        title = "Focus Presets",
-                        desc = "Save reusable timer modes and temporary app blocks",
-                        onClick = onNavigateToFocusPresets
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    SettingsNavRow(
-                        icon = Icons.Filled.Backup,
-                        title = "Backup & Restore",
-                        desc = "Export your local data or restore a Go Back backup",
-                        onClick = onNavigateToBackupRestore
-                    )
-                }
-            }
-        }
 
-        // Finish Alarm Sound Section
-        item {
-            Text("Focus Finish Sound", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "Sound played when a focus timer or Pomodoro phase completes.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    FINISH_ALARM_SOUNDS.forEach { (key, label) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setAlarmSound(key)
-                                }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedAlarmSound == key,
-                                onClick = {
-                                    viewModel.setAlarmSound(key)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { viewModel.playPreviewSound(key) }) {
-                                Icon(Icons.Filled.VolumeUp, contentDescription = "Preview", tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Daily Focus Goal Section
-        item {
-            Text("Daily Focus Goal", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Current Goal", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("${dailyGoalMinutes / 60}h ${dailyGoalMinutes % 60}m ($dailyGoalMinutes min)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        listOf(30, 60, 90, 120, 180, 240).forEach { goal ->
-                            FilterChip(
-                                selected = dailyGoalMinutes == goal,
-                                onClick = {
-                                    viewModel.setDailyGoalMinutes(goal)
-                                },
-                                label = { Text("${goal}m") }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Appearance & Theme Studio
-        item {
-            Text("Appearance & Theme Studio", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Theme Mode", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        listOf(
-                            Triple("system", "System", Icons.Filled.PhoneAndroid),
-                            Triple("light", "Light", Icons.Filled.LightMode),
-                            Triple("dark", "Dark", Icons.Filled.DarkMode)
-                        ).forEach { (mode, label, icon) ->
-                            FilterChip(
-                                selected = selectedThemeMode == mode,
-                                onClick = {
-                                    viewModel.setThemeMode(mode)
-                                },
-                                label = { Text(label) },
-                                leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Accent Color Palette", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        THEME_PALETTES.forEach { pal ->
-                            val isSelected = selectedPaletteName == pal.name
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier
-                                    .clickable {
-                                        viewModel.setThemePalette(pal.name)
-                                    }
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(modifier = Modifier.size(16.dp).clip(CircleShape).background(pal.color))
-                                    Text(pal.name, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Security PIN Card
-        item {
-            Text("Security PIN Protection", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(
-                            imageVector = if (!storedPinHash.isNullOrEmpty()) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                if (!storedPinHash.isNullOrEmpty()) "PIN Protection Active" else "PIN Protection Inactive",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                            Text(
-                                if (!storedPinHash.isNullOrEmpty()) "Protects App Blocking & Usage Limits against impulse modifications."
-                                else "Prevent yourself from turning off blockers or extending limits in weak moments.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (storedPinHash.isNullOrEmpty()) {
-                            Button(
-                                onClick = {
-                                    viewModel.setPinModalMode(PinModalMode.SET)
-                                    viewModel.setPinModalVisible(true)
-                                },
-                                shape = PillShape
-                            ) {
-                                Text("Set 4-Digit PIN")
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    viewModel.setPinModalMode(PinModalMode.SET)
-                                    viewModel.setPinModalVisible(true)
-                                },
-                                shape = PillShape
-                            ) {
-                                Text("Change PIN")
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    viewModel.setPinModalMode(PinModalMode.REMOVE)
-                                    viewModel.setPinModalVisible(true)
-                                },
-                                shape = PillShape
-                            ) {
-                                Text("Remove PIN", color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Quick Settings Tile Shortcut
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
                     shape = CardShape,
-                    color = MaterialTheme.colorScheme.surface
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(Icons.Filled.Grid3x3, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Quick Settings Focus Tile", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("Start and stop focus sessions right from the Android pull-down notification shade.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Button(
-                            onClick = {
-                                val statusBarManager = context.getSystemService(StatusBarManager::class.java)
-                                val executor = ContextCompat.getMainExecutor(context)
-                                statusBarManager?.requestAddTileService(
-                                    ComponentName(context, FocusTileService::class.java),
-                                    "Go Back Focus",
-                                    android.graphics.drawable.Icon.createWithResource(context, R.drawable.ic_focus_tile),
-                                    executor,
-                                    { /* Consumer */ }
-                                )
-                            },
-                            shape = PillShape
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Add Tile")
+                            Icon(
+                                imageVector = Icons.Outlined.RotateLeft,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Go Back", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Version 1.0.0 · Local-first focus companion", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-            }
-        }
 
-        // Local profile
-        item {
-            Text("Local Profile", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(6.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.surfaceVariant, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ProfileAvatar(name = profileName, imageUri = profileImageUri, modifier = Modifier.size(64.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Profile photo", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            OutlinedButton(
-                                onClick = { profilePhotoPicker.launch(arrayOf("image/*")) },
-                                shape = PillShape
-                            ) {
-                                Text(if (profileImageUri.isNullOrBlank()) "Choose photo" else "Change photo")
-                            }
+                Surface(
+                    shape = CardShape,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kr-ndv"))
+                            context.startActivity(intent)
                         }
-                    }
-                    Text("Display Name", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = profileName,
-                            onValueChange = { viewModel.setProfileName(it.take(60)) },
-                            placeholder = { Text("Your name (optional)") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        Button(
-                            onClick = {
-                                viewModel.saveProfileName()
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.height(52.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(PillShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Save")
+                            Icon(
+                                imageVector = Icons.Outlined.Favorite,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Made with Love By – KriSh", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Open GitHub profile", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.OpenInNew,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
