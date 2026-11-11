@@ -40,8 +40,6 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
-import com.goback.focus.ui.components.PinModalMode
-import com.goback.focus.ui.components.SecurityPinDialog
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.SettingsViewModel
@@ -88,11 +86,7 @@ fun SettingsScreen(
     val dailyGoalMinutes by viewModel.dailyGoalMinutes.collectAsStateWithLifecycle()
     val selectedThemeMode by viewModel.selectedThemeMode.collectAsStateWithLifecycle()
     val selectedPaletteName by viewModel.selectedPaletteName.collectAsStateWithLifecycle()
-    val selectedAlarmSound by viewModel.selectedAlarmSound.collectAsStateWithLifecycle()
-    val storedPinHash by viewModel.storedPinHash.collectAsStateWithLifecycle()
     val feedbackMessage by viewModel.feedbackMessage.collectAsStateWithLifecycle()
-    val pinModalVisible by viewModel.pinModalVisible.collectAsStateWithLifecycle()
-    val pinModalMode by viewModel.pinModalMode.collectAsStateWithLifecycle()
 
     val profileCropper = rememberLauncherForActivityResult(
         contract = CropImageContract()
@@ -419,58 +413,7 @@ fun SettingsScreen(
             }
         }
 
-        // 5. Controls Hub (Finish Alarm & PIN Protection)
-        item {
-            Text("Controls & Alerts", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MaterialTheme.colorScheme.outline, CardShape),
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surface
-            ) {
-                Column {
-                    SettingsNavRow(
-                        icon = Icons.Outlined.NotificationsActive,
-                        title = "Focus Finish Sound",
-                        desc = FINISH_ALARM_SOUNDS.find { it.first == selectedAlarmSound }?.second ?: "System default",
-                        onClick = {
-                            val nextIdx = (FINISH_ALARM_SOUNDS.indexOfFirst { it.first == selectedAlarmSound } + 1) % FINISH_ALARM_SOUNDS.size
-                            val next = FINISH_ALARM_SOUNDS[nextIdx]
-                            viewModel.setAlarmSound(next.first)
-                        }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.Lock,
-                        title = "Security PIN Protection",
-                        desc = if (!storedPinHash.isNullOrEmpty()) "Protected against impulse changes" else "Not set",
-                        onClick = {
-                            viewModel.setPinModalMode(PinModalMode.SET)
-                            viewModel.setPinModalVisible(true)
-                        }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.Shield,
-                        title = "App & Content Blocking",
-                        desc = "Shorts, Reels, Spotlight & adult sites",
-                        onClick = onNavigateToBlocking
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.HourglassBottom,
-                        title = "Screen-Time Limits",
-                        desc = "App quotas and usage boundaries",
-                        onClick = onNavigateToUsageLimits
-                    )
-                }
-            }
-        }
-
-        // 6. Backup & restore Section
+        // 5. Backup & restore Section
         item {
             Text("Backup & restore", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(6.dp))
@@ -695,19 +638,6 @@ fun SettingsScreen(
         }
     }
 
-    // Security PIN Dialog
-    if (pinModalVisible) {
-        SecurityPinDialog(
-            mode = pinModalMode,
-            storedPinHash = storedPinHash,
-            onSuccess = { newPin ->
-                viewModel.onPinSuccess(newPin)
-            },
-            onDismiss = {
-                viewModel.setPinModalVisible(false)
-            }
-        )
-    }
 }
 
 @Composable
