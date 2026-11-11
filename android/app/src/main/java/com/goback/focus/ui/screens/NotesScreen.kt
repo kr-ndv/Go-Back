@@ -236,7 +236,7 @@ fun NotesScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Description,
+                        imageVector = Icons.Filled.Description,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
@@ -480,7 +480,7 @@ fun NotesScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Description,
+                                imageVector = Icons.Filled.Description,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
