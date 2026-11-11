@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -66,6 +68,20 @@ fun AnalyticsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
+            .pointerInput(selectedTab, lockTab) {
+                if (lockTab == null) {
+                    var horizontalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { _, amount -> horizontalDrag += amount },
+                        onDragEnd = {
+                            if (horizontalDrag < -72f) selectedTab = AnalyticsViewTab.HISTORY
+                            else if (horizontalDrag > 72f) selectedTab = AnalyticsViewTab.USAGE
+                            horizontalDrag = 0f
+                        },
+                        onDragCancel = { horizontalDrag = 0f }
+                    )
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -237,6 +253,17 @@ fun AnalyticsScreen(
                 }
             }
 
+            // Usage data loading indicator
+            if (state.isLoading && state.hasUsageAccess) {
+                item {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().clip(PillShape),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
+
             // Total Over X Days Card
             item {
                 val totalMins = state.screenTimeMs / 60000L
@@ -268,7 +295,11 @@ fun AnalyticsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = if (state.hasUsageAccess) totalStr else "0m",
+                            text = when {
+                            !state.hasUsageAccess -> "0m"
+                            state.isLoading -> "Loading…"
+                            else -> totalStr
+                        },
                             fontSize = 38.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface
