@@ -90,25 +90,40 @@ class FocusTimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val now = System.currentTimeMillis()
+        val remainingMs = if (endAtMs > 0L) (endAtMs - now).coerceAtLeast(0L) else 0L
+        val elapsedMs = if (durationMs > 0L) (durationMs - remainingMs).coerceIn(0L, durationMs) else 0L
+        val progress = if (durationMs > 0L) ((elapsedMs * 100L) / durationMs).toInt().coerceIn(0, 100) else 0
+        val statusText = when {
+            paused -> "Session paused · Tap to return"
+            isStopwatch -> "Stopwatch running · Live elapsed time"
+            endAtMs > 0L -> "Focus countdown · Live remaining time"
+            else -> "Focus session active"
+        }
+
         val builder = NotificationCompat.Builder(this, GoBackApplication.CHANNEL_FOCUS_STATUS)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(title)
-            .setContentText(if (paused) "Paused" else if (isStopwatch) "Stopwatch running" else "Stay focused")
+            .setContentText(statusText)
+            .setSubText("Go Back · Focus session")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(statusText))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(true)
             .setUsesChronometer(!paused)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setColor(0xFFB8F36B.toInt())
             .setContentIntent(pendingIntent)
 
-        if (!paused) {
-            if (isStopwatch) {
-                builder.setWhen(System.currentTimeMillis() - durationMs)
-            } else if (endAtMs > 0) {
-                builder.setWhen(endAtMs)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    builder.setChronometerCountDown(true)
-                }
+        if (isStopwatch) {
+            if (!paused) builder.setWhen(now - durationMs)
+            builder.setProgress(0, 0, true)
+        } else if (endAtMs > 0L) {
+            builder.setProgress(100, progress, false)
+            builder.setWhen(if (paused) now else endAtMs)
+            if (!paused && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                builder.setChronometerCountDown(true)
             }
         }
 
