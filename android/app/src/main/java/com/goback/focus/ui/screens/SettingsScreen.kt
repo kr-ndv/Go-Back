@@ -39,7 +39,6 @@ import com.goback.focus.ui.components.ProfileAvatar
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
-import com.canhub.cropper.CropImageView
 import com.goback.focus.ui.theme.CardShape
 import com.goback.focus.ui.theme.PillShape
 import com.goback.focus.ui.viewmodel.SettingsViewModel
@@ -109,8 +108,7 @@ fun SettingsScreen(
                     cropImageOptions = CropImageOptions(
                         fixAspectRatio = true,
                         aspectRatioX = 1,
-                        aspectRatioY = 1,
-                        cropShape = CropImageView.CropShape.OVAL
+                        aspectRatioY = 1
                     )
                 )
             )
