@@ -112,7 +112,7 @@ class FocusTimerService : Service() {
             .setShowWhen(true)
             .setUsesChronometer(!paused)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setColor(0xFFB8F36B.toInt())
             .setContentIntent(pendingIntent)
 
