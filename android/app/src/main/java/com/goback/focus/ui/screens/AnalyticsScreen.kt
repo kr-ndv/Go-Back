@@ -253,7 +253,7 @@ fun AnalyticsScreen(
             }
 
             // Usage data loading indicator
-            if (state.isLoading && state.hasUsageAccess) {
+            if (state.isLoading) {
                 item {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth().clip(PillShape),
@@ -295,8 +295,8 @@ fun AnalyticsScreen(
                         )
                         Text(
                             text = when {
-                            !state.hasUsageAccess -> "0m"
                             state.isLoading -> "Loading…"
+                            !state.hasUsageAccess -> "0m"
                             else -> totalStr
                         },
                             fontSize = 38.sp,
