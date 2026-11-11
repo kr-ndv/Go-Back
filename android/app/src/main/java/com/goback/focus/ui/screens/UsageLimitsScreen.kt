@@ -140,6 +140,7 @@ fun UsageLimitsScreen(
 
         blockingPrefs.edit()
             .putStringSet("usage_limit_blocked_packages", exceededSet)
+            .putLong("usage_limits_updated_at", System.currentTimeMillis())
             .apply()
 
         usagePrefs.edit()
