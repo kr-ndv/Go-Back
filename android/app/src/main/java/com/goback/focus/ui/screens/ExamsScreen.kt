@@ -624,18 +624,6 @@ fun ExamsScreen(
         }
     }
 
-    // Add Exam Dialog
-    if (showAddDialog) {
-        AddExamDialog(
-            syllabusSubjects = state.syllabusSubjects,
-            onDismiss = { showAddDialog = false },
-            onSave = { title, date, details ->
-                viewModel.addExam(title, date, details)
-                showAddDialog = false
-            }
-        )
-    }
-
     // Delete Confirmation Dialog
     examToDelete?.let { exam ->
         AlertDialog(

@@ -41,7 +41,10 @@ sealed class NavTab(
     object Settings : NavTab("settings", "Settings", Icons.Filled.Tune, Icons.Outlined.Tune)
 
     companion object {
-        val items = listOf(Home, Focus, Analytics, Notes, Settings)
+        // Resolve nested singleton tabs lazily to avoid partially initialized references
+        // during the first Compose render.
+        val items: List<NavTab>
+            get() = listOf(Home, Focus, Analytics, Notes, Settings)
     }
 }
 
